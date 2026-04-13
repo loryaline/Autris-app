@@ -1,26 +1,176 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* ===== AUTRIS — Design System (Tailwind v4) ===== */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Text */
+  --color-text-primary: #1a1918;
+  --color-text-secondary: #5f5e5a;
+  --color-text-tertiary: #9b9a96;
+  --color-text-quaternary: #b4b2a9;
+
+  /* Backgrounds */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f7f6f3;
+  --color-bg-tertiary: #f0efe8;
+  --color-bg-hover: #eeecea;
+
+  /* Borders */
+  --color-border: #e2deda;
+  --color-border-light: #eeecea;
+
+  /* Brand / Primary (violet) */
+  --color-primary: #534AB7;
+  --color-primary-dark: #3C3489;
+  --color-primary-bg: #EEEDFE;
+  --color-primary-border: #AFA9EC;
+
+  /* Teal */
+  --color-teal: #5DCAA5;
+  --color-teal-dark: #1D9E75;
+  --color-teal-deeper: #085041;
+  --color-teal-bg: #E1F5EE;
+  --color-teal-border: #9FE1CB;
+
+  /* Amber */
+  --color-amber: #EF9F27;
+  --color-amber-dark: #BA7517;
+  --color-amber-deeper: #633806;
+  --color-amber-bg: #FAEEDA;
+
+  /* Red */
+  --color-red: #A32D2D;
+  --color-red-bg: #FCEBEB;
+
+  /* Rose */
+  --color-rose: #993556;
+  --color-rose-bg: #fce4ec;
+
+  /* Rarity */
+  --color-rarity-common: #888780;
+  --color-rarity-rare: #1D9E75;
+  --color-rarity-epic: #534AB7;
+  --color-rarity-legendary: #BA7517;
+
+  /* Activity calendar */
+  --color-activity-writing: #7F77DD;
+  --color-activity-wb: #5DCAA5;
+  --color-activity-planning: #EF9F27;
+
+  /* Radius */
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+
+  /* Fonts */
+  --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --font-serif: 'Georgia', 'Times New Roman', serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ===== Base styles ===== */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Editor themes (CSS variables on .editor-theme-*) ===== */
+.editor-theme-blanc {
+  --editor-bg: #ffffff;
+  --editor-text: #1a1918;
+  --editor-accent: #534AB7;
+}
+.editor-theme-fantasy {
+  --editor-bg: #ffffff;
+  --editor-text: #1a1918;
+  --editor-accent: #3C3489;
+}
+.editor-theme-horreur {
+  --editor-bg: #ffffff;
+  --editor-text: #1a1918;
+  --editor-accent: #A32D2D;
+}
+.editor-theme-sf {
+  --editor-bg: #ffffff;
+  --editor-text: #1a1918;
+  --editor-accent: #185FA5;
+}
+.editor-theme-polar {
+  --editor-bg: #ffffff;
+  --editor-text: #1a1918;
+  --editor-accent: #444441;
+}
+.editor-theme-romance {
+  --editor-bg: #ffffff;
+  --editor-text: #1a1918;
+  --editor-accent: #993556;
+}
+.editor-theme-historique {
+  --editor-bg: #ffffff;
+  --editor-text: #1a1918;
+  --editor-accent: #854F0B;
+}
+.editor-theme-contemporain {
+  --editor-bg: #ffffff;
+  --editor-text: #1a1918;
+  --editor-accent: #1D9E75;
+}
+
+/* ===== TipTap editor prose styles ===== */
+.tiptap {
+  outline: none;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--editor-text, #1a1918);
+}
+
+.tiptap p {
+  margin-bottom: 0.75em;
+}
+
+.tiptap h2 {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-family: var(--font-sans);
+}
+
+.tiptap h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+  font-family: var(--font-sans);
+}
+
+.tiptap blockquote {
+  border-left: 3px solid var(--editor-accent, #534AB7);
+  padding-left: 1em;
+  margin: 1em 0;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.tiptap li {
+  margin-bottom: 0.25em;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-text-quaternary);
+  pointer-events: none;
+  height: 0;
+  font-style: italic;
 }
