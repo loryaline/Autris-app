@@ -38,6 +38,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup");
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback");
+  const isOnboarding = request.nextUrl.pathname.startsWith("/onboarding");
 
   if (!user && !isAuthRoute && !isAuthCallback) {
     const url = request.nextUrl.clone();
@@ -50,6 +51,36 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
+  }
+
+  // If logged in but onboarding not done, redirect to onboarding
+  if (user && !isAuthRoute && !isAuthCallback && !isOnboarding) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_done")
+      .eq("id", user.id)
+      .single();
+
+    if (profile && !profile.onboarding_done) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // If onboarding done but still on /onboarding, redirect to dashboard
+  if (user && isOnboarding) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_done")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.onboarding_done) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

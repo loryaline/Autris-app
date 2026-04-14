@@ -6,26 +6,14 @@ import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { GENRES, GENRE_TO_THEME } from "@/lib/constants";
-import type { Genre, EditorTheme } from "@/types/database";
-
-const THEMES: { value: EditorTheme; label: string }[] = [
-  { value: "blanc", label: "Blanc" },
-  { value: "fantasy", label: "Fantasy" },
-  { value: "sf", label: "Science-fiction" },
-  { value: "polar", label: "Polar" },
-  { value: "horreur", label: "Horreur" },
-  { value: "romance", label: "Romance" },
-  { value: "historique", label: "Historique" },
-  { value: "contemporain", label: "Contemporain" },
-];
+import { GENRES } from "@/lib/constants";
+import type { Genre } from "@/types/database";
 
 interface NovelData {
   id: string;
   title: string;
   current_words: number;
   word_goal: number | null;
-  ui_theme: string;
 }
 
 interface ProjectData {
@@ -62,7 +50,7 @@ export function ProjectSettings({ project }: { project: ProjectData }) {
     router.refresh();
   }
 
-  async function handleSaveNovel(novelId: string, updates: { title?: string; word_goal?: number | null; ui_theme?: string }) {
+  async function handleSaveNovel(novelId: string, updates: { title?: string; word_goal?: number | null }) {
     const supabase = createClient();
     await supabase
       .from("novels")
@@ -90,7 +78,7 @@ export function ProjectSettings({ project }: { project: ProjectData }) {
         project_id: project.id,
         user_id: user.id,
         title: newNovelTitle.trim(),
-        ui_theme: GENRE_TO_THEME[genre] ?? "blanc",
+        ui_theme: "blanc",
       })
       .select()
       .single();
@@ -294,18 +282,16 @@ function NovelSettings({
   onSave,
 }: {
   novel: NovelData;
-  onSave: (updates: { title?: string; word_goal?: number | null; ui_theme?: string }) => void;
+  onSave: (updates: { title?: string; word_goal?: number | null }) => void;
 }) {
   const [title, setTitle] = useState(novel.title);
   const [wordGoal, setWordGoal] = useState(novel.word_goal?.toString() ?? "");
-  const [theme, setTheme] = useState(novel.ui_theme);
   const [saved, setSaved] = useState(false);
 
   function handleSave() {
     onSave({
       title: title.trim(),
       word_goal: wordGoal ? parseInt(wordGoal, 10) : null,
-      ui_theme: theme,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -341,36 +327,6 @@ function NovelSettings({
           placeholder="Ex : 80000"
           className="w-full h-9 px-3 text-[14px] border border-border rounded-[var(--radius-sm)] bg-bg-primary text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-primary-border focus:ring-1 focus:ring-primary-border"
         />
-      </div>
-
-      <div className="mb-4">
-        <label className="flex items-center gap-1.5 text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-1.5">
-          Thème de l&apos;éditeur
-          <span className="relative group">
-            <span className="inline-flex items-center justify-center w-[16px] h-[16px] rounded-full border border-text-quaternary text-[10px] text-text-quaternary cursor-help leading-none">
-              i
-            </span>
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 bg-text-primary text-bg-primary text-[11px] rounded-[var(--radius-sm)] whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10">
-              Change les couleurs d&apos;accentuation de l&apos;éditeur de texte
-            </span>
-          </span>
-        </label>
-        <div className="grid grid-cols-4 gap-1.5">
-          {THEMES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => setTheme(t.value)}
-              className={`px-1.5 py-1.5 rounded-[var(--radius-sm)] border text-[12px] whitespace-nowrap cursor-pointer transition-colors ${
-                theme === t.value
-                  ? "bg-primary-bg border-primary-border text-primary-dark font-medium"
-                  : "bg-bg-primary border-border text-text-secondary hover:bg-bg-hover"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="flex items-center gap-2">

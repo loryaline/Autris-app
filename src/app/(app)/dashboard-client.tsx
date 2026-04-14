@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { GENRES, GENRE_TO_THEME } from "@/lib/constants";
+import { GENRES } from "@/lib/constants";
 import type { Genre } from "@/types/database";
 
 interface ProjectWithNovels {
@@ -65,7 +65,7 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
         project_id: project.id,
         user_id: user.id,
         title: novelTitle.trim(),
-        ui_theme: GENRE_TO_THEME[genre] ?? "blanc",
+        ui_theme: "blanc",
       })
       .select()
       .single();

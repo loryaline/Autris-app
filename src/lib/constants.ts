@@ -10,14 +10,3 @@ export const GENRES: { value: Genre; label: string; emoji: string }[] = [
   { value: "historique", label: "Historique", emoji: "📜" },
   { value: "contemporain", label: "Contemporain", emoji: "🏙️" },
 ];
-
-export const GENRE_TO_THEME: Record<Genre, string> = {
-  fantasy: "fantasy",
-  sf: "sf",
-  thriller: "polar",
-  polar: "polar",
-  horreur: "horreur",
-  romance: "romance",
-  historique: "historique",
-  contemporain: "blanc",
-};

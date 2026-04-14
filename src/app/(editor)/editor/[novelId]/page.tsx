@@ -11,7 +11,7 @@ export default async function EditorPage({
 
   const { data: novel } = await supabase
     .from("novels")
-    .select("id, title, current_words, word_goal, ui_theme, project_id, chapters(id, title, content, word_count, position, status, synopsis)")
+    .select("id, title, current_words, word_goal, project_id, chapters(id, title, content, word_count, position, status, synopsis)")
     .eq("id", novelId)
     .single();
 
@@ -42,7 +42,6 @@ export default async function EditorPage({
       chapters={chapters}
       initialChapterId={firstChapter?.id ?? null}
       wordGoal={novel.word_goal}
-      uiTheme={novel.ui_theme}
     />
   );
 }

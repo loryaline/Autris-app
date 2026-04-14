@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
 const STATUS_DOT: Record<string, string> = {
-  a_ecrire: "bg-[#ccc]",
+  a_ecrire: "bg-text-quaternary",
   premier_jet: "bg-[#888780]",
   revision: "bg-amber",
   reecriture: "bg-primary",

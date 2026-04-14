@@ -135,6 +135,16 @@ export function Sidebar({ projects }: { projects?: SidebarProject[] }) {
 
               {isProjectOpen(project.id) && (
                 <div className="ml-2">
+                  <Link
+                    href={`/wb/${project.id}`}
+                    className={`block pl-4 py-[3px] text-[12px] rounded transition-colors duration-150 no-underline ${
+                      pathname === `/wb/${project.id}`
+                        ? "bg-primary-bg/20 text-primary font-medium"
+                        : "text-text-tertiary hover:text-text-secondary"
+                    }`}
+                  >
+                    🌍 World Building
+                  </Link>
                   {project.novels.map((novel) => (
                     <div key={novel.id}>
                       <button
@@ -149,6 +159,16 @@ export function Sidebar({ projects }: { projects?: SidebarProject[] }) {
 
                       {isNovelOpen(novel.id) && (
                         <div className="ml-3">
+                          <Link
+                            href={`/planning/${novel.id}`}
+                            className={`block pl-2 py-[3px] text-[12px] rounded transition-colors duration-150 no-underline ${
+                              pathname === `/planning/${novel.id}`
+                                ? "bg-primary-bg/20 text-primary font-medium"
+                                : "text-text-tertiary hover:text-text-secondary"
+                            }`}
+                          >
+                            Planification
+                          </Link>
                           <Link
                             href={`/editor/${novel.id}`}
                             className={`block pl-2 py-[3px] text-[12px] rounded transition-colors duration-150 no-underline ${

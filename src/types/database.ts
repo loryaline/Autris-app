@@ -8,16 +8,6 @@ export type Genre =
   | "historique"
   | "contemporain";
 
-export type EditorTheme =
-  | "blanc"
-  | "fantasy"
-  | "horreur"
-  | "sf"
-  | "polar"
-  | "romance"
-  | "historique"
-  | "contemporain";
-
 export type ItemStatus = "todo" | "in_progress" | "done";
 
 export type ChapterStatus =
@@ -30,10 +20,13 @@ export type ChapterStatus =
 
 export type Plan = "free" | "pro_monthly" | "pro_annual";
 
+export type Persona = "debutant" | "intermediaire_plan" | "intermediaire_suivi" | "avance";
+
 export interface Profile {
   id: string;
   username: string | null;
   plan: Plan;
+  persona: Persona | null;
   onboarding_done: boolean;
   created_at: string;
 }
@@ -54,10 +47,12 @@ export interface Novel {
   title: string;
   current_words: number;
   word_goal: number | null;
-  ui_theme: EditorTheme;
+  ui_theme: string;
   created_at: string;
   updated_at: string;
 }
+
+export type Tempo = "lent" | "moyen" | "rapide";
 
 export interface Chapter {
   id: string;
@@ -69,8 +64,93 @@ export interface Chapter {
   position: number;
   status: ChapterStatus;
   synopsis: string | null;
+  tempo: Tempo | null;
+  theme: string | null;
+  plot_elements: string | null;
+  minor_elements: string | null;
+  observations: string | null;
+  tension_indices: string | null;
+  pivot: string | null;
+  narrative_knot: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PlanningColumn {
+  id: string;
+  novel_id: string;
+  user_id: string;
+  name: string;
+  type: "text" | "select" | "number";
+  position: number;
+  options: { choices?: string[] } | null;
+  created_at: string;
+}
+
+export interface PlanningCellValue {
+  id: string;
+  column_id: string;
+  chapter_id: string;
+  user_id: string;
+  value: string | null;
+  created_at: string;
+}
+
+export interface PlanningPostit {
+  id: string;
+  novel_id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  color: string;
+  position_x: number;
+  position_y: number;
+  chapter_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanningMilestone {
+  id: string;
+  novel_id: string;
+  user_id: string;
+  title: string;
+  type: "plan" | "beta" | "salon" | "soumission" | "custom";
+  target_date: string | null;
+  status: "planned" | "in_progress" | "done";
+  color: string | null;
+  position: number;
+  created_at: string;
+}
+
+export type WbStatus = "brouillon" | "valide" | "archive";
+
+export interface WbEntry {
+  id: string;
+  project_id: string;
+  user_id: string;
+  category: string;
+  subcategory: string | null;
+  title: string;
+  subtitle: string | null;
+  description: string;
+  template_data: Record<string, unknown>;
+  personal_notes: string;
+  main_image_url: string | null;
+  gallery: string[];
+  tags: string[];
+  status: WbStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WbLink {
+  id: string;
+  from_entry_id: string;
+  to_entry_id: string;
+  link_type: string | null;
+  user_id: string;
+  created_at: string;
 }
 
 export interface Scene {

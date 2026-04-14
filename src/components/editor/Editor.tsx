@@ -30,7 +30,6 @@ interface EditorProps {
   chapters: ChapterData[];
   initialChapterId: string | null;
   wordGoal: number | null;
-  uiTheme: string;
 }
 
 function countWords(text: string): number {
@@ -46,7 +45,6 @@ export function NovelEditor({
   chapters,
   initialChapterId,
   wordGoal,
-  uiTheme,
 }: EditorProps) {
   const [activeChapterId, setActiveChapterId] = useState<string | null>(initialChapterId);
   const [syncStatus, setSyncStatus] = useState<"saved" | "saving" | "offline" | "error">("saved");
@@ -275,11 +273,10 @@ export function NovelEditor({
     ? editor.getText().split(/\n\n+/).filter((p) => p.trim()).length
     : 0;
 
-  const themeClass = `editor-theme-${uiTheme}`;
   const canNavigateHome = syncStatus === "saved";
 
   return (
-    <div className={`flex flex-col h-full ${themeClass}`}>
+    <div className="flex flex-col h-full">
       {/* Breadcrumb top bar */}
       {!focusMode ? (
         <div className="h-9 bg-bg-primary border-b border-border flex items-center px-3 gap-2 shrink-0">
@@ -392,15 +389,15 @@ export function NovelEditor({
         {/* Editor area — Google Docs style */}
         <div
           className="flex-1 overflow-y-auto flex justify-center"
-          style={{ background: "#e8e6e1" }}
+          style={{ background: "var(--color-bg-tertiary)" }}
         >
           <div
             className="w-full"
             style={{
               maxWidth: "780px",
-              background: "var(--editor-bg, #fff)",
-              color: "var(--editor-text, #1a1918)",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+              background: "#ffffff",
+              color: "#1a1918",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
               padding: "32px 48px",
               minHeight: "100%",
             }}
@@ -408,7 +405,7 @@ export function NovelEditor({
             {activeChapter ? (
               <>
                 {!focusMode && (
-                  <div className="text-[12px] text-text-tertiary mb-4 opacity-60" style={{ fontFamily: "var(--font-sans)" }}>
+                  <div className="text-[12px] mb-4 opacity-60" style={{ fontFamily: "var(--font-sans)", color: "#9b9a96" }}>
                     {activeChapter.title}
                   </div>
                 )}
@@ -448,6 +445,7 @@ export function NovelEditor({
                 paragraphCount={paragraphCount}
                 chapterTitle={activeChapter?.title ?? "—"}
                 chapterStatus={activeChapter?.status ?? "a_ecrire"}
+                chapterId={activeChapterId}
                 onStatusChange={() => activeChapterId && handleStatusChange(activeChapterId)}
               />
             </div>
