@@ -61,6 +61,10 @@ export function NovelEditor({
   wbEntries,
 }: EditorProps) {
   const [activeChapterId, setActiveChapterId] = useState<string | null>(initialChapterId);
+  const activeChapterIdRef = useRef<string | null>(initialChapterId);
+  useEffect(() => {
+    activeChapterIdRef.current = activeChapterId;
+  }, [activeChapterId]);
   const [syncStatus, setSyncStatus] = useState<"saved" | "saving" | "offline" | "error">("saved");
   const [focusMode, setFocusMode] = useState(false);
   const [showLeftPanel, setShowLeftPanel] = useState(true);
@@ -94,7 +98,8 @@ export function NovelEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      if (!activeChapterId) return;
+      const currentId = activeChapterIdRef.current;
+      if (!currentId) return;
 
       const html = editor.getHTML();
       const text = editor.getText();
@@ -102,7 +107,7 @@ export function NovelEditor({
 
       setLocalChapters((prev) =>
         prev.map((c) =>
-          c.id === activeChapterId
+          c.id === currentId
             ? { ...c, content: html, word_count: words }
             : c
         )
@@ -111,7 +116,7 @@ export function NovelEditor({
       setSyncStatus("saving");
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
-        saveChapter(activeChapterId, html, words);
+        saveChapter(currentId, html, words);
       }, 2000);
     },
     onSelectionUpdate: () => setTick((t) => t + 1),
@@ -164,8 +169,9 @@ export function NovelEditor({
     }
     const chapter = localChapters.find((c) => c.id === chapterId);
     if (chapter && editor) {
+      activeChapterIdRef.current = chapterId;
       setActiveChapterId(chapterId);
-      editor.commands.setContent(chapter.content || "");
+      editor.commands.setContent(chapter.content || "", false);
       setSyncStatus("saved");
     }
   }
@@ -181,7 +187,7 @@ export function NovelEditor({
       currentWords,
       "Auto (avant restauration)"
     );
-    editor.commands.setContent(content);
+    editor.commands.setContent(content, false);
     setLocalChapters((prev) =>
       prev.map((c) =>
         c.id === activeChapterId ? { ...c, content, word_count: wordCount } : c
@@ -256,9 +262,11 @@ export function NovelEditor({
       const sorted = [...remaining].sort((a, b) => a.position - b.position);
       const next = sorted[0];
       if (next && editor) {
+        activeChapterIdRef.current = next.id;
         setActiveChapterId(next.id);
-        editor.commands.setContent(next.content || "");
+        editor.commands.setContent(next.content || "", false);
       } else {
+        activeChapterIdRef.current = null;
         setActiveChapterId(null);
       }
     }
