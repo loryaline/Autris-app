@@ -29,6 +29,14 @@ export default async function EditorPage({
     .eq("id", novel.project_id)
     .single();
 
+  // Fiches WB du projet pour l'onglet "World" de l'éditeur
+  const { data: wbEntries } = await supabase
+    .from("wb_entries")
+    .select("id, title, subtitle, category, subcategory, main_image_url, status")
+    .eq("project_id", novel.project_id)
+    .neq("status", "archive")
+    .order("updated_at", { ascending: false });
+
   const chapters = (novel.chapters ?? [])
     .sort((a, b) => a.position - b.position);
 
@@ -37,11 +45,13 @@ export default async function EditorPage({
   return (
     <NovelEditor
       novelId={novel.id}
+      projectId={novel.project_id}
       novelTitle={novel.title}
       projectTitle={project?.title ?? "Mon projet"}
       chapters={chapters}
       initialChapterId={firstChapter?.id ?? null}
       wordGoal={novel.word_goal}
+      wbEntries={wbEntries ?? []}
     />
   );
 }

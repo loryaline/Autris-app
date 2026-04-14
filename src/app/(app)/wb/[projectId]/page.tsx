@@ -35,12 +35,24 @@ export default async function WorldBuildingPage({
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
+  // Charge tous les liens dont les deux extrémités appartiennent à ce projet
+  const entryIds = (entries ?? []).map((e) => e.id);
+  let links: unknown[] = [];
+  if (entryIds.length > 0) {
+    const { data: linkRows } = await supabase
+      .from("wb_links")
+      .select("*")
+      .in("from_entry_id", entryIds);
+    links = linkRows ?? [];
+  }
+
   return (
     <WbClient
       projectId={projectId}
       projectTitle={project.title}
       genre={project.genre as Genre}
       initialEntries={entries ?? []}
+      initialLinks={links as never}
     />
   );
 }

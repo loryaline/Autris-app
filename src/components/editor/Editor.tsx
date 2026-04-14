@@ -23,13 +23,25 @@ interface ChapterData {
   synopsis: string | null;
 }
 
+interface WbEntryLite {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  category: string;
+  subcategory: string | null;
+  main_image_url: string | null;
+  status: string;
+}
+
 interface EditorProps {
   novelId: string;
+  projectId: string;
   novelTitle: string;
   projectTitle: string;
   chapters: ChapterData[];
   initialChapterId: string | null;
   wordGoal: number | null;
+  wbEntries: WbEntryLite[];
 }
 
 function countWords(text: string): number {
@@ -40,11 +52,13 @@ function countWords(text: string): number {
 
 export function NovelEditor({
   novelId,
+  projectId,
   novelTitle,
   projectTitle,
   chapters,
   initialChapterId,
   wordGoal,
+  wbEntries,
 }: EditorProps) {
   const [activeChapterId, setActiveChapterId] = useState<string | null>(initialChapterId);
   const [syncStatus, setSyncStatus] = useState<"saved" | "saving" | "offline" | "error">("saved");
@@ -52,7 +66,7 @@ export function NovelEditor({
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [leftWidth, setLeftWidth] = useState(155);
-  const [rightWidth, setRightWidth] = useState(175);
+  const [rightWidth, setRightWidth] = useState(240);
   const [localChapters, setLocalChapters] = useState(chapters);
   const [, setTick] = useState(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,7 +78,7 @@ export function NovelEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [2, 3] },
+        heading: { levels: [1, 2, 3] },
       }),
       Underline,
       Placeholder.configure({
@@ -104,6 +118,24 @@ export function NovelEditor({
     onTransaction: () => setTick((t) => t + 1),
   });
 
+  // Snapshot du contenu courant dans chapter_versions
+  const createSnapshot = useCallback(
+    async (chapterId: string, content: string, wordCount: number, label: string) => {
+      if (!content || content === "<p></p>") return;
+      const supabase = supabaseRef.current;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from("chapter_versions").insert({
+        chapter_id: chapterId,
+        user_id: user.id,
+        content,
+        word_count: wordCount,
+        label,
+      });
+    },
+    []
+  );
+
   const saveChapter = useCallback(
     async (chapterId: string, content: string, wordCount: number) => {
       try {
@@ -120,9 +152,15 @@ export function NovelEditor({
   );
 
   function handleChapterSelect(chapterId: string) {
-    if (saveTimeoutRef.current && activeChapterId && editor) {
-      clearTimeout(saveTimeoutRef.current);
-      saveChapter(activeChapterId, editor.getHTML(), countWords(editor.getText()));
+    if (activeChapterId && editor) {
+      const html = editor.getHTML();
+      const words = countWords(editor.getText());
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveChapter(activeChapterId, html, words);
+      }
+      // Snapshot auto en quittant le chapitre si du contenu réel y est saisi
+      createSnapshot(activeChapterId, html, words, "Auto (changement de chapitre)");
     }
     const chapter = localChapters.find((c) => c.id === chapterId);
     if (chapter && editor) {
@@ -130,6 +168,33 @@ export function NovelEditor({
       editor.commands.setContent(chapter.content || "");
       setSyncStatus("saved");
     }
+  }
+
+  function handleRestoreVersion(content: string, wordCount: number) {
+    if (!activeChapterId || !editor) return;
+    // Snapshot pré-restauration pour pouvoir revenir en arrière
+    const currentHtml = editor.getHTML();
+    const currentWords = countWords(editor.getText());
+    createSnapshot(
+      activeChapterId,
+      currentHtml,
+      currentWords,
+      "Auto (avant restauration)"
+    );
+    editor.commands.setContent(content);
+    setLocalChapters((prev) =>
+      prev.map((c) =>
+        c.id === activeChapterId ? { ...c, content, word_count: wordCount } : c
+      )
+    );
+    saveChapter(activeChapterId, content, wordCount);
+  }
+
+  function handleManualSnapshot() {
+    if (!activeChapterId || !editor) return;
+    const html = editor.getHTML();
+    const words = countWords(editor.getText());
+    createSnapshot(activeChapterId, html, words, "Manuelle");
   }
 
   async function handleAddChapter() {
@@ -261,7 +326,7 @@ export function NovelEditor({
     e.preventDefault();
     const startX = e.clientX;
     const startW = rightWidth;
-    const onMove = (ev: MouseEvent) => setRightWidth(Math.max(120, Math.min(320, startW - (ev.clientX - startX))));
+    const onMove = (ev: MouseEvent) => setRightWidth(Math.max(140, Math.min(640, startW - (ev.clientX - startX))));
     const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
@@ -447,6 +512,10 @@ export function NovelEditor({
                 chapterStatus={activeChapter?.status ?? "a_ecrire"}
                 chapterId={activeChapterId}
                 onStatusChange={() => activeChapterId && handleStatusChange(activeChapterId)}
+                wbEntries={wbEntries}
+                projectId={projectId}
+                onSnapshot={handleManualSnapshot}
+                onRestoreVersion={handleRestoreVersion}
               />
             </div>
           </>

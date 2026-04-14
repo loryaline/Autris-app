@@ -482,7 +482,7 @@ export function ChapterTable({
 
     // Default: text field on chapter
     if (col.field) {
-      const fieldValue = (chapter as Record<string, unknown>)[col.field] as string | null;
+      const fieldValue = (chapter as unknown as Record<string, unknown>)[col.field] as string | null;
       return (
         <EditableCell
           value={fieldValue ?? ""}
