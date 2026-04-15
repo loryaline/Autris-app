@@ -157,20 +157,44 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
 
                   {project.novels.length > 0 ? (
                     <div className="flex flex-col gap-1">
-                      {project.novels.map((novel) => (
-                        <a
-                          key={novel.id}
-                          href={`/editor/${novel.id}`}
-                          className="flex items-center justify-between p-1.5 rounded-[var(--radius-sm)] hover:bg-bg-hover transition-colors text-[12px]"
-                        >
-                          <span className="text-text-secondary">
-                            {novel.title}
-                          </span>
-                          <span className="text-text-tertiary">
-                            {novel.current_words.toLocaleString("fr-FR")} mots
-                          </span>
-                        </a>
-                      ))}
+                      {project.novels.map((novel) => {
+                        const nGoal = novel.word_goal ?? 0;
+                        const nHasGoal = nGoal > 0;
+                        const nProgress = nHasGoal
+                          ? Math.min((novel.current_words / nGoal) * 100, 100)
+                          : 0;
+                        return (
+                          <a
+                            key={novel.id}
+                            href={`/editor/${novel.id}`}
+                            className="flex flex-col gap-1 p-1.5 rounded-[var(--radius-sm)] hover:bg-bg-hover transition-colors text-[12px]"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-secondary truncate">
+                                {novel.title}
+                              </span>
+                              <span className="text-text-tertiary shrink-0 ml-2">
+                                {nHasGoal
+                                  ? `${novel.current_words.toLocaleString("fr-FR")} / ${nGoal.toLocaleString("fr-FR")}`
+                                  : `${novel.current_words.toLocaleString("fr-FR")} mots`}
+                                {nHasGoal && (
+                                  <span className="text-primary font-medium ml-1">
+                                    {Math.round(nProgress)}%
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                            {nHasGoal && (
+                              <div className="h-1 bg-bg-hover rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full transition-all duration-300"
+                                  style={{ width: `${nProgress}%` }}
+                                />
+                              </div>
+                            )}
+                          </a>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-[12px] text-text-tertiary">

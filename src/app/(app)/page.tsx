@@ -19,20 +19,46 @@ export default async function DashboardPage() {
   const totalWords = projects?.reduce((sum, p) =>
     sum + (p.novels?.reduce((s: number, n: { current_words: number }) => s + n.current_words, 0) ?? 0), 0) ?? 0;
 
-  // Build weekly activity from chapter updates
-  const allChapters = projects?.flatMap(p =>
-    (p.novels ?? []).flatMap((n: { chapters?: { updated_at: string; word_count: number }[] }) => n.chapters ?? [])
-  ) ?? [];
-
+  // Build weekly activity from chapter_versions snapshots (delta-based)
   const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - 6);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const { data: versions } = await supabase
+    .from("chapter_versions")
+    .select("chapter_id, word_count, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: true });
+
+  // For each chapter, track cumulative word_count per day
+  // Words written on day D = (max word_count <= end of day D) - (max word_count <= end of day D-1)
+  const DAILY_GOAL = 500;
   const weekActivity = Array.from({ length: 7 }, (_, i) => {
     const day = new Date(today);
     day.setDate(today.getDate() - (6 - i));
-    const dayStr = day.toISOString().slice(0, 10);
-    const active = allChapters.some((c: { updated_at: string; word_count: number }) =>
-      c.updated_at.slice(0, 10) === dayStr && c.word_count > 0
-    );
-    return { day: day.toLocaleDateString("fr-FR", { weekday: "narrow" }), active };
+    day.setHours(0, 0, 0, 0);
+    const dayStart = day.getTime();
+    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+
+    // Per chapter, compute latest word_count up to dayEnd and up to dayStart
+    const chapterIds = new Set((versions ?? []).map((v) => v.chapter_id));
+    let totalWritten = 0;
+    for (const cid of chapterIds) {
+      const vs = (versions ?? []).filter((v) => v.chapter_id === cid);
+      const upToEnd = vs.filter((v) => new Date(v.created_at).getTime() < dayEnd);
+      const upToStart = vs.filter((v) => new Date(v.created_at).getTime() < dayStart);
+      const endWc = upToEnd.length ? upToEnd[upToEnd.length - 1].word_count : 0;
+      const startWc = upToStart.length ? upToStart[upToStart.length - 1].word_count : 0;
+      totalWritten += Math.max(0, endWc - startWc);
+    }
+
+    const ratio = Math.min(totalWritten / DAILY_GOAL, 1);
+    return {
+      day: day.toLocaleDateString("fr-FR", { weekday: "narrow" }),
+      words: totalWritten,
+      ratio,
+    };
   });
 
   // Find last updated novel and chapter
@@ -104,15 +130,19 @@ export default async function DashboardPage() {
           {weekActivity.map((d, i) => (
             <div key={i} className="flex flex-col items-center gap-0.5">
               <div
-                className={`w-[14px] h-[14px] rounded-[3px] ${
-                  d.active ? "bg-primary" : "bg-bg-hover"
-                }`}
-                title={d.day}
-              />
+                className="w-[14px] h-[14px] rounded-[3px] bg-bg-hover relative overflow-hidden"
+                title={`${d.day} — ${d.words} mots`}
+              >
+                <div
+                  className="absolute inset-0 bg-primary"
+                  style={{ opacity: d.ratio === 0 ? 0 : 0.2 + d.ratio * 0.8 }}
+                />
+              </div>
               <span className="text-[9px] text-text-quaternary">{d.day}</span>
             </div>
           ))}
         </div>
+        <div className="text-[10px] text-text-quaternary ml-1">objectif {500}/j</div>
       </div>
 
       {/* Last novel shortcut */}

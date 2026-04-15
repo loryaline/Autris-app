@@ -124,18 +124,63 @@ export function NovelEditor({
   });
 
   // Snapshot du contenu courant dans chapter_versions
+  // kind: "auto" → +0.0.1, "manual" → +0.1.1, "status" → +1.0.0
   const createSnapshot = useCallback(
-    async (chapterId: string, content: string, wordCount: number, label: string) => {
+    async (
+      chapterId: string,
+      content: string,
+      wordCount: number,
+      kind: "auto" | "manual" | "status",
+      name?: string
+    ) => {
       if (!content || content === "<p></p>") return;
       const supabase = supabaseRef.current;
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Dedupe + fetch version précédente
+      const { data: previous } = await supabase
+        .from("chapter_versions")
+        .select("content, version")
+        .eq("chapter_id", chapterId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Dedupe : uniquement pour les auto-save (changement de chapitre).
+      // Les versions manuelles et les changements de statut sont toujours créées.
+      if (kind === "auto" && previous && previous.content === content) return;
+
+      // Calcul du prochain numéro de version
+      const parse = (v: string | null | undefined): [number, number, number] => {
+        if (!v) return [0, 0, 0];
+        const parts = v.split(".").map((n) => parseInt(n, 10));
+        return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
+      };
+      const [maj, min, pat] = parse(previous?.version);
+      const next: [number, number, number] =
+        kind === "auto"
+          ? [maj, min, pat + 1]
+          : kind === "manual"
+            ? [maj, min + 1, pat + 1]
+            : [maj + 1, 0, 0];
+      const nextVersion = next.join(".");
+
+      const label =
+        kind === "auto"
+          ? "Auto"
+          : kind === "manual"
+            ? "Manuelle"
+            : "Changement de statut";
+
       await supabase.from("chapter_versions").insert({
         chapter_id: chapterId,
         user_id: user.id,
         content,
         word_count: wordCount,
         label,
+        version: nextVersion,
+        name: name?.trim() || null,
       });
     },
     []
@@ -164,14 +209,14 @@ export function NovelEditor({
         clearTimeout(saveTimeoutRef.current);
         saveChapter(activeChapterId, html, words);
       }
-      // Snapshot auto en quittant le chapitre si du contenu réel y est saisi
-      createSnapshot(activeChapterId, html, words, "Auto (changement de chapitre)");
+      // Snapshot auto en quittant le chapitre (dedupe si inchangé)
+      createSnapshot(activeChapterId, html, words, "auto");
     }
     const chapter = localChapters.find((c) => c.id === chapterId);
     if (chapter && editor) {
       activeChapterIdRef.current = chapterId;
       setActiveChapterId(chapterId);
-      editor.commands.setContent(chapter.content || "", false);
+      editor.commands.setContent(chapter.content || "", { emitUpdate: false });
       setSyncStatus("saved");
     }
   }
@@ -181,13 +226,8 @@ export function NovelEditor({
     // Snapshot pré-restauration pour pouvoir revenir en arrière
     const currentHtml = editor.getHTML();
     const currentWords = countWords(editor.getText());
-    createSnapshot(
-      activeChapterId,
-      currentHtml,
-      currentWords,
-      "Auto (avant restauration)"
-    );
-    editor.commands.setContent(content, false);
+    createSnapshot(activeChapterId, currentHtml, currentWords, "auto");
+    editor.commands.setContent(content, { emitUpdate: false });
     setLocalChapters((prev) =>
       prev.map((c) =>
         c.id === activeChapterId ? { ...c, content, word_count: wordCount } : c
@@ -196,11 +236,11 @@ export function NovelEditor({
     saveChapter(activeChapterId, content, wordCount);
   }
 
-  function handleManualSnapshot() {
+  function handleManualSnapshot(name?: string) {
     if (!activeChapterId || !editor) return;
     const html = editor.getHTML();
     const words = countWords(editor.getText());
-    createSnapshot(activeChapterId, html, words, "Manuelle");
+    createSnapshot(activeChapterId, html, words, "manual", name);
   }
 
   async function handleAddChapter() {
@@ -264,7 +304,7 @@ export function NovelEditor({
       if (next && editor) {
         activeChapterIdRef.current = next.id;
         setActiveChapterId(next.id);
-        editor.commands.setContent(next.content || "", false);
+        editor.commands.setContent(next.content || "", { emitUpdate: false });
       } else {
         activeChapterIdRef.current = null;
         setActiveChapterId(null);
@@ -279,7 +319,15 @@ export function NovelEditor({
     if (!chapter) return;
 
     const currentIdx = STATUS_ORDER.indexOf(chapter.status);
-    const nextStatus = STATUS_ORDER[(currentIdx + 1) % STATUS_ORDER.length];
+    const nextIdx = (currentIdx + 1) % STATUS_ORDER.length;
+    const nextStatus = STATUS_ORDER[nextIdx];
+
+    // Snapshot +1.0.0 si passage à un statut supérieur (pas au rollover termine→a_ecrire)
+    if (nextIdx > currentIdx && editor && chapterId === activeChapterId) {
+      const html = editor.getHTML();
+      const words = countWords(editor.getText());
+      createSnapshot(chapterId, html, words, "status");
+    }
 
     setLocalChapters((prev) =>
       prev.map((c) => (c.id === chapterId ? { ...c, status: nextStatus } : c))

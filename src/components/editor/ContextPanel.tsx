@@ -46,6 +46,8 @@ interface ChapterVersion {
   content: string;
   word_count: number;
   label: string | null;
+  version: string | null;
+  name: string | null;
   created_at: string;
 }
 
@@ -85,7 +87,7 @@ export function ContextPanel({
   onStatusChange: () => void;
   wbEntries: WbEntryLite[];
   projectId: string;
-  onSnapshot: () => void;
+  onSnapshot: (name?: string) => void;
   onRestoreVersion: (content: string, wordCount: number) => void;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("info");
@@ -145,7 +147,7 @@ export function ContextPanel({
     setLoadingVersions(true);
     supabaseRef.current
       .from("chapter_versions")
-      .select("id, content, word_count, label, created_at")
+      .select("id, content, word_count, label, version, name, created_at")
       .eq("chapter_id", chapterId)
       .order("created_at", { ascending: false })
       .limit(50)
@@ -234,13 +236,15 @@ export function ContextPanel({
   }
 
   function triggerManualSnapshot() {
-    onSnapshot();
+    const name = window.prompt("Nom de la version (optionnel) :", "");
+    if (name === null) return; // annulé
+    onSnapshot(name || undefined);
     // Re-fetch versions after a moment
     if (!chapterId) return;
     setTimeout(() => {
       supabaseRef.current
         .from("chapter_versions")
-        .select("id, content, word_count, label, created_at")
+        .select("id, content, word_count, label, version, name, created_at")
         .eq("chapter_id", chapterId)
         .order("created_at", { ascending: false })
         .limit(50)
@@ -616,13 +620,20 @@ export function ContextPanel({
                             onClick={() => setPreviewVersionId(isPreview ? null : v.id)}
                             className="w-full text-left cursor-pointer bg-transparent border-none p-0"
                           >
-                            <div className="text-[11px] text-text-primary font-medium">
-                              {d.toLocaleDateString("fr-FR")}{" "}
-                              <span className="text-text-tertiary font-normal">
-                                {d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              {v.version && (
+                                <span className="text-[10px] font-mono text-primary bg-primary-bg px-1 py-0.5 rounded">
+                                  v{v.version}
+                                </span>
+                              )}
+                              <span className="text-[11px] text-text-primary font-medium truncate">
+                                {v.name || d.toLocaleDateString("fr-FR")}
                               </span>
                             </div>
                             <div className="text-[9px] text-text-tertiary">
+                              {d.toLocaleDateString("fr-FR")}{" "}
+                              {d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                              {" · "}
                               {v.word_count.toLocaleString("fr-FR")} mots
                               {v.label ? ` · ${v.label}` : ""}
                             </div>
