@@ -461,7 +461,7 @@ export function NovelEditor({
 
         {/* Editor area — Google Docs style */}
         <div
-          className="flex-1 overflow-y-auto flex justify-center"
+          className="flex-1 overflow-y-auto flex justify-center items-start"
           style={{ background: "var(--color-bg-tertiary)" }}
         >
           <div
@@ -471,7 +471,7 @@ export function NovelEditor({
               background: "#ffffff",
               color: "#1a1918",
               boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-              padding: "32px 48px",
+              padding: "32px 48px 50vh",
               minHeight: "100%",
             }}
           >
