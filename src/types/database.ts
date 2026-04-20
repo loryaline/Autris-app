@@ -18,6 +18,15 @@ export type ChapterStatus =
   | "correction"
   | "termine";
 
+export type NovelStatus =
+  | "a_ecrire"
+  | "premier_jet"
+  | "revision"
+  | "reecriture"
+  | "correction"
+  | "termine"
+  | "publie";
+
 export type Plan = "free" | "pro_monthly" | "pro_annual";
 
 export type Persona = "debutant" | "intermediaire_plan" | "intermediaire_suivi" | "avance";

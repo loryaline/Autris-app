@@ -68,12 +68,16 @@ function PanelToggleButton({
 export function Toolbar({
   editor,
   wordCount,
+  totalChars,
+  totalCharsNoSpaces,
   onToggleLeft,
   onToggleRight,
   hidePanelToggles,
 }: {
   editor: Editor | null;
   wordCount: number;
+  totalChars: number;
+  totalCharsNoSpaces: number;
   onToggleLeft: () => void;
   onToggleRight: () => void;
   hidePanelToggles?: boolean;
@@ -110,12 +114,12 @@ export function Toolbar({
         <span className="text-[12px] text-text-tertiary mr-1 flex items-center gap-2">
           <span title="Mots">{wordCount.toLocaleString("fr-FR")} mots</span>
           <span className="text-border">·</span>
-          <span title="Signes sans espaces">
-            {editor.getText().replace(/\s/g, "").length.toLocaleString("fr-FR")} S
+          <span title="Signes sans espaces (tous chapitres)">
+            {totalCharsNoSpaces.toLocaleString("fr-FR")} S
           </span>
           <span className="text-border">·</span>
-          <span title="Signes espaces compris">
-            {editor.storage.characterCount.characters().toLocaleString("fr-FR")} SEC
+          <span title="Signes espaces compris (tous chapitres)">
+            {totalChars.toLocaleString("fr-FR")} SEC
           </span>
         </span>
         {!hidePanelToggles && (

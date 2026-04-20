@@ -50,6 +50,10 @@ function countWords(text: string): number {
   return trimmed.split(/\s+/).length;
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+}
+
 export function NovelEditor({
   novelId,
   projectId,
@@ -389,6 +393,14 @@ export function NovelEditor({
   }, [rightWidth]);
 
   const totalWords = localChapters.reduce((sum, c) => sum + c.word_count, 0);
+  const totalChars = localChapters.reduce((sum, c) => {
+    const text = stripHtml(c.content);
+    return sum + text.length;
+  }, 0);
+  const totalCharsNoSpaces = localChapters.reduce((sum, c) => {
+    const text = stripHtml(c.content);
+    return sum + text.replace(/\s/g, "").length;
+  }, 0);
 
   const editorText = editor ? editor.getText() : "";
   const paragraphCount = editorText
@@ -483,6 +495,8 @@ export function NovelEditor({
       <Toolbar
         editor={editor}
         wordCount={totalWords}
+        totalChars={totalChars}
+        totalCharsNoSpaces={totalCharsNoSpaces}
         onToggleLeft={() => setShowLeftPanel(!showLeftPanel)}
         onToggleRight={() => setShowRightPanel(!showRightPanel)}
         hidePanelToggles={focusMode}

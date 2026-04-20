@@ -11,7 +11,7 @@ export default async function ProjectPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, genre, created_at, novels(id, title, current_words, word_goal)")
+    .select("id, title, genre, created_at, cover_image_url, novels(id, title, current_words, word_goal, is_active, words_per_session, sessions_per_week, chapters(id))")
     .eq("id", projectId)
     .single();
 
@@ -30,7 +30,11 @@ export default async function ProjectPage({
         title: project.title,
         genre: project.genre,
         created_at: project.created_at,
-        novels: project.novels ?? [],
+        cover_image_url: project.cover_image_url ?? null,
+        novels: (project.novels ?? []).map((n) => ({
+          ...n,
+          chapter_count: Array.isArray(n.chapters) ? n.chapters.length : 0,
+        })),
       }}
     />
   );
