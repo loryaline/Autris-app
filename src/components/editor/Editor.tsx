@@ -390,9 +390,14 @@ export function NovelEditor({
 
   const totalWords = localChapters.reduce((sum, c) => sum + c.word_count, 0);
 
-  const paragraphCount = editor
-    ? editor.getText().split(/\n\n+/).filter((p) => p.trim()).length
+  const editorText = editor ? editor.getText() : "";
+  const paragraphCount = editorText
+    ? editorText.split(/\n\n+/).filter((p) => p.trim()).length
     : 0;
+  const charCount = editor
+    ? editor.storage.characterCount.characters()
+    : 0;
+  const charCountNoSpaces = editorText.replace(/\s/g, "").length;
 
   const canNavigateHome = syncStatus === "saved";
 
@@ -564,6 +569,8 @@ export function NovelEditor({
               <ContextPanel
                 wordCount={activeChapter?.word_count ?? 0}
                 paragraphCount={paragraphCount}
+                charCount={charCount}
+                charCountNoSpaces={charCountNoSpaces}
                 chapterTitle={activeChapter?.title ?? "—"}
                 chapterStatus={activeChapter?.status ?? "a_ecrire"}
                 chapterId={activeChapterId}

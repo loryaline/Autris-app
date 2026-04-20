@@ -107,8 +107,16 @@ export function Toolbar({
       </ToolbarButton>
 
       <div className="ml-auto flex items-center gap-1.5">
-        <span className="text-[12px] text-text-tertiary mr-1">
-          {wordCount.toLocaleString("fr-FR")} mots
+        <span className="text-[12px] text-text-tertiary mr-1 flex items-center gap-2">
+          <span title="Mots">{wordCount.toLocaleString("fr-FR")} mots</span>
+          <span className="text-border">·</span>
+          <span title="Signes sans espaces">
+            {editor.getText().replace(/\s/g, "").length.toLocaleString("fr-FR")} S
+          </span>
+          <span className="text-border">·</span>
+          <span title="Signes espaces compris">
+            {editor.storage.characterCount.characters().toLocaleString("fr-FR")} SEC
+          </span>
         </span>
         {!hidePanelToggles && (
           <>

@@ -70,6 +70,8 @@ type TabKey = "info" | "scenes" | "world" | "versions";
 export function ContextPanel({
   wordCount,
   paragraphCount,
+  charCount,
+  charCountNoSpaces,
   chapterTitle,
   chapterStatus,
   chapterId,
@@ -81,6 +83,8 @@ export function ContextPanel({
 }: {
   wordCount: number;
   paragraphCount: number;
+  charCount: number;
+  charCountNoSpaces: number;
   chapterTitle: string;
   chapterStatus: string;
   chapterId: string | null;
@@ -339,6 +343,8 @@ export function ContextPanel({
               <div className="text-[11px] font-medium text-text-tertiary mb-1">STATS</div>
               <div className="text-[12px] text-text-secondary leading-relaxed">
                 <div>{wordCount.toLocaleString("fr-FR")} mots</div>
+                <div>{charCountNoSpaces.toLocaleString("fr-FR")} S</div>
+                <div>{charCount.toLocaleString("fr-FR")} SEC</div>
                 <div>{paragraphCount} §</div>
                 <div>{readingTime} min lecture</div>
                 <div>{speakingTime} min voix haute</div>
