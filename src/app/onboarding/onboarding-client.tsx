@@ -14,14 +14,6 @@ const PERSONAS: { value: Persona; label: string; desc: string }[] = [
   { value: "avance", label: "Autonome", desc: "Je sais ce que je fais, allons-y" },
 ];
 
-const TEMPLATES: { value: string; label: string; desc: string }[] = [
-  { value: "libre", label: "Libre", desc: "Pas de structure imposee" },
-  { value: "3actes", label: "3 actes", desc: "Setup, confrontation, resolution" },
-  { value: "snowflake", label: "Snowflake", desc: "Du resume au manuscrit" },
-  { value: "savethecat", label: "Save the Cat", desc: "15 beats narratifs" },
-  { value: "heroe", label: "Voyage du heros", desc: "Le parcours initiatique" },
-];
-
 const FREQUENCIES = [
   { value: "daily", label: "Tous les jours" },
   { value: "weekdays", label: "En semaine" },
@@ -31,8 +23,8 @@ const FREQUENCIES = [
 
 const POMO_DURATIONS = [15, 20, 25, 30, 45, 60];
 
-type Step = "accueil" | "persona" | "projet" | "template" | "objectifs" | "final";
-const STEPS: Step[] = ["accueil", "persona", "projet", "template", "objectifs", "final"];
+type Step = "accueil" | "persona" | "projet" | "objectifs" | "final";
+const STEPS: Step[] = ["accueil", "persona", "projet", "objectifs", "final"];
 
 export function OnboardingClient() {
   const router = useRouter();
@@ -43,7 +35,6 @@ export function OnboardingClient() {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [projectTitle, setProjectTitle] = useState("");
   const [genre, setGenre] = useState<Genre>("contemporain");
-  const [template, setTemplate] = useState("libre");
   const [wordGoalPerSession, setWordGoalPerSession] = useState("500");
   const [frequency, setFrequency] = useState("flexible");
   const [pomoDuration, setPomoDuration] = useState(25);
@@ -68,51 +59,73 @@ export function OnboardingClient() {
     router.push("/");
   }
 
-  async function finishOnboarding(destination: string) {
+  const [createdIds, setCreatedIds] = useState<{ projectId: string; novelId: string } | null>(null);
+
+  async function createProjectAndGoFinal() {
     setSaving(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setSaving(false); return; }
 
-    // Update profile
+    // Update profile (persona + pomo_duration + onboarding_done stays false until final choice)
     await supabase
       .from("profiles")
-      .update({ onboarding_done: true, persona: persona ?? "debutant" })
+      .update({ persona: persona ?? "debutant", pomo_duration: pomoDuration })
       .eq("id", user.id);
 
-    // Create project + novel + first chapter
+    // Create project
     const { data: project } = await supabase
       .from("projects")
       .insert({ user_id: user.id, title: projectTitle.trim() || "Mon projet", genre })
       .select("id")
       .single();
 
-    if (project) {
-      const { data: novel } = await supabase
-        .from("novels")
-        .insert({
-          project_id: project.id,
-          user_id: user.id,
-          title: "Mon roman",
-          ui_theme: "blanc",
-          word_goal: parseInt(wordGoalPerSession) * 120 || 60000,
-        })
-        .select("id")
-        .single();
+    if (!project) { setSaving(false); return; }
 
-      if (novel) {
-        await supabase
-          .from("chapters")
-          .insert({ novel_id: novel.id, user_id: user.id, title: "Chapitre 1", position: 0 });
+    const { data: novel } = await supabase
+      .from("novels")
+      .insert({
+        project_id: project.id,
+        user_id: user.id,
+        title: "Mon roman",
+        ui_theme: "blanc",
+        word_goal: parseInt(wordGoalPerSession) * 120 || 60000,
+        is_active: true,
+      })
+      .select("id")
+      .single();
 
-        if (destination === "editor") {
-          router.push(`/editor/${novel.id}`);
-          return;
-        }
-      }
+    if (novel) {
+      await supabase
+        .from("chapters")
+        .insert({ novel_id: novel.id, user_id: user.id, title: "Chapitre 1", position: 0 });
+      setCreatedIds({ projectId: project.id, novelId: novel.id });
     }
 
-    router.push(destination === "planning" ? "/" : "/");
+    setSaving(false);
+    setStep("final");
+  }
+
+  async function finishOnboarding(destination: "editor" | "characters" | "planning") {
+    setSaving(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Mark onboarding done + award "Première ligne" via autarie_showcase
+    await supabase
+      .from("profiles")
+      .update({
+        onboarding_done: true,
+        autarie_showcase: ["premiere_ligne"],
+      })
+      .eq("id", user.id);
+
+    if (!createdIds) { router.push("/"); return; }
+
+    if (destination === "editor") router.push(`/editor/${createdIds.novelId}`);
+    else if (destination === "characters") router.push(`/wb/${createdIds.projectId}`);
+    else router.push(`/planning/${createdIds.novelId}`);
   }
 
   // Calculate estimated time
@@ -306,52 +319,6 @@ export function OnboardingClient() {
           </div>
         )}
 
-        {/* ===== STEP: TEMPLATE ===== */}
-        {step === "template" && (
-          <div>
-            <h2 className="text-[20px] font-bold text-text-primary mb-1">
-              Structure narrative
-            </h2>
-            <p className="text-[13px] text-text-tertiary mb-6">
-              Choisissez un modele pour organiser vos chapitres. Modifiable a tout moment.
-            </p>
-
-            <div className="flex flex-col gap-2 mb-8">
-              {TEMPLATES.map((t) => (
-                <button
-                  key={t.value}
-                  onClick={() => setTemplate(t.value)}
-                  className={`text-left px-4 py-3 rounded-[var(--radius-md)] border cursor-pointer transition-colors ${
-                    template === t.value
-                      ? "bg-primary-bg border-primary-border"
-                      : "bg-bg-secondary border-border hover:bg-bg-hover"
-                  }`}
-                >
-                  <div className={`text-[14px] font-medium ${template === t.value ? "text-primary" : "text-text-primary"}`}>
-                    {t.label}
-                  </div>
-                  <div className="text-[12px] text-text-tertiary mt-0.5">{t.desc}</div>
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={prev}
-                className="h-10 px-4 text-[13px] text-text-tertiary border border-border rounded-[var(--radius-md)] cursor-pointer bg-transparent hover:bg-bg-hover transition-colors"
-              >
-                Retour
-              </button>
-              <button
-                onClick={next}
-                className="flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors bg-primary text-white hover:bg-primary-dark"
-              >
-                Continuer
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* ===== STEP: OBJECTIFS ===== */}
         {step === "objectifs" && (
           <div>
@@ -436,10 +403,11 @@ export function OnboardingClient() {
                 Retour
               </button>
               <button
-                onClick={next}
-                className="flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors bg-primary text-white hover:bg-primary-dark"
+                onClick={createProjectAndGoFinal}
+                disabled={saving}
+                className="flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors bg-primary text-white hover:bg-primary-dark disabled:opacity-60"
               >
-                Terminer
+                {saving ? "Création…" : "Terminer"}
               </button>
             </div>
           </div>
@@ -459,27 +427,33 @@ export function OnboardingClient() {
               Autarie est impatiente de vous accompagner. Par ou commencez-vous ?
             </p>
 
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => finishOnboarding("editor")}
                 disabled={saving}
-                className="w-full h-12 bg-primary text-white rounded-[var(--radius-md)] text-[15px] font-medium cursor-pointer hover:bg-primary-dark transition-colors border-none"
+                className="flex flex-col items-center gap-2 p-4 bg-primary-bg border border-primary-border rounded-[var(--radius-md)] cursor-pointer hover:bg-primary/10 transition-colors disabled:opacity-60"
               >
-                Ecrire mon premier chapitre
+                <span className="text-[28px]">✎</span>
+                <span className="text-[13px] font-medium text-primary">Écrire</span>
+                <span className="text-[11px] text-text-tertiary leading-tight">Démarrer le chapitre 1</span>
+              </button>
+              <button
+                onClick={() => finishOnboarding("characters")}
+                disabled={saving}
+                className="flex flex-col items-center gap-2 p-4 bg-bg-secondary border border-border rounded-[var(--radius-md)] cursor-pointer hover:bg-bg-hover transition-colors disabled:opacity-60"
+              >
+                <span className="text-[28px]">◐</span>
+                <span className="text-[13px] font-medium text-teal">Personnages</span>
+                <span className="text-[11px] text-text-tertiary leading-tight">Bâtir votre univers</span>
               </button>
               <button
                 onClick={() => finishOnboarding("planning")}
                 disabled={saving}
-                className="w-full h-11 bg-bg-secondary text-text-primary rounded-[var(--radius-md)] text-[14px] font-medium cursor-pointer hover:bg-bg-hover transition-colors border border-border"
+                className="flex flex-col items-center gap-2 p-4 bg-bg-secondary border border-border rounded-[var(--radius-md)] cursor-pointer hover:bg-bg-hover transition-colors disabled:opacity-60"
               >
-                Planifier mon roman
-              </button>
-              <button
-                onClick={() => finishOnboarding("dashboard")}
-                disabled={saving}
-                className="w-full h-11 bg-transparent text-text-tertiary rounded-[var(--radius-md)] text-[14px] cursor-pointer hover:text-text-secondary transition-colors border-none"
-              >
-                Explorer le tableau de bord
+                <span className="text-[28px]">▦</span>
+                <span className="text-[13px] font-medium text-amber">Planifier</span>
+                <span className="text-[11px] text-text-tertiary leading-tight">Poser la structure</span>
               </button>
             </div>
           </div>

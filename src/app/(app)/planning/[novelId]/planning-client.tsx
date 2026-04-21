@@ -51,6 +51,7 @@ interface Milestone {
   type: string;
   status: string;
   color: string | null;
+  target_date?: string | null;
 }
 
 export function PlanningClient({
@@ -87,6 +88,7 @@ export function PlanningClient({
         activeView={activeView}
         onViewChange={setActiveView}
         milestones={milestones}
+        novelId={novelId}
       />
 
       {/* Main content */}

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { DashboardClient } from "./dashboard-client";
+import { AutarieWBNudge } from "@/components/home/AutarieWBNudge";
 
 const DEFAULT_DAILY_GOAL = 500;
 
@@ -41,6 +42,48 @@ export default async function DashboardPage() {
           .in("chapter_id", activeChapterIds)
           .order("created_at", { ascending: true })
       : { data: [] as { chapter_id: string; word_count: number; created_at: string }[] };
+
+  // ---- Lecture de daily_activity (agrégats pré-calculés par triggers) ----
+  // Couvre WB (teal) et planif (ambre) pour le mois courant.
+  // La rédaction reste calculée à partir de chapter_versions (scope roman actif),
+  // pour éviter que des imports dans d'autres romans polluent le calendrier.
+  const nowForQuery = new Date();
+  const monthStartIso = new Date(nowForQuery.getFullYear(), nowForQuery.getMonth(), 1)
+    .toISOString().slice(0, 10);
+  const monthEndIso = new Date(nowForQuery.getFullYear(), nowForQuery.getMonth() + 1, 0)
+    .toISOString().slice(0, 10);
+
+  const { data: activityRows } = await supabase
+    .from("daily_activity")
+    .select("date, wb_activity, wb_count, plan_activity, plan_count")
+    .eq("user_id", user.id)
+    .gte("date", monthStartIso)
+    .lte("date", monthEndIso);
+
+  // Pour le nudge WB : dernière date connue avec wb_activity = true.
+  const { data: lastWbRow } = await supabase
+    .from("daily_activity")
+    .select("date")
+    .eq("user_id", user.id)
+    .eq("wb_activity", true)
+    .order("date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const activityByDate = new Map<string, {
+    wb_count: number;
+    plan_count: number;
+    wb_activity: boolean;
+    plan_activity: boolean;
+  }>();
+  for (const r of activityRows ?? []) {
+    activityByDate.set(r.date, {
+      wb_count: r.wb_count ?? 0,
+      plan_count: r.plan_count ?? 0,
+      wb_activity: !!r.wb_activity,
+      plan_activity: !!r.plan_activity,
+    });
+  }
 
   // Pre-group versions by chapter for efficiency
   const versionsByChapter = new Map<string, { wc: number; ts: number }[]>();
@@ -92,18 +135,44 @@ export default async function DashboardPage() {
   const firstDayOfWeek = new Date(year, month, 1).getDay();
   const startOffset = (firstDayOfWeek + 6) % 7;
 
+  function isoDate(y: number, m: number, d: number): string {
+    const mm = String(m + 1).padStart(2, "0");
+    const dd = String(d).padStart(2, "0");
+    return `${y}-${mm}-${dd}`;
+  }
+
   const monthActivity = Array.from({ length: daysInMonth }, (_, i) => {
     const dayNum = i + 1;
     const dayStart = new Date(year, month, dayNum).getTime();
     const words = wordsOnDay(dayStart);
+    const row = activityByDate.get(isoDate(year, month, dayNum));
+    const wbCount = row?.wb_count ?? 0;
+    const planCount = row?.plan_count ?? 0;
+    // Intensités 0..1 (4 paliers visuels appliqués au rendu via opacité)
+    const redactionIntensity = Math.min(1, words / Math.max(DAILY_GOAL, 1));
+    const wbIntensity = Math.min(1, wbCount / 3);
+    const planIntensity = Math.min(1, planCount / 3);
     return {
       day: dayNum,
       words,
-      ratio: Math.min(words / DAILY_GOAL, 1),
+      wbCount,
+      planCount,
+      ratio: redactionIntensity,
+      wbIntensity,
+      planIntensity,
       isFuture: dayNum > todayNum,
       isToday: dayNum === todayNum,
     };
   });
+
+  // Encouragement WB — jours depuis dernière activité WB (via daily_activity)
+  const lastWbDate = lastWbRow?.date ? new Date(lastWbRow.date).getTime() : 0;
+  const daysSinceWB =
+    lastWbDate > 0 ? Math.floor((Date.now() - lastWbDate) / 86_400_000) : Infinity;
+  const recentRedaction = monthActivity
+    .slice(Math.max(0, todayNum - 7), todayNum)
+    .some((d) => d.words > 0);
+  const showWBNudge = recentRedaction && daysSinceWB > 7;
 
   // Streak : jours consécutifs depuis aujourd'hui avec au moins 1 mot
   let streak = 0;
@@ -155,6 +224,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-3 max-w-[960px]">
+      {/* Nudge WB Autarie (max 1x/semaine, fermable) */}
+      {showWBNudge && <AutarieWBNudge daysSinceWB={daysSinceWB} />}
+
       {/* Welcome card */}
       <Card highlight className="p-2.5 mb-3 flex items-center gap-2.5">
         <span className="text-[16px]">🦭</span>
@@ -295,39 +367,80 @@ export default async function DashboardPage() {
           </div>
         )}
 
+        {/* Légende multi-couleurs */}
+        <div className="flex items-center gap-3 mb-1.5 text-[9px] text-text-quaternary">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-[2px]" style={{ background: "#7F77DD" }} />
+            Rédaction
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-[2px]" style={{ background: "#5DCAA5" }} />
+            World building
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-[2px]" style={{ background: "#EF9F27" }} />
+            Planification
+          </span>
+        </div>
+
         {/* Calendar grid */}
         <div className="grid grid-cols-7 gap-[3px]">
           {/* Empty cells before the 1st */}
           {Array.from({ length: startOffset }, (_, i) => (
             <div key={`empty-${i}`} />
           ))}
-          {monthActivity.map((d) => (
-            <div
-              key={d.day}
-              title={d.isFuture ? "" : `${d.day} — ${d.words.toLocaleString("fr-FR")} mots`}
-              className={`relative h-[18px] rounded-[3px] flex items-center justify-center ${
-                d.isFuture
-                  ? "bg-bg-tertiary"
-                  : d.isToday
-                    ? "ring-1 ring-primary bg-bg-hover"
-                    : "bg-bg-hover"
-              }`}
-            >
-              {!d.isFuture && d.ratio > 0 && (
-                <div
-                  className="absolute inset-0 rounded-[3px] bg-primary"
-                  style={{ opacity: 0.15 + d.ratio * 0.85 }}
-                />
-              )}
-              <span
-                className={`relative text-[9px] z-10 ${
-                  d.isToday ? "font-bold text-primary" : "text-text-quaternary"
+          {monthActivity.map((d) => {
+            const bands = [
+              d.ratio > 0 && { color: "#7F77DD", op: 0.15 + d.ratio * 0.85, label: "rédaction" },
+              d.wbIntensity > 0 && { color: "#5DCAA5", op: 0.15 + d.wbIntensity * 0.85, label: "world building" },
+              d.planIntensity > 0 && { color: "#EF9F27", op: 0.15 + d.planIntensity * 0.85, label: "planification" },
+            ].filter(Boolean) as { color: string; op: number; label: string }[];
+
+            const tooltip = d.isFuture
+              ? ""
+              : [
+                  `${d.day}`,
+                  d.words > 0 ? `✎ ${d.words.toLocaleString("fr-FR")} mots` : null,
+                  d.wbCount > 0 ? `◐ ${d.wbCount} fiche${d.wbCount > 1 ? "s" : ""} WB` : null,
+                  d.planCount > 0 ? `▦ ${d.planCount} élément${d.planCount > 1 ? "s" : ""} planif` : null,
+                ].filter(Boolean).join(" · ");
+
+            return (
+              <div
+                key={d.day}
+                title={tooltip}
+                className={`relative h-[18px] rounded-[3px] flex items-center justify-center overflow-hidden ${
+                  d.isFuture
+                    ? "bg-bg-tertiary"
+                    : d.isToday
+                      ? "ring-1 ring-primary bg-bg-hover"
+                      : "bg-bg-hover"
                 }`}
               >
-                {d.day}
-              </span>
-            </div>
-          ))}
+                {/* Bandes horizontales : 1/2/3 couleurs empilées */}
+                {!d.isFuture &&
+                  bands.map((b, idx) => (
+                    <div
+                      key={b.label}
+                      className="absolute left-0 right-0 rounded-[2px]"
+                      style={{
+                        top: `${(idx * 100) / bands.length}%`,
+                        height: `${100 / bands.length}%`,
+                        background: b.color,
+                        opacity: b.op,
+                      }}
+                    />
+                  ))}
+                <span
+                  className={`relative text-[9px] z-10 ${
+                    d.isToday ? "font-bold text-primary" : "text-text-quaternary"
+                  }`}
+                >
+                  {d.day}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </Card>
 
