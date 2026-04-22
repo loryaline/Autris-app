@@ -3,9 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { GENRES } from "@/lib/constants";
 import type { Genre, NovelStatus } from "@/types/database";
 import {
@@ -29,7 +26,16 @@ interface ProjectWithNovels {
   }[];
 }
 
-export function DashboardClient({ projects }: { projects: ProjectWithNovels[] }) {
+export function DashboardClient({
+  projects,
+  lastProjectTitle: _lastProjectTitle,
+}: {
+  projects: ProjectWithNovels[];
+  lastProjectTitle?: string | null;
+}) {
+  // Prefix unused var with _ to silence lint while keeping the API stable
+  void _lastProjectTitle;
+
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [projectTitle, setProjectTitle] = useState("");
@@ -64,7 +70,6 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Create project
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .insert({ user_id: user.id, title: projectTitle.trim(), genre })
@@ -77,7 +82,6 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
       return;
     }
 
-    // Create novel
     const { data: novel, error: novelError } = await supabase
       .from("novels")
       .insert({
@@ -95,7 +99,6 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
       return;
     }
 
-    // Create first chapter
     await supabase
       .from("chapters")
       .insert({
@@ -115,192 +118,220 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
 
   return (
     <>
-      {/* Projects list */}
+      {/* Header : Vos univers + Nouveau projet */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[18px] text-text-primary">
+          Vos <span className="font-serif italic text-[var(--color-accent)]">univers</span>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-[var(--color-accent-border)] text-[var(--color-accent)] text-[12px] hover:bg-[var(--color-accent-bg)] transition-colors cursor-pointer"
+        >
+          + Nouveau projet
+        </button>
+      </div>
+
       {projects.length > 0 ? (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-[13px] font-medium text-text-primary">
-              Mes projets
-            </div>
-            <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
-              + Nouveau projet
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {projects.map((project) => {
-              const genreInfo = GENRES.find((g) => g.value === project.genre);
-              const totalWords = project.novels.reduce((s, n) => s + n.current_words, 0);
-              const totalGoal = project.novels.reduce((s, n) => s + (n.word_goal ?? 0), 0);
-              const hasGoal = totalGoal > 0;
-              const progress = hasGoal ? Math.min((totalWords / totalGoal) * 100, 100) : 0;
+        <div className="flex flex-col gap-3">
+          {projects.map((project) => {
+            const genreInfo = GENRES.find((g) => g.value === project.genre);
+            const totalWords = project.novels.reduce((s, n) => s + n.current_words, 0);
+            const activeNovel =
+              project.novels.find((n) => n.is_active) ??
+              project.novels.find((n) => n.word_goal) ??
+              project.novels[0];
+            const activeGoal = activeNovel?.word_goal ?? 0;
+            const activeWords = activeNovel?.current_words ?? 0;
+            const activeProgress =
+              activeGoal > 0 ? Math.min((activeWords / activeGoal) * 100, 100) : 0;
 
-              // Roman actif de ce projet (is_active), sinon premier avec objectif
-              const activeNovel =
-                project.novels.find((n) => n.is_active) ??
-                project.novels.find((n) => n.word_goal) ??
-                project.novels[0];
-              const activeGoal = activeNovel?.word_goal ?? 0;
-              const activeWords = activeNovel?.current_words ?? 0;
-              const activeProgress = activeGoal > 0 ? Math.min((activeWords / activeGoal) * 100, 100) : 0;
-
-              const settingsSvg = (
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 9a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" strokeWidth="1.2"/>
-                  <path d="M11.4 8.6a1 1 0 00.2 1.1l.04.04a1.2 1.2 0 11-1.7 1.7l-.04-.04a1 1 0 00-1.1-.2 1 1 0 00-.6.92v.11a1.2 1.2 0 11-2.4 0v-.06a1 1 0 00-.66-.92 1 1 0 00-1.1.2l-.04.04a1.2 1.2 0 11-1.7-1.7l.04-.04a1 1 0 00.2-1.1 1 1 0 00-.92-.6h-.11a1.2 1.2 0 110-2.4h.06a1 1 0 00.92-.66 1 1 0 00-.2-1.1l-.04-.04a1.2 1.2 0 111.7-1.7l.04.04a1 1 0 001.1.2h.05a1 1 0 00.6-.92v-.11a1.2 1.2 0 112.4 0v.06a1 1 0 00.6.92 1 1 0 001.1-.2l.04-.04a1.2 1.2 0 111.7 1.7l-.04.04a1 1 0 00-.2 1.1v.05a1 1 0 00.92.6h.11a1.2 1.2 0 110 2.4h-.06a1 1 0 00-.92.6z" stroke="currentColor" strokeWidth="1.2"/>
-                </svg>
-              );
-
-              return (
-                <Card key={project.id} className="overflow-hidden p-0">
-                  {/* Cover image or plain header */}
-                  {project.cover_image_url ? (
+            return (
+              <div
+                key={project.id}
+                className="relative overflow-hidden rounded-[var(--radius-xl)] border border-white/[0.06]"
+              >
+                {/* Hero / cover */}
+                <div
+                  className={`relative h-[110px] univers-glow flex items-end ${
+                    project.cover_image_url ? "" : ""
+                  }`}
+                  style={
+                    project.cover_image_url
+                      ? {
+                          backgroundImage: `linear-gradient(180deg, rgba(26,26,43,0.15) 0%, rgba(26,26,43,0.85) 100%), url(${project.cover_image_url})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }
+                      : undefined
+                  }
+                >
+                  {/* Moon */}
+                  {!project.cover_image_url && (
                     <div
-                      className="relative h-[90px] w-full bg-cover bg-center"
-                      style={{ backgroundImage: `url(${project.cover_image_url})` }}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-2.5 flex items-end justify-between">
-                        <div>
-                          <div className="text-[14px] font-semibold text-white leading-tight drop-shadow">
-                            {project.title}
-                          </div>
-                          <div className="text-[11px] text-white/70 mt-0.5">
-                            {genreInfo?.emoji} {genreInfo?.label}
-                          </div>
+                      className="absolute top-5 right-6 w-12 h-12 rounded-full"
+                      style={{
+                        background:
+                          "radial-gradient(circle at 35% 35%, #d9a57c 0%, #a86a44 60%, #5a3322 100%)",
+                        boxShadow: "0 0 40px rgba(228,180,140,0.25)",
+                      }}
+                    />
+                  )}
+                  <div className="relative p-4 w-full">
+                    <div className="flex items-end justify-between">
+                      <div className="font-serif italic text-[22px] text-text-primary leading-tight">
+                        {project.title}
+                      </div>
+                      <div className="text-right">
+                        <div className="font-serif text-[22px] text-text-primary leading-none">
+                          {formatCompact(totalWords)}
                         </div>
-                        <a href={`/project/${project.id}`} title="Paramètres" className="text-white/60 hover:text-white transition-colors shrink-0">
-                          {settingsSvg}
-                        </a>
+                        <div className="text-[9.5px] text-text-quaternary uppercase mt-0.5" style={{ letterSpacing: "0.14em" }}>
+                          mots au total
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] text-[var(--color-accent)] uppercase" style={{ letterSpacing: "0.16em" }}>
+                        ◆ {genreInfo?.label}
+                      </span>
+                      <span className="text-[10px] text-text-quaternary uppercase" style={{ letterSpacing: "0.16em" }}>
+                        · {project.novels.length} roman{project.novels.length > 1 ? "s" : ""}
+                      </span>
+                      <div className="flex-1" />
+                      <a
+                        href={`/project/${project.id}`}
+                        title="Paramètres"
+                        className="text-text-quaternary hover:text-[var(--color-accent)] transition-colors"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                          <path d="M7 9a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" strokeWidth="1.2"/>
+                          <path d="M11.4 8.6a1 1 0 00.2 1.1l.04.04a1.2 1.2 0 11-1.7 1.7l-.04-.04a1 1 0 00-1.1-.2 1 1 0 00-.6.92v.11a1.2 1.2 0 11-2.4 0v-.06a1 1 0 00-.66-.92 1 1 0 00-1.1.2l-.04.04a1.2 1.2 0 11-1.7-1.7l.04-.04a1 1 0 00.2-1.1 1 1 0 00-.92-.6h-.11a1.2 1.2 0 110-2.4h.06a1 1 0 00.92-.66 1 1 0 00-.2-1.1l-.04-.04a1.2 1.2 0 111.7-1.7l.04.04a1 1 0 001.1.2h.05a1 1 0 00.6-.92v-.11a1.2 1.2 0 112.4 0v.06a1 1 0 00.6.92 1 1 0 001.1-.2l.04-.04a1.2 1.2 0 111.7 1.7l-.04.04a1 1 0 00-.2 1.1v.05a1 1 0 00.92.6h.11a1.2 1.2 0 110 2.4h-.06a1 1 0 00-.92.6z" stroke="currentColor" strokeWidth="1.2"/>
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active novel progress strip */}
+                {activeNovel && activeGoal > 0 && (
+                  <div className="px-4 py-2.5 border-t border-white/[0.04] bg-white/[0.015]">
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="text-text-tertiary truncate mr-2">
+                        {activeNovel.title} · <span className="text-text-quaternary">en cours</span>
+                      </span>
+                      <span className="text-text-secondary shrink-0">
+                        {activeWords.toLocaleString("fr-FR")} / {activeGoal.toLocaleString("fr-FR")} ·{" "}
+                        <span className="text-[var(--color-accent)] font-medium">{Math.round(activeProgress)} %</span>
+                      </span>
+                    </div>
+                    <div className="h-[2px] rounded-full bg-white/[0.05] overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--color-accent)] rounded-full"
+                        style={{ width: `${activeProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Novels list */}
+                <div className="px-2 py-2 bg-white/[0.01]">
+                  {project.novels.length > 0 ? (
+                    <div className="flex flex-col">
+                      {project.novels.map((novel) => {
+                        const status: NovelStatus = novel.status ?? "a_ecrire";
+                        const statusInfo = NOVEL_STATUS_LABELS[status];
+                        return (
+                          <div
+                            key={novel.id}
+                            className="group flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] hover:bg-white/[0.03] transition-colors"
+                          >
+                            <span className="text-[13px] text-text-quaternary">
+                              {novel.is_active ? "✦" : "›"}
+                            </span>
+                            <a
+                              href={`/editor/${novel.id}`}
+                              className="flex-1 min-w-0 text-[12.5px] text-text-secondary hover:text-text-primary truncate no-underline"
+                            >
+                              {novel.title}
+                            </a>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleCycleNovelStatus(novel.id, status);
+                              }}
+                              title={`Statut : ${statusInfo.label} (clic pour changer)`}
+                              className={`text-[10px] px-2 py-0.5 rounded-full cursor-pointer transition-opacity hover:opacity-80 ${statusInfo.color}`}
+                            >
+                              {statusInfo.label}
+                            </button>
+                            <span className="text-[11px] text-text-tertiary tabular-nums w-[82px] text-right">
+                              {novel.current_words.toLocaleString("fr-FR")} mots
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="px-2 py-1 text-[12px] text-text-quaternary italic">Aucun roman</div>
+                  )}
+
+                  {/* Supprimer */}
+                  {deletingId === project.id ? (
+                    <div className="mt-1.5 px-2 pt-2 border-t border-white/[0.05]">
+                      <div className="text-[11px] text-red mb-1.5">Supprimer ce projet et tous ses romans ?</div>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => handleDeleteProject(project.id)} className="text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] bg-red text-white cursor-pointer hover:bg-red/90 transition-colors">
+                          Supprimer
+                        </button>
+                        <button onClick={() => setDeletingId(null)} className="text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] text-text-tertiary hover:text-text-primary cursor-pointer transition-colors">
+                          Annuler
+                        </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 p-3 pb-1.5">
-                      <span className="text-[16px]">{genreInfo?.emoji}</span>
-                      <div className="text-[14px] font-medium text-text-primary flex-1">{project.title}</div>
-                      <a href={`/project/${project.id}`} title="Paramètres" className="text-text-quaternary hover:text-primary transition-colors">
-                        {settingsSvg}
-                      </a>
-                    </div>
+                    <button
+                      onClick={() => setDeletingId(project.id)}
+                      className="mt-1 px-2 text-[10.5px] text-text-quaternary hover:text-red cursor-pointer transition-colors"
+                    >
+                      Supprimer
+                    </button>
                   )}
-
-                  <div className="p-3 pt-2">
-                    {!project.cover_image_url && (
-                      <Badge variant="primary" className="mb-2">{genreInfo?.label}</Badge>
-                    )}
-
-                    {/* Barre de progression du roman actif */}
-                    {activeGoal > 0 && (
-                      <div className="mb-2">
-                        <div className="flex items-center justify-between text-[11px] mb-0.5">
-                          <span className="text-text-tertiary truncate mr-1">{activeNovel?.title}</span>
-                          <span className="text-primary font-medium shrink-0">
-                            {activeWords.toLocaleString("fr-FR")} / {activeGoal.toLocaleString("fr-FR")} · {Math.round(activeProgress)}%
-                          </span>
-                        </div>
-                        <div className="h-1.5 bg-bg-hover rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all duration-300"
-                            style={{ width: `${activeProgress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Liste des romans */}
-                    {project.novels.length > 0 ? (
-                      <div className="flex flex-col gap-1">
-                        {project.novels.map((novel) => {
-                          const status: NovelStatus = novel.status ?? "a_ecrire";
-                          const statusInfo = NOVEL_STATUS_LABELS[status];
-                          return (
-                            <div
-                              key={novel.id}
-                              className="flex items-center justify-between p-1.5 rounded-[var(--radius-sm)] hover:bg-bg-hover transition-colors text-[12px] group"
-                            >
-                              <a
-                                href={`/editor/${novel.id}`}
-                                className="text-text-secondary truncate flex items-center gap-1 flex-1 min-w-0"
-                              >
-                                {novel.is_active && (
-                                  <span className="text-primary" title="Roman actif">✦</span>
-                                )}
-                                <span className="truncate">{novel.title}</span>
-                              </a>
-                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleCycleNovelStatus(novel.id, status);
-                                  }}
-                                  title={`Statut : ${statusInfo.label} (clic pour changer)`}
-                                  className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer transition-opacity hover:opacity-80 ${statusInfo.color}`}
-                                >
-                                  {statusInfo.label}
-                                </button>
-                                <span className="text-text-tertiary">
-                                  {novel.current_words.toLocaleString("fr-FR")} mots
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-[12px] text-text-tertiary">Aucun roman</div>
-                    )}
-
-                    {/* Supprimer */}
-                    {deletingId === project.id ? (
-                      <div className="mt-2 pt-2 border-t border-border">
-                        <div className="text-[11px] text-red mb-1.5">Supprimer ce projet et tous ses romans ?</div>
-                        <div className="flex gap-1.5">
-                          <button onClick={() => handleDeleteProject(project.id)} className="text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] bg-red text-white cursor-pointer hover:bg-red/90 transition-colors">
-                            Supprimer
-                          </button>
-                          <button onClick={() => setDeletingId(null)} className="text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] text-text-tertiary hover:text-text-primary cursor-pointer transition-colors">
-                            Annuler
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button onClick={() => setDeletingId(project.id)} className="mt-2 text-[11px] text-text-quaternary hover:text-red cursor-pointer transition-colors">
-                        Supprimer
-                      </button>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <Card className="p-6 text-center">
-          <div className="text-[36px] mb-2">🦭</div>
-          <div className="text-[15px] font-medium text-text-primary mb-1">
+        <div className="rounded-[var(--radius-xl)] border border-white/[0.06] bg-bg-tertiary/40 p-6 text-center">
+          <div className="text-[28px] mb-2">🦭</div>
+          <div className="text-[14px] text-text-primary mb-1">
             Aucun projet pour l&apos;instant
           </div>
-          <div className="text-[13px] text-text-tertiary mb-3">
+          <div className="text-[12px] text-text-tertiary mb-3">
             Créez votre premier projet et commencez à écrire votre roman.
           </div>
-          <Button variant="primary" size="md" onClick={() => setShowModal(true)}>
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-[var(--color-accent-border)] text-[var(--color-accent)] text-[12px] hover:bg-[var(--color-accent-bg)] transition-colors cursor-pointer"
+          >
             + Nouveau projet
-          </Button>
-        </Card>
+          </button>
+        </div>
       )}
 
-      {/* Create project modal */}
+      {/* Create project modal (unchanged functionality, restyled shell) */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           />
-          <div className="relative bg-bg-primary border border-border rounded-[var(--radius-lg)] p-5 w-full max-w-[420px] mx-4">
+          <div className="relative bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-xl)] p-5 w-full max-w-[440px] mx-4 shadow-2xl">
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-[20px]">🦭</span>
-              <h2 className="text-[16px] font-medium text-text-primary">
-                Nouveau projet
+              <span className="text-[18px]">🦭</span>
+              <h2 className="text-[16px] text-text-primary">
+                Nouveau <span className="font-serif italic text-[var(--color-accent)]">projet</span>
               </h2>
             </div>
 
@@ -312,7 +343,7 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
 
             <form onSubmit={handleCreate} className="flex flex-col gap-3">
               <div>
-                <label className="block text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-1">
+                <label className="block text-[10px] font-medium text-text-quaternary uppercase mb-1.5" style={{ letterSpacing: "0.16em" }}>
                   Nom du projet (saga / univers)
                 </label>
                 <input
@@ -322,12 +353,12 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
                   placeholder="Ex : Les Chroniques d'Aldara"
                   required
                   autoFocus
-                  className="w-full h-8 px-2.5 text-[14px] border border-border rounded-[var(--radius-sm)] bg-bg-primary text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-primary-border focus:ring-1 focus:ring-primary-border"
+                  className="w-full h-9 px-3 text-[13px] border border-white/[0.08] rounded-[var(--radius-sm)] bg-bg-primary text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-[var(--color-accent-border)]"
                 />
               </div>
 
               <div>
-                <label className="block text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-1">
+                <label className="block text-[10px] font-medium text-text-quaternary uppercase mb-1.5" style={{ letterSpacing: "0.16em" }}>
                   Titre du premier roman
                 </label>
                 <input
@@ -336,12 +367,12 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
                   onChange={(e) => setNovelTitle(e.target.value)}
                   placeholder="Ex : Tome 1 — La Mémoire des Dieux"
                   required
-                  className="w-full h-8 px-2.5 text-[14px] border border-border rounded-[var(--radius-sm)] bg-bg-primary text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-primary-border focus:ring-1 focus:ring-primary-border"
+                  className="w-full h-9 px-3 text-[13px] border border-white/[0.08] rounded-[var(--radius-sm)] bg-bg-primary text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-[var(--color-accent-border)]"
                 />
               </div>
 
               <div>
-                <label className="block text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-1.5">
+                <label className="block text-[10px] font-medium text-text-quaternary uppercase mb-1.5" style={{ letterSpacing: "0.16em" }}>
                   Genre
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
@@ -352,8 +383,8 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
                       onClick={() => setGenre(g.value)}
                       className={`flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-[var(--radius-sm)] border text-[11px] whitespace-nowrap cursor-pointer transition-colors ${
                         genre === g.value
-                          ? "bg-primary-bg border-primary-border text-primary-dark font-medium"
-                          : "bg-bg-primary border-border text-text-secondary hover:bg-bg-hover"
+                          ? "bg-[var(--color-accent-bg)] border-[var(--color-accent-border)] text-[var(--color-accent)]"
+                          : "bg-bg-primary border-white/[0.06] text-text-secondary hover:bg-bg-hover"
                       }`}
                     >
                       <span>{g.emoji}</span>
@@ -363,25 +394,21 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-1">
-                <Button
+              <div className="flex gap-2 mt-2">
+                <button
                   type="button"
-                  variant="ghost"
-                  size="md"
-                  className="flex-1"
+                  className="flex-1 h-9 px-3 rounded-[var(--radius-sm)] border border-white/[0.08] text-[13px] text-text-secondary hover:bg-bg-hover cursor-pointer"
                   onClick={() => setShowModal(false)}
                 >
                   Annuler
-                </Button>
-                <Button
+                </button>
+                <button
                   type="submit"
-                  variant="primary"
-                  size="md"
-                  className="flex-1"
+                  className="flex-1 h-9 px-3 rounded-[var(--radius-sm)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[13px] transition-colors cursor-pointer disabled:opacity-50"
                   disabled={loading || !projectTitle.trim() || !novelTitle.trim()}
                 >
                   {loading ? "Création…" : "Créer le projet"}
-                </Button>
+                </button>
               </div>
             </form>
           </div>
@@ -389,4 +416,10 @@ export function DashboardClient({ projects }: { projects: ProjectWithNovels[] })
       )}
     </>
   );
+}
+
+function formatCompact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 100) / 10}k`;
+  return n.toLocaleString("fr-FR");
 }

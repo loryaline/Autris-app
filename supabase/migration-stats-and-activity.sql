@@ -107,30 +107,39 @@ CREATE TRIGGER trigger_create_user_stats
   EXECUTE FUNCTION public.fn_create_user_stats();
 
 -- ---------------------------------------------------------------------------
--- 5. Trigger daily_activity — RÉDACTION (sur chapter_versions)
+-- 5. Trigger daily_activity — RÉDACTION (sur chapters.word_count, LIVE)
 -- ---------------------------------------------------------------------------
+-- On s'appuie sur les autosaves (UPDATE de chapters) plutôt que sur les
+-- snapshots chapter_versions, qui ne se produisent qu'en changement de
+-- chapitre / snapshot manuel / changement de statut. Chaque delta positif
+-- de word_count est ajouté à daily_activity du jour courant.
 
-CREATE OR REPLACE FUNCTION public.fn_daily_redaction()
+CREATE OR REPLACE FUNCTION public.fn_daily_writing_chapter()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  prev_wc int4;
   delta int4;
+  v_is_active bool;
 BEGIN
-  SELECT word_count INTO prev_wc
-  FROM public.chapter_versions
-  WHERE chapter_id = NEW.chapter_id
-    AND created_at < NEW.created_at
-  ORDER BY created_at DESC
-  LIMIT 1;
+  IF NEW.word_count IS NULL THEN RETURN NEW; END IF;
 
-  delta := GREATEST(0, NEW.word_count - COALESCE(prev_wc, 0));
-  IF delta > 0 THEN
+  -- On ne comptabilise QUE l'écriture du roman actif (sinon les imports
+  -- de romans inactifs polluent la projection quotidienne).
+  SELECT COALESCE(n.is_active, false) INTO v_is_active
+  FROM public.novels n
+  WHERE n.id = NEW.novel_id;
+  IF NOT v_is_active THEN RETURN NEW; END IF;
+
+  -- Delta NET : on autorise les valeurs négatives (suppressions) pour que la
+  -- somme mensuelle corresponde à la croissance nette du roman. L'affichage
+  -- clampe à 0 côté UI pour ne pas montrer de jour "négatif".
+  delta := NEW.word_count - COALESCE(OLD.word_count, 0);
+  IF delta <> 0 THEN
     INSERT INTO public.daily_activity (user_id, date, words_written)
-    VALUES (NEW.user_id, NEW.created_at::date, delta)
+    VALUES (NEW.user_id, now()::date, delta)
     ON CONFLICT (user_id, date) DO UPDATE
       SET words_written = public.daily_activity.words_written + EXCLUDED.words_written,
           updated_at = now();
@@ -139,11 +148,15 @@ BEGIN
 END;
 $$;
 
+-- Retire l'ancien trigger sur chapter_versions (on double-comptait avec le nouveau)
 DROP TRIGGER IF EXISTS trigger_daily_redaction ON public.chapter_versions;
-CREATE TRIGGER trigger_daily_redaction
-  AFTER INSERT ON public.chapter_versions
+
+DROP TRIGGER IF EXISTS trigger_daily_writing_chapter_upd ON public.chapters;
+CREATE TRIGGER trigger_daily_writing_chapter_upd
+  AFTER UPDATE ON public.chapters
   FOR EACH ROW
-  EXECUTE FUNCTION public.fn_daily_redaction();
+  WHEN (NEW.word_count IS DISTINCT FROM OLD.word_count)
+  EXECUTE FUNCTION public.fn_daily_writing_chapter();
 
 -- ---------------------------------------------------------------------------
 -- 6. Trigger daily_activity — WORLD BUILDING (wb_entries)
@@ -258,9 +271,9 @@ BEGIN
 END;
 $$;
 
+-- Pas de trigger INSERT : la seule création d'un chapitre n'est pas une "édition".
+-- Seules les éditions ultérieures (UPDATE de champs ≠ word_count) comptent.
 DROP TRIGGER IF EXISTS trigger_daily_plan_chapter_ins ON public.chapters;
-CREATE TRIGGER trigger_daily_plan_chapter_ins AFTER INSERT ON public.chapters
-  FOR EACH ROW EXECUTE FUNCTION public.fn_daily_plan_chapter();
 
 DROP TRIGGER IF EXISTS trigger_daily_plan_chapter_upd ON public.chapters;
 CREATE TRIGGER trigger_daily_plan_chapter_upd AFTER UPDATE ON public.chapters
@@ -288,9 +301,8 @@ BEGIN
 END;
 $$;
 
+-- Idem : pas de trigger INSERT sur scenes (création ≠ édition).
 DROP TRIGGER IF EXISTS trigger_daily_plan_scene_ins ON public.scenes;
-CREATE TRIGGER trigger_daily_plan_scene_ins AFTER INSERT ON public.scenes
-  FOR EACH ROW EXECUTE FUNCTION public.fn_daily_plan_scene();
 
 DROP TRIGGER IF EXISTS trigger_daily_plan_scene_upd ON public.scenes;
 CREATE TRIGGER trigger_daily_plan_scene_upd AFTER UPDATE ON public.scenes
@@ -304,43 +316,74 @@ CREATE TRIGGER trigger_daily_plan_scene_upd AFTER UPDATE ON public.scenes
 
 TRUNCATE public.daily_activity;
 
--- 8.a — RÉDACTION (deltas de chapter_versions)
+-- 8.a — RÉDACTION (historique : deltas NETS de chapter_versions, ROMAN ACTIF UNIQUEMENT)
+-- Les suppressions comptent négativement pour que la somme mensuelle matche la
+-- croissance nette du roman.
 INSERT INTO public.daily_activity (user_id, date, words_written)
 SELECT user_id, day, SUM(delta)
 FROM (
   SELECT
-    user_id,
-    created_at::date AS day,
-    GREATEST(
-      0,
-      word_count - LAG(word_count, 1, 0) OVER (PARTITION BY chapter_id ORDER BY created_at)
-    ) AS delta
-  FROM public.chapter_versions
+    cv.user_id,
+    cv.created_at::date AS day,
+    (cv.word_count - LAG(cv.word_count, 1, 0) OVER (PARTITION BY cv.chapter_id ORDER BY cv.created_at)) AS delta
+  FROM public.chapter_versions cv
+  JOIN public.chapters c ON c.id = cv.chapter_id
+  JOIN public.novels n ON n.id = c.novel_id
+  WHERE n.is_active = true
 ) sub
 GROUP BY user_id, day
 ON CONFLICT (user_id, date) DO UPDATE
   SET words_written = EXCLUDED.words_written;
 
--- 8.b — WB
+-- 8.a bis — CATCH-UP : delta NET entre chapters.word_count et la dernière version
+-- snapshotée (peut être négatif si le chapitre a rétréci depuis le dernier snapshot).
+-- Roman actif uniquement, delta attribué à chapters.updated_at.
+INSERT INTO public.daily_activity (user_id, date, words_written)
+SELECT
+  c.user_id,
+  c.updated_at::date AS day,
+  SUM(c.word_count - COALESCE(v.last_wc, 0)) AS delta
+FROM public.chapters c
+JOIN public.novels n ON n.id = c.novel_id AND n.is_active = true
+LEFT JOIN (
+  SELECT DISTINCT ON (chapter_id)
+    chapter_id, word_count AS last_wc
+  FROM public.chapter_versions
+  ORDER BY chapter_id, created_at DESC
+) v ON v.chapter_id = c.id
+WHERE c.word_count IS NOT NULL
+GROUP BY c.user_id, c.updated_at::date
+HAVING SUM(c.word_count - COALESCE(v.last_wc, 0)) <> 0
+ON CONFLICT (user_id, date) DO UPDATE
+  SET words_written = public.daily_activity.words_written + EXCLUDED.words_written,
+      updated_at = now();
+
+-- 8.b — WB (uniquement des fiches RÉELLEMENT éditées, i.e. updated_at > created_at)
+--     Les simples créations sans édition ultérieure ne colorent PAS le jour.
 INSERT INTO public.daily_activity (user_id, date, wb_activity, wb_count)
 SELECT user_id, updated_at::date, true, count(*)
 FROM public.wb_entries
+WHERE updated_at IS NOT NULL
+  AND created_at IS NOT NULL
+  AND updated_at > created_at + INTERVAL '1 minute'
 GROUP BY user_id, updated_at::date
 ON CONFLICT (user_id, date) DO UPDATE
   SET wb_activity = true,
       wb_count = EXCLUDED.wb_count;
 
--- 8.c — PLANIFICATION (postits + milestones + chapitres + scènes agrégés)
+-- 8.c — PLANIFICATION (postits + milestones uniquement)
+--     On exclut chapters/scenes du backfill : leur simple existence ne doit PAS
+--     colorer le calendrier. Les futures éditions passent par les triggers 7 bis
+--     (chapters/scenes UPDATE) — seuls les changements intentionnels comptent.
 INSERT INTO public.daily_activity (user_id, date, plan_activity, plan_count)
 SELECT user_id, day, true, count(*)
 FROM (
   SELECT user_id, updated_at::date AS day FROM public.planning_postits
+  WHERE updated_at IS NOT NULL
+    AND created_at IS NOT NULL
+    AND updated_at > created_at + INTERVAL '1 minute'
   UNION ALL
   SELECT user_id, created_at::date AS day FROM public.planning_milestones
-  UNION ALL
-  SELECT user_id, updated_at::date AS day FROM public.chapters
-  UNION ALL
-  SELECT user_id, updated_at::date AS day FROM public.scenes
 ) u
 GROUP BY user_id, day
 ON CONFLICT (user_id, date) DO UPDATE

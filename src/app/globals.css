@@ -2,27 +2,34 @@
 
 /* ===== AUTRIS — Design System (Tailwind v4) ===== */
 @theme inline {
-  /* Text */
-  --color-text-primary: #e8e6e3;
-  --color-text-secondary: #a9a7a2;
-  --color-text-tertiary: #7a7874;
-  --color-text-quaternary: #5a5854;
+  /* Text (warm cream on navy) */
+  --color-text-primary: #e2d5c1;
+  --color-text-secondary: #a89e8d;
+  --color-text-tertiary: #7a7163;
+  --color-text-quaternary: #544d44;
 
-  /* Backgrounds */
-  --color-bg-primary: #1e1e22;
-  --color-bg-secondary: #26262b;
-  --color-bg-tertiary: #2e2e33;
-  --color-bg-hover: #36363c;
+  /* Backgrounds (cool navy) */
+  --color-bg-primary: #1a1d2e;
+  --color-bg-secondary: #15172a;
+  --color-bg-tertiary: #23263d;
+  --color-bg-hover: #2a2e45;
 
   /* Borders */
-  --color-border: #3a3a40;
-  --color-border-light: #32323a;
+  --color-border: #2e3148;
+  --color-border-light: #242740;
 
-  /* Brand / Primary (violet) */
-  --color-primary: #7B6FDE;
-  --color-primary-dark: #9B91F0;
-  --color-primary-bg: #2d2a4a;
-  --color-primary-border: #5a51a8;
+  /* Brand / Primary — warm peach/amber accent */
+  --color-primary: #e4b48c;
+  --color-primary-dark: #eec19b;
+  --color-primary-bg: #2e2538;
+  --color-primary-border: #7a553d;
+
+  /* Accent (alias peach) */
+  --color-accent: #e4b48c;
+  --color-accent-dark: #eec19b;
+  --color-accent-soft: #c99879;
+  --color-accent-bg: #2e2538;
+  --color-accent-border: #7a553d;
 
   /* Teal */
   --color-teal: #5DCAA5;
@@ -64,7 +71,21 @@
 
   /* Fonts */
   --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
-  --font-serif: 'Georgia', 'Times New Roman', serif;
+  --font-serif: 'Cormorant Garamond', 'Playfair Display', 'Georgia', 'Times New Roman', serif;
+}
+
+/* Utilities */
+.font-serif { font-family: var(--font-serif); }
+.font-serif-italic { font-family: var(--font-serif); font-style: italic; }
+.hero-glow {
+  background-image:
+    radial-gradient(120% 140% at 100% 0%, rgba(228,180,140,0.22) 0%, rgba(228,180,140,0.08) 25%, transparent 55%),
+    linear-gradient(135deg, #2a2640 0%, #1d1c2e 60%);
+}
+.univers-glow {
+  background-image:
+    radial-gradient(90% 120% at 95% 20%, rgba(228,180,140,0.35) 0%, rgba(228,180,140,0.08) 28%, transparent 60%),
+    linear-gradient(180deg, #2a2236 0%, #1a1a2b 100%);
 }
 
 /* ===== Base styles ===== */

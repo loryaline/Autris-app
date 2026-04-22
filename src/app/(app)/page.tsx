@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/Card";
 import { DashboardClient } from "./dashboard-client";
 import { AutarieWBNudge } from "@/components/home/AutarieWBNudge";
 
@@ -22,45 +21,21 @@ export default async function DashboardPage() {
   const totalWords = projects?.reduce((sum, p) =>
     sum + (p.novels?.reduce((s: number, n: { current_words: number }) => s + n.current_words, 0) ?? 0), 0) ?? 0;
 
-  // Roman actif : le calendrier suit UNIQUEMENT ses versions de chapitres
-  // (cohérent avec l'objectif quotidien, qui est celui du roman actif).
-  const activeNovelEarly = (projects ?? [])
-    .flatMap((p) => p.novels ?? [])
-    .find((n: { is_active?: boolean }) => n.is_active);
-  const activeChapterIds: string[] = activeNovelEarly
-    ? ((activeNovelEarly as { chapters?: { id: string }[] }).chapters ?? []).map(
-        (c) => c.id
-      )
-    : [];
-
-  const { data: versions } =
-    activeChapterIds.length > 0
-      ? await supabase
-          .from("chapter_versions")
-          .select("chapter_id, word_count, created_at")
-          .eq("user_id", user.id)
-          .in("chapter_id", activeChapterIds)
-          .order("created_at", { ascending: true })
-      : { data: [] as { chapter_id: string; word_count: number; created_at: string }[] };
-
-  // ---- Lecture de daily_activity (agrégats pré-calculés par triggers) ----
-  // Couvre WB (teal) et planif (ambre) pour le mois courant.
-  // La rédaction reste calculée à partir de chapter_versions (scope roman actif),
-  // pour éviter que des imports dans d'autres romans polluent le calendrier.
   const nowForQuery = new Date();
   const monthStartIso = new Date(nowForQuery.getFullYear(), nowForQuery.getMonth(), 1)
     .toISOString().slice(0, 10);
   const monthEndIso = new Date(nowForQuery.getFullYear(), nowForQuery.getMonth() + 1, 0)
     .toISOString().slice(0, 10);
 
+  // Source de vérité unique : daily_activity (alimenté par triggers côté DB).
+  // Rédaction = words_written (tous romans), WB et planif = counts dédiés.
   const { data: activityRows } = await supabase
     .from("daily_activity")
-    .select("date, wb_activity, wb_count, plan_activity, plan_count")
+    .select("date, words_written, wb_activity, wb_count, plan_activity, plan_count")
     .eq("user_id", user.id)
     .gte("date", monthStartIso)
     .lte("date", monthEndIso);
 
-  // Pour le nudge WB : dernière date connue avec wb_activity = true.
   const { data: lastWbRow } = await supabase
     .from("daily_activity")
     .select("date")
@@ -71,6 +46,7 @@ export default async function DashboardPage() {
     .maybeSingle();
 
   const activityByDate = new Map<string, {
+    words_written: number;
     wb_count: number;
     plan_count: number;
     wb_activity: boolean;
@@ -78,6 +54,7 @@ export default async function DashboardPage() {
   }>();
   for (const r of activityRows ?? []) {
     activityByDate.set(r.date, {
+      words_written: r.words_written ?? 0,
       wb_count: r.wb_count ?? 0,
       plan_count: r.plan_count ?? 0,
       wb_activity: !!r.wb_activity,
@@ -85,38 +62,13 @@ export default async function DashboardPage() {
     });
   }
 
-  // Pre-group versions by chapter for efficiency
-  const versionsByChapter = new Map<string, { wc: number; ts: number }[]>();
-  for (const v of versions ?? []) {
-    const ts = new Date(v.created_at).getTime();
-    if (!versionsByChapter.has(v.chapter_id)) versionsByChapter.set(v.chapter_id, []);
-    versionsByChapter.get(v.chapter_id)!.push({ wc: v.word_count, ts });
-  }
-
-  function wordsOnDay(dayStart: number): number {
-    const dayEnd = dayStart + 86_400_000;
-    let total = 0;
-    for (const vs of versionsByChapter.values()) {
-      const upToEnd = vs.filter((v) => v.ts < dayEnd);
-      const upToStart = vs.filter((v) => v.ts < dayStart);
-      const end = upToEnd.length ? upToEnd[upToEnd.length - 1].wc : 0;
-      const start = upToStart.length ? upToStart[upToStart.length - 1].wc : 0;
-      total += Math.max(0, end - start);
-    }
-    return total;
-  }
-
-  // Roman actif (pour l'objectif quotidien)
   const allNovels = projects?.flatMap(p => p.novels ?? []) ?? [];
   const activeNovel = allNovels.find((n: { is_active?: boolean }) => n.is_active);
 
-  // Dernier roman édité (pour le raccourci "Continuer à écrire")
   const lastNovel = allNovels.sort((a, b) =>
     new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
   )[0];
 
-  // Objectif quotidien : words_per_session × sessions_per_week / 7
-  // (uniquement depuis le roman marqué actif)
   const DAILY_GOAL = (() => {
     if (!activeNovel) return DEFAULT_DAILY_GOAL;
     const wps = (activeNovel as { words_per_session?: number | null }).words_per_session ?? 0;
@@ -125,13 +77,12 @@ export default async function DashboardPage() {
     return DEFAULT_DAILY_GOAL;
   })();
 
-  // Monthly activity (current month)
+  // Monthly activity
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayNum = now.getDate();
-  // Monday-first offset
   const firstDayOfWeek = new Date(year, month, 1).getDay();
   const startOffset = (firstDayOfWeek + 6) % 7;
 
@@ -143,18 +94,21 @@ export default async function DashboardPage() {
 
   const monthActivity = Array.from({ length: daysInMonth }, (_, i) => {
     const dayNum = i + 1;
-    const dayStart = new Date(year, month, dayNum).getTime();
-    const words = wordsOnDay(dayStart);
     const row = activityByDate.get(isoDate(year, month, dayNum));
+    const words = row?.words_written ?? 0;
+    // Pour l'affichage (intensité, tooltip, streak) on clampe à 0 :
+    // un jour à delta négatif (grosse suppression) ne doit pas s'afficher en « rouge »
+    // ni apparaître avec une opacité négative. La somme mensuelle, elle, reste nette.
+    const wordsDisplay = Math.max(0, words);
     const wbCount = row?.wb_count ?? 0;
     const planCount = row?.plan_count ?? 0;
-    // Intensités 0..1 (4 paliers visuels appliqués au rendu via opacité)
-    const redactionIntensity = Math.min(1, words / Math.max(DAILY_GOAL, 1));
+    const redactionIntensity = Math.min(1, wordsDisplay / Math.max(DAILY_GOAL, 1));
     const wbIntensity = Math.min(1, wbCount / 3);
     const planIntensity = Math.min(1, planCount / 3);
     return {
       day: dayNum,
       words,
+      wordsDisplay,
       wbCount,
       planCount,
       ratio: redactionIntensity,
@@ -165,41 +119,34 @@ export default async function DashboardPage() {
     };
   });
 
-  // Encouragement WB — jours depuis dernière activité WB (via daily_activity)
   const lastWbDate = lastWbRow?.date ? new Date(lastWbRow.date).getTime() : 0;
   const daysSinceWB =
     lastWbDate > 0 ? Math.floor((Date.now() - lastWbDate) / 86_400_000) : Infinity;
   const recentRedaction = monthActivity
     .slice(Math.max(0, todayNum - 7), todayNum)
-    .some((d) => d.words > 0);
+    .some((d) => d.wordsDisplay > 0);
   const showWBNudge = recentRedaction && daysSinceWB > 7;
 
-  // Streak : jours consécutifs depuis aujourd'hui avec au moins 1 mot
   let streak = 0;
   for (let d = todayNum; d >= 1; d--) {
-    if (monthActivity[d - 1].words > 0) streak++;
+    if (monthActivity[d - 1].wordsDisplay > 0) streak++;
     else break;
   }
 
-  // Résumé mensuel : réel vs objectif attendu (DAILY_GOAL × jours écoulés)
   const monthWordsTotal = monthActivity.reduce((s, d) => s + d.words, 0);
   const expectedSoFar = DAILY_GOAL * todayNum;
-  const monthRatio = expectedSoFar > 0 ? monthWordsTotal / expectedSoFar : 0;
+  const monthExpectedTotal = DAILY_GOAL * daysInMonth;
+  const monthRatio = monthExpectedTotal > 0 ? monthWordsTotal / monthExpectedTotal : 0;
   const monthPct = Math.round(monthRatio * 100);
-  const monthStatusColor =
-    monthRatio >= 1 ? "text-emerald-600" : monthRatio >= 0.7 ? "text-amber" : "text-text-tertiary";
+  const onTrackRatio = expectedSoFar > 0 ? monthWordsTotal / expectedSoFar : 0;
 
-  // Estimation DYNAMIQUE basée sur le rythme réel (moyenne /jour depuis le début du mois)
-  // pour le roman actif. Utilise word_goal - current_words pour le restant.
   const activeGoal = (activeNovel as { word_goal?: number | null } | undefined)?.word_goal ?? 0;
   const activeWords = (activeNovel as { current_words?: number } | undefined)?.current_words ?? 0;
   const remainingWords = Math.max(0, activeGoal - activeWords);
   const realDailyPace = todayNum > 0 ? monthWordsTotal / todayNum : 0;
   const etaDays = realDailyPace > 0 ? Math.ceil(remainingWords / realDailyPace) : 0;
   const etaDate = etaDays > 0 ? new Date(Date.now() + etaDays * 86_400_000) : null;
-  // Vs objectif théorique (rythme voulu)
-  const targetDailyPace = DAILY_GOAL;
-  const paceDelta = realDailyPace - targetDailyPace;
+  const paceDelta = realDailyPace - DAILY_GOAL;
   const paceVerdict =
     activeGoal === 0
       ? null
@@ -207,7 +154,7 @@ export default async function DashboardPage() {
         ? "noData"
         : paceDelta >= 0
           ? "ahead"
-          : paceDelta > -targetDailyPace * 0.3
+          : paceDelta > -DAILY_GOAL * 0.3
             ? "onTrack"
             : "behind";
 
@@ -220,252 +167,360 @@ export default async function DashboardPage() {
       new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     )[0] ?? null;
 
-  const monthName = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const monthName = now.toLocaleDateString("fr-FR", { month: "long" });
+
+  // Week this month : how many words written during current calendar week so far
+  const weekStart = todayNum - ((now.getDay() + 6) % 7);
+  const weekWords = monthActivity
+    .filter((d) => d.day >= Math.max(1, weekStart) && d.day <= todayNum)
+    .reduce((s, d) => s + d.wordsDisplay, 0);
+
+  // Novels split by status (rédaction / réécriture / relecture…) — light summary
+  const novelsRedac = allNovels.filter((n: { status?: string }) =>
+    n.status === "en_cours" || n.status === "redaction" || !n.status
+  ).length;
+  const novelsReecr = allNovels.filter((n: { status?: string }) =>
+    n.status === "reecriture" || n.status === "relecture"
+  ).length;
+
+  // Total WB entries across projects (as the caption "+N fiches univers" uses it)
+  const { count: wbCount } = await supabase
+    .from("wb_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
 
   return (
-    <div className="p-3 max-w-[960px]">
-      {/* Nudge WB Autarie (max 1x/semaine, fermable) */}
+    <div className="px-6 py-5 max-w-[1280px] mx-auto">
       {showWBNudge && <AutarieWBNudge daysSinceWB={daysSinceWB} />}
 
-      {/* Welcome card */}
-      <Card highlight className="p-2.5 mb-3 flex items-center gap-2.5">
-        <span className="text-[16px]">🦭</span>
-        <div className="flex-1">
-          <div className="text-[13px] font-medium text-primary-dark">
-            {projects && projects.length > 0
-              ? "Autarie vous attend pour écrire !"
-              : "Bienvenue sur Autris !"}
-          </div>
-          <div className="text-[12px] text-primary">
-            {projects && projects.length > 0
-              ? "Continuez votre histoire là où vous l'avez laissée."
-              : "Créez votre premier projet pour commencer à écrire."}
-          </div>
+      {/* === Hero banner === */}
+      <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-white/[0.06] hero-glow p-5 mb-5 flex items-center gap-4">
+        <div className="shrink-0 w-12 h-12 rounded-[var(--radius-md)] bg-[var(--color-primary-bg)] border border-[var(--color-primary-border)] flex items-center justify-center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M4 20L14 10M14 10L18 6C19 5 20.5 5 21.5 6C22.5 7 22.5 8.5 21.5 9.5L17.5 13.5M14 10L17.5 13.5M17.5 13.5L10 21H4V15"
+              stroke="var(--color-accent)"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
-      </Card>
-
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-1.5 mb-3">
-        <div className="bg-bg-tertiary rounded-[var(--radius-md)] p-2">
-          <div className="text-[11px] text-text-tertiary mb-0.5">Mots écrits</div>
-          <div className="text-[16px] font-medium text-text-primary">
-            {totalWords.toLocaleString("fr-FR")}
-          </div>
-        </div>
-        <div className="bg-bg-tertiary rounded-[var(--radius-md)] p-2">
-          <div className="text-[11px] text-text-tertiary mb-0.5">Romans</div>
-          <div className="text-[16px] font-medium text-text-primary">
-            {allNovels.length}
-          </div>
-        </div>
-        <div className="bg-bg-tertiary rounded-[var(--radius-md)] p-2">
-          <div className="text-[11px] text-text-tertiary mb-0.5">Projets</div>
-          <div className="text-[16px] font-medium text-text-primary">
-            {projects?.length ?? 0}
-          </div>
-        </div>
-        <div className="bg-bg-tertiary rounded-[var(--radius-md)] p-2">
-          <div className="text-[11px] text-text-tertiary mb-0.5">XP</div>
-          <div className="text-[16px] font-medium text-text-primary">0</div>
-          <div className="text-[11px] text-primary">Scribouillard</div>
-        </div>
-      </div>
-
-      {/* Monthly calendar */}
-      <Card className="p-3 mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[12px] font-medium text-text-primary capitalize">{monthName}</div>
-          <div className="flex items-center gap-1.5">
-            {streak > 0 && (
-              <span className="text-[11px] text-amber font-medium bg-amber/10 px-1.5 py-0.5 rounded">
-                🔥 {streak} jour{streak > 1 ? "s" : ""}
-              </span>
-            )}
-            <span className="text-[10px] text-text-quaternary">
-              objectif {DAILY_GOAL}/j
+        <div className="flex-1 min-w-0">
+          <div className="text-[17px] text-text-primary leading-tight">
+            <span>Autarie vous attend,</span>{" "}
+            <span className="font-serif italic text-[var(--color-accent)]">
+              là où votre plume s&apos;est posée.
             </span>
           </div>
-        </div>
-
-        {/* Day headers Mon-Sun */}
-        <div className="grid grid-cols-7 gap-[3px] mb-[3px]">
-          {["L","M","M","J","V","S","D"].map((d, i) => (
-            <div key={i} className="text-[9px] text-text-quaternary text-center">{d}</div>
-          ))}
-        </div>
-
-        {/* Monthly summary: actual vs expected */}
-        <div className="mb-2 p-2 rounded-[var(--radius-sm)] bg-bg-tertiary">
-          <div className="flex items-center justify-between mb-1">
-            <div className="text-[11px] text-text-tertiary">
-              Ce mois : <span className="text-text-primary font-medium">{monthWordsTotal.toLocaleString("fr-FR")}</span>
-              {" / "}
-              <span className="text-text-tertiary">{expectedSoFar.toLocaleString("fr-FR")} attendus</span>
+          {lastChapter && lastNovel ? (
+            <div className="text-[12px] text-text-tertiary mt-1">
+              {lastChapter.title} · <span className="font-serif italic text-text-secondary">{lastNovel.title}</span>
+              {" · "}modifié {relativeTime(lastChapter.updated_at)}
             </div>
-            <div className={`text-[11px] font-medium ${monthStatusColor}`}>
-              {monthPct}%
+          ) : (
+            <div className="text-[12px] text-text-tertiary mt-1">
+              {projects && projects.length > 0
+                ? "Continuez votre histoire là où vous l'avez laissée."
+                : "Créez votre premier projet pour commencer à écrire."}
             </div>
-          </div>
-          <div className="h-1 rounded-full bg-bg-hover overflow-hidden">
-            <div
-              className={`h-full rounded-full ${monthRatio >= 1 ? "bg-emerald-500" : "bg-primary"}`}
-              style={{ width: `${Math.min(100, monthRatio * 100)}%` }}
-            />
-          </div>
+          )}
         </div>
+        {lastNovel && (
+          <a
+            href={`/editor/${lastNovel.id}`}
+            className="shrink-0 inline-flex items-center gap-2 h-10 px-5 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[13px] transition-colors no-underline"
+          >
+            Reprendre l&apos;écriture
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <path d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+        )}
+      </div>
 
-        {/* Estimation dynamique basée sur le rythme RÉEL */}
-        {activeNovel && activeGoal > 0 && (
-          <div className="mb-2 p-2 rounded-[var(--radius-sm)] bg-bg-tertiary border border-border">
-            <div className="flex items-center justify-between mb-1">
-              <div className="text-[11px] text-text-tertiary">
-                Estimation de fin (rythme réel)
+      {/* === Stats row === */}
+      <div className="grid grid-cols-4 gap-3 mb-5">
+        <StatCard
+          label="Mots écrits"
+          value={totalWords.toLocaleString("fr-FR")}
+          caption={weekWords > 0 ? `▲ + ${weekWords.toLocaleString("fr-FR")} cette semaine` : "— cette semaine"}
+        />
+        <StatCard
+          label="Romans"
+          value={String(allNovels.length)}
+          caption={`${novelsRedac} rédaction · ${novelsReecr} réécriture`}
+        />
+        <StatCard
+          label="Projets actifs"
+          value={String(projects?.length ?? 0)}
+          caption={`+ ${wbCount ?? 0} fiches univers`}
+        />
+        <StatCard
+          label="XP · Scribouillard"
+          value="0"
+          valueSuffix="/ 500"
+          caption="◆ Niveau 1"
+        />
+      </div>
+
+      {/* === Split layout: Objectif du mois / Vos univers === */}
+      <div className="grid grid-cols-12 gap-4">
+        {/* Objectif du mois */}
+        <div className="col-span-8 rounded-[var(--radius-xl)] border border-white/[0.06] bg-bg-tertiary/50 p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="text-[10px] font-medium text-text-quaternary uppercase mb-1" style={{ letterSpacing: "0.18em" }}>
+                Objectif du mois
               </div>
-              {paceVerdict === "ahead" && (
-                <span className="text-[10px] text-emerald-600 font-medium">✓ en avance</span>
-              )}
-              {paceVerdict === "onTrack" && (
-                <span className="text-[10px] text-amber font-medium">≈ dans les temps</span>
-              )}
-              {paceVerdict === "behind" && (
-                <span className="text-[10px] text-red font-medium">⚠ en retard</span>
-              )}
-              {paceVerdict === "noData" && (
-                <span className="text-[10px] text-text-quaternary">pas encore de rythme</span>
-              )}
-            </div>
-            {realDailyPace > 0 && etaDays > 0 ? (
-              <>
-                <div className="text-[13px] text-text-primary">
-                  Fin estimée :{" "}
-                  <span className="font-medium">
-                    {etaDate?.toLocaleDateString("fr-FR", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </span>
-                  <span className="text-text-tertiary">
-                    {" "}— {etaDays} jour{etaDays > 1 ? "s" : ""}
-                  </span>
+              <div className="flex items-baseline gap-2">
+                <div className="text-[20px] text-text-primary capitalize">
+                  {monthName}
                 </div>
-                <div className="text-[10px] text-text-quaternary mt-0.5">
-                  Rythme réel : {Math.round(realDailyPace).toLocaleString("fr-FR")} mots/j
-                  {" · "}cible : {targetDailyPace.toLocaleString("fr-FR")} mots/j
-                  {" · "}restant : {remainingWords.toLocaleString("fr-FR")} mots
+                <div className="font-serif italic text-[20px] text-[var(--color-accent)]">
+                  {year}
                 </div>
-              </>
-            ) : remainingWords === 0 ? (
-              <div className="text-[13px] text-text-primary">
-                Objectif atteint 🎉
               </div>
-            ) : (
-              <div className="text-[11px] text-text-tertiary">
-                Écris quelques jours pour obtenir une estimation basée sur ton rythme.
+              <div className="text-[11px] text-text-tertiary mt-0.5">
+                Objectif quotidien · {DAILY_GOAL.toLocaleString("fr-FR")} mots
+              </div>
+            </div>
+            {streak > 0 && (
+              <div className="flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-[var(--color-accent-bg)] border border-[var(--color-accent-border)] text-[11px] text-[var(--color-accent)]">
+                🔥 <span>{streak} jour{streak > 1 ? "s" : ""} d&apos;affilée</span>
               </div>
             )}
           </div>
-        )}
 
-        {/* Légende multi-couleurs */}
-        <div className="flex items-center gap-3 mb-1.5 text-[9px] text-text-quaternary">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-[2px]" style={{ background: "#7F77DD" }} />
-            Rédaction
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-[2px]" style={{ background: "#5DCAA5" }} />
-            World building
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-[2px]" style={{ background: "#EF9F27" }} />
-            Planification
-          </span>
-        </div>
-
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-[3px]">
-          {/* Empty cells before the 1st */}
-          {Array.from({ length: startOffset }, (_, i) => (
-            <div key={`empty-${i}`} />
-          ))}
-          {monthActivity.map((d) => {
-            const bands = [
-              d.ratio > 0 && { color: "#7F77DD", op: 0.15 + d.ratio * 0.85, label: "rédaction" },
-              d.wbIntensity > 0 && { color: "#5DCAA5", op: 0.15 + d.wbIntensity * 0.85, label: "world building" },
-              d.planIntensity > 0 && { color: "#EF9F27", op: 0.15 + d.planIntensity * 0.85, label: "planification" },
-            ].filter(Boolean) as { color: string; op: number; label: string }[];
-
-            const tooltip = d.isFuture
-              ? ""
-              : [
-                  `${d.day}`,
-                  d.words > 0 ? `✎ ${d.words.toLocaleString("fr-FR")} mots` : null,
-                  d.wbCount > 0 ? `◐ ${d.wbCount} fiche${d.wbCount > 1 ? "s" : ""} WB` : null,
-                  d.planCount > 0 ? `▦ ${d.planCount} élément${d.planCount > 1 ? "s" : ""} planif` : null,
-                ].filter(Boolean).join(" · ");
-
-            return (
-              <div
-                key={d.day}
-                title={tooltip}
-                className={`relative h-[18px] rounded-[3px] flex items-center justify-center overflow-hidden ${
-                  d.isFuture
-                    ? "bg-bg-tertiary"
-                    : d.isToday
-                      ? "ring-1 ring-primary bg-bg-hover"
-                      : "bg-bg-hover"
-                }`}
-              >
-                {/* Bandes horizontales : 1/2/3 couleurs empilées */}
-                {!d.isFuture &&
-                  bands.map((b, idx) => (
-                    <div
-                      key={b.label}
-                      className="absolute left-0 right-0 rounded-[2px]"
-                      style={{
-                        top: `${(idx * 100) / bands.length}%`,
-                        height: `${100 / bands.length}%`,
-                        background: b.color,
-                        opacity: b.op,
-                      }}
-                    />
-                  ))}
-                <span
-                  className={`relative text-[9px] z-10 ${
-                    d.isToday ? "font-bold text-primary" : "text-text-quaternary"
-                  }`}
-                >
-                  {d.day}
-                </span>
+          {/* Progress */}
+          <div className="mb-3">
+            <div className="flex items-center justify-between text-[11px] mb-1">
+              <div className="text-text-tertiary">
+                Ce mois · <span className="text-text-secondary">{monthWordsTotal.toLocaleString("fr-FR")}</span>
+                <span className="text-text-quaternary"> / {monthExpectedTotal.toLocaleString("fr-FR")} attendus</span>
               </div>
-            );
-          })}
+              <div className="text-[var(--color-accent)] font-medium">{monthPct} %</div>
+            </div>
+            <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[var(--color-accent)]"
+                style={{ width: `${Math.min(100, monthPct)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Metrics row */}
+          <div className="grid grid-cols-4 gap-3 pb-3 mb-3 border-b border-white/[0.05]">
+            <Metric
+              label="Fin estimée"
+              value={
+                etaDate
+                  ? etaDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                  : "—"
+              }
+              accent={paceVerdict === "behind"}
+            />
+            <Metric
+              label="Rythme"
+              value={realDailyPace > 0 ? `${Math.round(realDailyPace).toLocaleString("fr-FR")}` : "—"}
+              suffix="mots/j"
+            />
+            <Metric
+              label="Restant"
+              value={remainingWords > 0 ? remainingWords.toLocaleString("fr-FR") : "—"}
+            />
+            <div>
+              <div className="text-[10px] font-medium text-text-quaternary uppercase mb-1.5" style={{ letterSpacing: "0.16em" }}>
+                Statut
+              </div>
+              <PaceChip verdict={paceVerdict} onTrack={onTrackRatio} />
+            </div>
+          </div>
+
+          {/* Calendrier */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-serif italic text-[13px] text-text-secondary">Activité du mois</div>
+              <div className="flex items-center gap-3 text-[10px] text-text-quaternary">
+                <LegendDot color="#7F77DD" label="Rédaction" />
+                <LegendDot color="#5DCAA5" label="Worldbuilding" />
+                <LegendDot color="#EF9F27" label="Planif." />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {["L","M","M","J","V","S","D"].map((d, i) => (
+                <div key={i} className="text-[10px] text-text-quaternary text-center font-serif italic">{d}</div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: startOffset }, (_, i) => (
+                <div key={`empty-${i}`} className="h-14 rounded-[var(--radius-sm)]" />
+              ))}
+              {monthActivity.map((d) => {
+                const bands = [
+                  d.ratio > 0 && { color: "#7F77DD", op: 0.25 + d.ratio * 0.65 },
+                  d.wbIntensity > 0 && { color: "#5DCAA5", op: 0.25 + d.wbIntensity * 0.65 },
+                  d.planIntensity > 0 && { color: "#EF9F27", op: 0.25 + d.planIntensity * 0.65 },
+                ].filter(Boolean) as { color: string; op: number }[];
+
+                const tooltip = d.isFuture
+                  ? ""
+                  : [
+                      `${d.day}`,
+                      d.wordsDisplay > 0 ? `✎ ${d.wordsDisplay.toLocaleString("fr-FR")} mots` : null,
+                      d.wbCount > 0 ? `◐ ${d.wbCount} fiche${d.wbCount > 1 ? "s" : ""} WB` : null,
+                      d.planCount > 0 ? `▦ ${d.planCount} élément${d.planCount > 1 ? "s" : ""} planif` : null,
+                    ].filter(Boolean).join(" · ");
+
+                return (
+                  <div
+                    key={d.day}
+                    title={tooltip}
+                    className={`relative h-14 rounded-[var(--radius-sm)] border border-white/[0.04] overflow-hidden ${
+                      d.isFuture
+                        ? "bg-white/[0.015]"
+                        : d.isToday
+                          ? "bg-[var(--color-accent-bg)]/40 ring-1 ring-[var(--color-accent-border)]"
+                          : "bg-white/[0.025]"
+                    }`}
+                  >
+                    {/* Bars en haut de la cellule */}
+                    {!d.isFuture && bands.length > 0 && (
+                      <div className="absolute inset-x-1 top-1 flex gap-[2px]">
+                        {bands.map((b, i) => (
+                          <span
+                            key={i}
+                            className="h-[2px] flex-1 rounded-full"
+                            style={{ background: b.color, opacity: b.op }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <span
+                      className={`absolute bottom-1 right-1.5 text-[10px] ${
+                        d.isToday
+                          ? "font-medium text-[var(--color-accent)]"
+                          : d.isFuture
+                            ? "text-text-quaternary/60"
+                            : "text-text-quaternary"
+                      }`}
+                    >
+                      {d.day}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </Card>
 
-      {/* Last novel shortcut */}
-      {lastNovel && lastProject && (
-        <Card className="p-3 mb-3">
-          <div className="text-[12px] font-medium text-text-primary mb-1">
-            Dernière activité — {lastProject.title}
-          </div>
-          <div className="text-[11px] text-text-tertiary mb-2">
-            {lastNovel.title}
-            {lastChapter && <> · {lastChapter.title}</>}
-            {" · "}{lastNovel.current_words.toLocaleString("fr-FR")} mots
-          </div>
-          <a
-            href={`/editor/${lastNovel.id}`}
-            className="inline-block text-[12px] text-primary border border-primary-border rounded-[var(--radius-sm)] px-2 py-0.5 hover:bg-primary-bg transition-colors"
-          >
-            Continuer à écrire
-          </a>
-        </Card>
-      )}
-
-      {/* Projects list or empty state */}
-      <DashboardClient projects={projects ?? []} />
+        {/* Vos univers */}
+        <div className="col-span-4">
+          <DashboardClient
+            projects={projects ?? []}
+            lastProjectTitle={lastProject?.title}
+          />
+        </div>
+      </div>
     </div>
   );
+}
+
+/* ========== Sub-components ========== */
+
+function StatCard({
+  label,
+  value,
+  valueSuffix,
+  caption,
+}: {
+  label: string;
+  value: string;
+  valueSuffix?: string;
+  caption: string;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-[var(--radius-lg)] border border-white/[0.06] bg-bg-tertiary/50 p-3.5">
+      <div className="text-[10px] font-medium text-text-quaternary uppercase mb-2" style={{ letterSpacing: "0.18em" }}>
+        {label}
+      </div>
+      <div className="text-[28px] leading-none font-light text-text-primary mb-2">
+        {value}
+        {valueSuffix && (
+          <span className="text-[14px] text-text-quaternary ml-1">{valueSuffix}</span>
+        )}
+      </div>
+      <div className="text-[11px] text-text-tertiary">{caption}</div>
+      <div
+        className="pointer-events-none absolute -bottom-8 -right-8 w-24 h-24 rounded-full opacity-40"
+        style={{ background: "radial-gradient(circle, rgba(228,180,140,0.12) 0%, transparent 70%)" }}
+      />
+    </div>
+  );
+}
+
+function Metric({ label, value, suffix, accent }: { label: string; value: string; suffix?: string; accent?: boolean }) {
+  return (
+    <div>
+      <div className="text-[10px] font-medium text-text-quaternary uppercase mb-1.5" style={{ letterSpacing: "0.16em" }}>
+        {label}
+      </div>
+      <div className={`text-[15px] ${accent ? "text-[var(--color-accent)]" : "text-text-primary"} leading-none`}>
+        {value}
+        {suffix && <span className="text-[11px] text-text-quaternary ml-1">{suffix}</span>}
+      </div>
+    </div>
+  );
+}
+
+function PaceChip({ verdict, onTrack }: { verdict: string | null; onTrack: number }) {
+  if (verdict === "ahead") {
+    return (
+      <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full text-[11px] bg-teal-bg border border-teal-border text-teal">
+        ✓ en avance
+      </span>
+    );
+  }
+  if (verdict === "behind") {
+    return (
+      <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full text-[11px] bg-amber-bg border border-amber/30 text-amber">
+        ⚠ En retard
+      </span>
+    );
+  }
+  if (verdict === "onTrack") {
+    return (
+      <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full text-[11px] bg-white/[0.04] border border-white/[0.08] text-text-secondary">
+        ≈ dans les temps
+      </span>
+    );
+  }
+  const pct = Math.round(onTrack * 100);
+  return (
+    <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full text-[11px] bg-white/[0.04] border border-white/[0.08] text-text-tertiary">
+      {pct > 0 ? `${pct} %` : "—"}
+    </span>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span className="w-2 h-[2px] rounded-full" style={{ background: color }} />
+      {label}
+    </span>
+  );
+}
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return "à l'instant";
+  if (minutes < 60) return `il y a ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `il y a ${hours} heure${hours > 1 ? "s" : ""}`;
+  const days = Math.floor(hours / 24);
+  return `il y a ${days} jour${days > 1 ? "s" : ""}`;
 }

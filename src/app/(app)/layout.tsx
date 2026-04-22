@@ -32,7 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-full">
-      <Sidebar projects={sidebarProjects} />
+      <Sidebar projects={sidebarProjects} username={username} />
       <div className="flex flex-col flex-1 min-w-0">
         <Topbar username={username} />
         <main className="flex-1 overflow-y-auto bg-bg-secondary">{children}</main>
