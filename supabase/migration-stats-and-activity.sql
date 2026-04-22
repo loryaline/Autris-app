@@ -20,6 +20,9 @@ ALTER TABLE public.projects
 
 -- (narrative_template retiré — feature pas implémentée côté app)
 
+-- tempo retiré du chapitrage (jamais exposé dans DEFAULT_COLUMNS)
+ALTER TABLE public.chapters DROP COLUMN IF EXISTS tempo;
+
 -- ---------------------------------------------------------------------------
 -- 2. Table user_stats — XP, streak, totaux
 -- ---------------------------------------------------------------------------

@@ -61,8 +61,6 @@ export interface Novel {
   updated_at: string;
 }
 
-export type Tempo = "lent" | "moyen" | "rapide";
-
 export interface Chapter {
   id: string;
   novel_id: string;
@@ -73,7 +71,6 @@ export interface Chapter {
   position: number;
   status: ChapterStatus;
   synopsis: string | null;
-  tempo: Tempo | null;
   theme: string | null;
   plot_elements: string | null;
   minor_elements: string | null;

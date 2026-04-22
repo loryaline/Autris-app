@@ -31,7 +31,7 @@ export default async function PlanningPage({
   // Fetch chapters with planning fields
   const { data: chapters } = await supabase
     .from("chapters")
-    .select("id, title, position, status, synopsis, word_count, tempo, theme, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
+    .select("id, title, position, status, synopsis, word_count, theme, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
     .eq("novel_id", novelId)
     .eq("user_id", user.id)
     .order("position", { ascending: true });

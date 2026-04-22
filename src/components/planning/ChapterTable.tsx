@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
+import { useState, useRef, useEffect, useCallback, type Dispatch, type SetStateAction } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { ChapterStatus, Tempo } from "@/types/database";
+import type { ChapterStatus } from "@/types/database";
 import type { ChapterData as ChapterRow, CustomColumn, CellValue } from "@/app/(app)/planning/[novelId]/planning-client";
+import { RichEditableCell } from "./RichEditableCell";
 
 /* ---- Column definitions ---- */
 interface ColumnDef {
   key: string;
   label: string;
   width: string;
-  type: "title" | "text" | "tempo" | "status" | "words" | "custom";
+  type: "title" | "text" | "status" | "words" | "custom";
   field?: string; // chapter field name
 }
 
@@ -33,7 +34,7 @@ DEFAULT_COLUMNS.forEach((c) => {
 
 const DEFAULT_COLUMN_ORDER = DEFAULT_COLUMNS.map((c) => c.key);
 
-/* ---- Status & Tempo ---- */
+/* ---- Status ---- */
 const STATUS_LABELS: Record<ChapterStatus, { label: string; color: string }> = {
   a_ecrire: { label: "À écrire", color: "bg-bg-hover text-text-tertiary" },
   premier_jet: { label: "Premier jet", color: "bg-[#888780]/15 text-[#888780]" },
@@ -47,85 +48,16 @@ const STATUS_ORDER: ChapterStatus[] = [
   "a_ecrire", "premier_jet", "revision", "reecriture", "correction", "termine",
 ];
 
-const TEMPO_LABELS: Record<Tempo, { label: string; color: string }> = {
-  lent: { label: "Lent", color: "bg-blue/15 text-blue" },
-  moyen: { label: "Moyen", color: "bg-amber/15 text-amber" },
-  rapide: { label: "Rapide", color: "bg-red/15 text-red" },
-};
-
-const TEMPO_ORDER: (Tempo | null)[] = [null, "lent", "moyen", "rapide"];
-
 /* ---- Types (imported from planning-client) ---- */
 
-/* ---- Editable Cell ---- */
-function EditableCell({
-  value,
-  onSave,
-  className,
-  placeholder,
-}: {
+/* ---- Editable Cell (rich text — Bold/Italic/Underline/Strike + color + highlight) ---- */
+function EditableCell(props: {
   value: string;
   onSave: (val: string) => void;
   className?: string;
   placeholder?: string;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    setEditValue(value);
-  }, [value]);
-
-  function startEdit() {
-    setEditValue(value);
-    setEditing(true);
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.style.height = "auto";
-        textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
-      }
-    }, 0);
-  }
-
-  function commit() {
-    setEditing(false);
-    if (editValue.trim() !== value) {
-      onSave(editValue.trim());
-    }
-  }
-
-  if (editing) {
-    return (
-      <textarea
-        ref={textareaRef}
-        value={editValue}
-        onChange={(e) => {
-          setEditValue(e.target.value);
-          e.target.style.height = "auto";
-          e.target.style.height = e.target.scrollHeight + "px";
-        }}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") setEditing(false);
-        }}
-        className="w-full px-2 py-1 text-[12px] bg-bg-primary border border-primary-border rounded outline-none text-text-primary resize-none min-h-[28px]"
-      />
-    );
-  }
-
-  return (
-    <div
-      onClick={startEdit}
-      className={`px-2 py-1.5 text-[12px] cursor-text min-h-[28px] whitespace-pre-wrap break-words ${className ?? ""}`}
-      title={value || undefined}
-    >
-      {value || (
-        <span className="text-text-quaternary">{placeholder ?? "—"}</span>
-      )}
-    </div>
-  );
+  return <RichEditableCell {...props} />;
 }
 
 /* ---- Main Table ---- */
@@ -288,13 +220,6 @@ export function ChapterTable({
     saveChapterField(chapterId, "status", next);
   }
 
-  /* ---- Tempo cycle ---- */
-  function cycleTempo(chapterId: string, current: Tempo | null) {
-    const idx = TEMPO_ORDER.indexOf(current);
-    const next = TEMPO_ORDER[(idx + 1) % TEMPO_ORDER.length];
-    saveChapterField(chapterId, "tempo", next);
-  }
-
   /* ---- Add chapter ---- */
   async function handleAddChapter() {
     const supabase = supabaseRef.current;
@@ -311,7 +236,7 @@ export function ChapterTable({
         title: "À nommer",
         position: maxPos + 1,
       })
-      .select("id, title, position, status, synopsis, word_count, tempo, theme, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
+      .select("id, title, position, status, synopsis, word_count, theme, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
       .single();
 
     if (data) {
@@ -426,22 +351,6 @@ export function ChapterTable({
           onSave={(val) => saveChapterField(chapter.id, "title", val)}
           className="text-text-primary font-medium"
         />
-      );
-    }
-
-    if (col.type === "tempo") {
-      const tempoInfo = chapter.tempo ? TEMPO_LABELS[chapter.tempo] : null;
-      return (
-        <div className="flex items-center px-2">
-          <button
-            onClick={() => cycleTempo(chapter.id, chapter.tempo)}
-            className={`text-[11px] px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
-              tempoInfo ? tempoInfo.color : "text-text-quaternary hover:bg-bg-hover"
-            }`}
-          >
-            {tempoInfo ? tempoInfo.label : "—"}
-          </button>
-        </div>
       );
     }
 
@@ -645,6 +554,15 @@ export function ChapterTable({
                 }`}
                 style={{ gridTemplateColumns: gridTemplate }}
                 draggable
+                onMouseDownCapture={(e) => {
+                  // Disable row drag when the press starts inside an editable cell,
+                  // so the user can drag-select text without starting a row reorder.
+                  const t = e.target as HTMLElement;
+                  const inEditor = !!t.closest(
+                    '.ProseMirror, [contenteditable="true"], input, textarea'
+                  );
+                  (e.currentTarget as HTMLElement).draggable = !inEditor;
+                }}
                 onDragStart={(e) => {
                   setDragRowIdx(idx);
                   e.dataTransfer.effectAllowed = "move";

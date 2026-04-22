@@ -4,7 +4,7 @@ import { useState, type Dispatch, type SetStateAction } from "react";
 import { PlanningSubSidebar, type PlanningView } from "@/components/planning/PlanningSubSidebar";
 import { ChapterTable } from "@/components/planning/ChapterTable";
 import { OutlineView } from "@/components/planning/OutlineView";
-import type { ChapterStatus, Tempo } from "@/types/database";
+import type { ChapterStatus } from "@/types/database";
 
 export interface ChapterData {
   id: string;
@@ -13,7 +13,6 @@ export interface ChapterData {
   status: ChapterStatus;
   synopsis: string | null;
   word_count: number;
-  tempo: Tempo | null;
   theme: string | null;
   plot_elements: string | null;
   minor_elements: string | null;

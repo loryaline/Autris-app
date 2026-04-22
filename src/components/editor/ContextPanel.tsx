@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/Badge";
 import { getCategoryDef, UNIVERS_SUBTYPES, WB_CATEGORIES } from "@/lib/wb-constants";
 import { getTemplate } from "@/lib/wb-templates";
+import { RichEditableCell } from "@/components/planning/RichEditableCell";
 
 const STATUS_CONFIG: Record<string, { variant: "teal" | "amber" | "muted" | "primary"; label: string }> = {
   a_ecrire: { variant: "muted", label: "À écrire" },
@@ -22,6 +23,35 @@ const SCENE_STATUS: Record<string, { label: string; color: string }> = {
 };
 
 const SCENE_STATUS_ORDER: string[] = ["todo", "in_progress", "done"];
+
+// Colonnes du chapitrage exposées dans l'onglet Scènes (hors synopsis rendu à part)
+const CHAPTER_TEXT_FIELDS: { key: keyof ChapterFields; label: string }[] = [
+  { key: "theme", label: "Thème" },
+  { key: "plot_elements", label: "Intrigue globale" },
+  { key: "minor_elements", label: "Éléments mineurs / ambiances" },
+  { key: "observations", label: "Observations" },
+  { key: "tension_indices", label: "Tension" },
+  { key: "pivot", label: "Bascule" },
+  { key: "narrative_knot", label: "Nœud narratif" },
+];
+
+interface ChapterFields {
+  synopsis: string | null;
+  theme: string | null;
+  plot_elements: string | null;
+  minor_elements: string | null;
+  observations: string | null;
+  tension_indices: string | null;
+  pivot: string | null;
+  narrative_knot: string | null;
+}
+
+interface CustomColumn {
+  id: string;
+  name: string;
+  type: string;
+  position: number;
+}
 
 interface SceneItem {
   id: string;
@@ -75,6 +105,7 @@ export function ContextPanel({
   chapterTitle,
   chapterStatus,
   chapterId,
+  novelId,
   onStatusChange,
   wbEntries,
   projectId,
@@ -88,6 +119,7 @@ export function ContextPanel({
   chapterTitle: string;
   chapterStatus: string;
   chapterId: string | null;
+  novelId: string;
   onStatusChange: () => void;
   wbEntries: WbEntryLite[];
   projectId: string;
@@ -96,7 +128,13 @@ export function ContextPanel({
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("info");
   const [scenes, setScenes] = useState<SceneItem[]>([]);
-  const [synopsis, setSynopsis] = useState<string | null>(null);
+  const [chapterFields, setChapterFields] = useState<ChapterFields>({
+    synopsis: null, theme: null, plot_elements: null,
+    minor_elements: null, observations: null, tension_indices: null,
+    pivot: null, narrative_knot: null,
+  });
+  const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const [customValues, setCustomValues] = useState<Record<string, string>>({}); // column_id -> value
   const [loadingScenes, setLoadingScenes] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -130,13 +168,38 @@ export function ContextPanel({
         .order("position", { ascending: true }),
       supabaseRef.current
         .from("chapters")
-        .select("synopsis")
+        .select("synopsis, theme, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
         .eq("id", chapterId)
         .single(),
-    ]).then(([scenesRes, chapterRes]) => {
+      supabaseRef.current
+        .from("planning_columns")
+        .select("id, name, type, position")
+        .eq("novel_id", novelId)
+        .order("position", { ascending: true }),
+      supabaseRef.current
+        .from("planning_cell_values")
+        .select("column_id, value")
+        .eq("chapter_id", chapterId),
+    ]).then(([scenesRes, chapterRes, columnsRes, valuesRes]) => {
       if (!cancelled) {
         setScenes(scenesRes.data ?? []);
-        setSynopsis(chapterRes.data?.synopsis ?? null);
+        const c = (chapterRes.data ?? {}) as Partial<ChapterFields>;
+        setChapterFields({
+          synopsis: c.synopsis ?? null,
+          theme: c.theme ?? null,
+          plot_elements: c.plot_elements ?? null,
+          minor_elements: c.minor_elements ?? null,
+          observations: c.observations ?? null,
+          tension_indices: c.tension_indices ?? null,
+          pivot: c.pivot ?? null,
+          narrative_knot: c.narrative_knot ?? null,
+        });
+        setCustomColumns((columnsRes.data ?? []) as CustomColumn[]);
+        const vmap: Record<string, string> = {};
+        for (const row of (valuesRes.data ?? []) as { column_id: string; value: string | null }[]) {
+          if (row.value != null) vmap[row.column_id] = row.value;
+        }
+        setCustomValues(vmap);
         setLoadingScenes(false);
       }
     });
@@ -171,6 +234,31 @@ export function ContextPanel({
       inputRef.current.select();
     }
   }, [editingId]);
+
+  /* ---- Chapter fields (chapitrage exposé) ---- */
+  async function saveChapterField(field: keyof ChapterFields, value: string | null) {
+    if (!chapterId) return;
+    const dbVal = value === "" ? null : value;
+    setChapterFields((prev) => ({ ...prev, [field]: dbVal }));
+    await supabaseRef.current.from("chapters").update({ [field]: dbVal }).eq("id", chapterId);
+  }
+
+  async function saveCustomValue(columnId: string, value: string) {
+    if (!chapterId) return;
+    const supabase = supabaseRef.current;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setCustomValues((prev) => {
+      const next = { ...prev };
+      if (value === "") delete next[columnId];
+      else next[columnId] = value;
+      return next;
+    });
+    await supabase.from("planning_cell_values").upsert(
+      { column_id: columnId, chapter_id: chapterId, user_id: user.id, value: value || null },
+      { onConflict: "column_id,chapter_id" }
+    );
+  }
 
   /* ---- Scene CRUD ---- */
   async function addScene() {
@@ -363,12 +451,34 @@ export function ContextPanel({
               <div className="text-[12px] text-text-quaternary italic">Chargement…</div>
             ) : (
               <>
+                {/* ---- Chapitrage : colonnes exposées depuis la planification ---- */}
                 <div className="mb-2">
                   <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-0.5">Résumé</div>
-                  <div className="text-[11px] text-text-secondary leading-relaxed whitespace-pre-wrap">
-                    {synopsis || <span className="italic text-text-quaternary">Aucun résumé</span>}
-                  </div>
+                  <RichEditableCell
+                    value={chapterFields.synopsis ?? ""}
+                    onSave={(val) => saveChapterField("synopsis", val)}
+                  />
                 </div>
+
+                {CHAPTER_TEXT_FIELDS.map(({ key, label }) => (
+                  <div key={key} className="mb-1.5">
+                    <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-0.5">{label}</div>
+                    <RichEditableCell
+                      value={(chapterFields[key] as string | null) ?? ""}
+                      onSave={(val) => saveChapterField(key, val)}
+                    />
+                  </div>
+                ))}
+
+                {customColumns.map((col) => (
+                  <div key={col.id} className="mb-1.5">
+                    <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-0.5">{col.name}</div>
+                    <RichEditableCell
+                      value={customValues[col.id] ?? ""}
+                      onSave={(val) => saveCustomValue(col.id, val)}
+                    />
+                  </div>
+                ))}
 
                 <div className="border-t border-border pt-2 mb-1">
                   <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-1">Scènes</div>

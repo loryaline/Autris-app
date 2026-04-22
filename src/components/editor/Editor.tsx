@@ -588,6 +588,7 @@ export function NovelEditor({
                 chapterTitle={activeChapter?.title ?? "—"}
                 chapterStatus={activeChapter?.status ?? "a_ecrire"}
                 chapterId={activeChapterId}
+                novelId={novelId}
                 onStatusChange={() => activeChapterId && handleStatusChange(activeChapterId)}
                 wbEntries={wbEntries}
                 projectId={projectId}
