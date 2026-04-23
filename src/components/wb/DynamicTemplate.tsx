@@ -8,6 +8,7 @@ export function DynamicTemplate({
   data,
   onChange,
   renderAsCards = false,
+  readOnly = false,
 }: {
   template: Template;
   data: Record<string, unknown>;
@@ -17,6 +18,11 @@ export function DynamicTemplate({
    * avec les champs disposés en grille 2 colonnes. Sinon, rendu stack vertical.
    */
   renderAsCards?: boolean;
+  /**
+   * Mode lecture seule : rend les valeurs comme du texte formatté.
+   * Les sections et champs vides sont masqués.
+   */
+  readOnly?: boolean;
 }) {
   const [local, setLocal] = useState<Record<string, unknown>>(data);
 
@@ -30,7 +36,53 @@ export function DynamicTemplate({
     onChange(next);
   }
 
+  function renderReadOnlyField(f: TemplateField): React.ReactElement | null {
+    if (f.type === "quad") {
+      const quadData = (local[f.key] as Record<string, string>) ?? {};
+      const cols = f.columns ?? ["A", "B", "C", "D"];
+      const hasAny = Object.values(quadData).some((s) => (s ?? "").trim());
+      if (!hasAny) return null;
+      return (
+        <div key={f.key} className={fieldSpan(f, true)}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {cols.map((col, idx) => {
+              const colKey = `col${idx}`;
+              const val = (quadData[colKey] ?? "").trim();
+              if (!val) return null;
+              return (
+                <div key={colKey}>
+                  <FieldLabel>{col}</FieldLabel>
+                  <p className={RO_TEXT}>{val}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+    const raw = ((local[f.key] as string) ?? "").trim();
+    if (!raw) return null;
+    return (
+      <div key={f.key} className={fieldSpan(f, renderAsCards)}>
+        {f.label && <FieldLabel>{f.label}</FieldLabel>}
+        <p className={RO_TEXT}>{raw}</p>
+      </div>
+    );
+  }
+
+  function sectionHasContent(fields: TemplateField[]): boolean {
+    return fields.some((f) => {
+      const v = local[f.key];
+      if (f.type === "quad") {
+        const q = (v as Record<string, string>) ?? {};
+        return Object.values(q).some((s) => (s ?? "").trim());
+      }
+      return !!((v as string) ?? "").trim();
+    });
+  }
+
   function renderField(f: TemplateField) {
+    if (readOnly) return renderReadOnlyField(f);
     if (f.type === "quad") {
       const quadData = (local[f.key] as Record<string, string>) ?? {};
       const cols = f.columns ?? ["A", "B", "C", "D"];
@@ -88,10 +140,22 @@ export function DynamicTemplate({
     );
   }
 
+  const visibleSections = readOnly
+    ? template.sections.filter((s) => sectionHasContent(s.fields))
+    : template.sections;
+
+  if (readOnly && visibleSections.length === 0) {
+    return (
+      <p className="text-[12.5px] text-text-quaternary italic font-serif">
+        Aucun détail renseigné pour cette fiche.
+      </p>
+    );
+  }
+
   if (renderAsCards) {
     return (
       <div className="flex flex-col gap-4">
-        {template.sections.map((section) => (
+        {visibleSections.map((section) => (
           <section
             key={section.group}
             className="rounded-[var(--radius-lg)] border border-white/[0.06] bg-bg-tertiary/50 p-4"
@@ -119,7 +183,7 @@ export function DynamicTemplate({
   // Mode stack par défaut (rétro-compatible)
   return (
     <div className="flex flex-col gap-5">
-      {template.sections.map((section, sIdx) => (
+      {visibleSections.map((section, sIdx) => (
         <section
           key={section.group}
           className={sIdx === 0 ? "" : "pt-5 border-t border-white/[0.05]"}
@@ -165,6 +229,9 @@ const FIELD_INPUT =
 
 const FIELD_TEXTAREA =
   "w-full text-[12.5px] leading-relaxed px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-md)] resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary transition-colors";
+
+const RO_TEXT =
+  "text-[12.5px] leading-relaxed text-text-secondary whitespace-pre-wrap";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (

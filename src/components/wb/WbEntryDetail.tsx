@@ -16,6 +16,7 @@ import { WbMainImage } from "./WbMainImage";
 import { WbGallery } from "./WbGallery";
 import { WbTagsEditor } from "./WbTagsEditor";
 import { WbLinksEditor } from "./WbLinksEditor";
+import Image from "next/image";
 
 export function WbEntryDetail({
   entry,
@@ -45,6 +46,9 @@ export function WbEntryDetail({
   const [local, setLocal] = useState<WbEntry>(entry);
   const [saving, setSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mode, setMode] = useState<"view" | "edit">(
+    entry.title?.trim() ? "view" : "edit"
+  );
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,6 +56,7 @@ export function WbEntryDetail({
 
   useEffect(() => {
     setLocal(entry);
+    setMode(entry.title?.trim() ? "view" : "edit");
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
     if (!entry.title?.trim()) {
       requestAnimationFrame(() => titleInputRef.current?.focus());
@@ -142,19 +147,20 @@ export function WbEntryDetail({
               Retour aux fiches
             </button>
 
-            {/* Pill MODE ÉDITION */}
-            <span
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10.5px] font-medium uppercase"
-              style={{
-                letterSpacing: "0.16em",
-                background: "var(--color-accent-bg)",
-                borderColor: "var(--color-accent-border)",
-                color: "var(--color-accent)",
-              }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" />
-              Mode édition
-            </span>
+            {mode === "edit" && (
+              <span
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10.5px] font-medium uppercase"
+                style={{
+                  letterSpacing: "0.16em",
+                  background: "var(--color-accent-bg)",
+                  borderColor: "var(--color-accent-border)",
+                  color: "var(--color-accent)",
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" />
+                Mode édition
+              </span>
+            )}
 
             {siblings.length > 1 && currentIdx >= 0 && (
               <>
@@ -190,48 +196,65 @@ export function WbEntryDetail({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Indicateur auto-save */}
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-text-quaternary">
-              {saving ? (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
-                  <span className="font-serif italic">Sauvegarde…</span>
-                </>
-              ) : (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal" />
-                  <span className="font-serif italic">Auto · enregistré</span>
-                </>
-              )}
-            </span>
-            <div className="relative">
-              <select
-                value={local.status}
-                onChange={(e) => scheduleSave({ ...local, status: e.target.value as WbStatus })}
-                className="h-8 pl-5 pr-6 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.06] text-[11.5px] text-text-secondary cursor-pointer appearance-none hover:border-white/[0.1]"
-                style={{
-                  backgroundImage:
-                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23737687' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E\")",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "right 6px center",
-                }}
-              >
-                {WB_STATUSES.map((s) => (
-                  <option key={s.key} value={s.key}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <span
-                className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${
-                  local.status === "valide"
-                    ? "bg-teal"
-                    : local.status === "archive"
-                      ? "bg-white/30"
-                      : "bg-[var(--color-accent)]"
-                }`}
-              />
-            </div>
+            {/* Indicateur auto-save (édition uniquement) */}
+            {mode === "edit" && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] text-text-quaternary">
+                {saving ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
+                    <span className="font-serif italic">Sauvegarde…</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal" />
+                    <span className="font-serif italic">Auto · enregistré</span>
+                  </>
+                )}
+              </span>
+            )}
+            {mode === "edit" ? (
+              <div className="relative">
+                <select
+                  value={local.status}
+                  onChange={(e) => scheduleSave({ ...local, status: e.target.value as WbStatus })}
+                  className="h-8 pl-5 pr-6 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.06] text-[11.5px] text-text-secondary cursor-pointer appearance-none hover:border-white/[0.1]"
+                  style={{
+                    backgroundImage:
+                      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23737687' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E\")",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 6px center",
+                  }}
+                >
+                  {WB_STATUSES.map((s) => (
+                    <option key={s.key} value={s.key}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <span
+                  className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${
+                    local.status === "valide"
+                      ? "bg-teal"
+                      : local.status === "archive"
+                        ? "bg-white/30"
+                        : "bg-[var(--color-accent)]"
+                  }`}
+                />
+              </div>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-bg-secondary border border-white/[0.06] text-[11.5px] text-text-secondary">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    local.status === "valide"
+                      ? "bg-teal"
+                      : local.status === "archive"
+                        ? "bg-white/30"
+                        : "bg-[var(--color-accent)]"
+                  }`}
+                />
+                {statusDef?.label ?? local.status}
+              </span>
+            )}
             <div className="relative">
               <button
                 onClick={() => setMenuOpen((v) => !v)}
@@ -264,9 +287,46 @@ export function WbEntryDetail({
                 </>
               )}
             </div>
+            {mode === "view" ? (
+              <button
+                onClick={() => setMode("edit")}
+                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[var(--radius-md)] text-[12px] font-medium cursor-pointer transition-colors"
+                style={{
+                  background: "var(--color-accent)",
+                  color: "#1a1410",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <path d="M9.5 2.5L11.5 4.5L5 11L2.5 11.5L3 9L9.5 2.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Éditer
+              </button>
+            ) : (
+              <button
+                onClick={() => setMode("view")}
+                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[var(--radius-md)] text-[12px] font-medium cursor-pointer transition-colors bg-bg-secondary border border-white/[0.08] text-text-primary hover:border-white/[0.15]"
+              >
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 7L5.5 10.5L12 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Terminer
+              </button>
+            )}
           </div>
         </div>
 
+        {mode === "view" ? (
+          <ViewBody
+            local={local}
+            catDef={catDef}
+            subList={subList}
+            template={template}
+            entryLinks={entryLinks}
+            allEntries={allEntries}
+            onSelectEntry={onSelectEntry}
+          />
+        ) : (
+          <>
         {/* === Zone Identité : image carrée + titre / sous-titre / catégorie chips === */}
         <div className="grid grid-cols-12 gap-6 mb-6 pb-6 border-b border-white/[0.05]">
           {/* Image drop square */}
@@ -528,8 +588,302 @@ export function WbEntryDetail({
             </Card>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+/* ========== View mode ========== */
+
+function ViewBody({
+  local,
+  catDef,
+  subList,
+  template,
+  entryLinks,
+  allEntries,
+  onSelectEntry,
+}: {
+  local: WbEntry;
+  catDef: ReturnType<typeof getCategoryDef>;
+  subList: { key: string; label: string; icon?: string }[];
+  template: ReturnType<typeof getTemplate>;
+  entryLinks: WbLink[];
+  allEntries: WbEntry[];
+  onSelectEntry: (id: string) => void;
+}) {
+  const tone = toneFor(local.category, local.subcategory);
+  const subLabel =
+    subList.find((s) => s.key === local.subcategory)?.label ?? catDef?.label;
+  const subIcon =
+    subList.find((s) => s.key === local.subcategory)?.icon ?? catDef?.icon;
+
+  return (
+    <>
+      {/* === Hero banner === */}
+      <div
+        className="relative rounded-[var(--radius-lg)] overflow-hidden border border-white/[0.06] mb-6"
+        style={{ minHeight: local.main_image_url ? "280px" : "auto" }}
+      >
+        {local.main_image_url && (
+          <>
+            <Image
+              src={local.main_image_url}
+              alt={local.title}
+              fill
+              className="object-cover"
+              unoptimized
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(15,15,22,0.35) 0%, rgba(15,15,22,0.55) 55%, rgba(15,15,22,0.92) 100%)",
+              }}
+            />
+          </>
+        )}
+        {!local.main_image_url && (
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(ellipse at 70% 30%, ${tone.glow}, transparent 60%), linear-gradient(180deg, ${tone.bg}, rgba(15,15,22,0.85))`,
+            }}
+          />
+        )}
+
+        <div className="relative px-7 py-6 flex flex-col gap-2">
+          {/* Badge sous-catégorie */}
+          <span
+            className="self-start inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[11px] font-medium uppercase"
+            style={{
+              letterSpacing: "0.14em",
+              background: "rgba(0,0,0,0.35)",
+              borderColor: tone.border,
+              color: tone.text,
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            {subIcon && <span className="text-[12px] leading-none">{subIcon}</span>}
+            {subLabel ?? "—"}
+          </span>
+
+          <h1 className="font-serif text-[44px] leading-[1.05] tracking-tight text-white mt-2">
+            {splitLastWord(local.title ?? "Sans titre")}
+          </h1>
+          {local.subtitle && (
+            <p className="font-serif italic text-[18px] text-[var(--color-accent)] -mt-1">
+              {local.subtitle}
+            </p>
+          )}
+          {local.description && (
+            <p className="text-[13px] leading-relaxed text-white/75 max-w-[820px] mt-1 whitespace-pre-wrap">
+              {local.description}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* === 2-col content === */}
+      <div className="grid grid-cols-12 gap-4">
+        <div className="col-span-12 lg:col-span-8 flex flex-col gap-4">
+          {template ? (
+            <DynamicTemplate
+              template={template}
+              data={local.template_data ?? {}}
+              onChange={() => {}}
+              renderAsCards
+              readOnly
+            />
+          ) : (
+            <Card icon="📝" title="Description">
+              {local.description?.trim() ? (
+                <p className="text-[13px] leading-relaxed text-text-secondary whitespace-pre-wrap">
+                  {local.description}
+                </p>
+              ) : (
+                <p className="text-[12.5px] text-text-quaternary italic font-serif">
+                  Aucune description.
+                </p>
+              )}
+            </Card>
+          )}
+
+          {local.personal_notes?.trim() && (
+            <Card
+              icon="💬"
+              title={
+                <span>
+                  Notes <span className="font-serif italic text-[var(--color-accent)]">personnelles</span>
+                  <span className="text-text-quaternary font-sans italic ml-2 text-[12px]">
+                    — hors worldbuilding
+                  </span>
+                </span>
+              }
+              accent
+            >
+              <p className="text-[13px] leading-relaxed text-text-secondary whitespace-pre-wrap font-serif italic">
+                {local.personal_notes}
+              </p>
+            </Card>
+          )}
+
+          {local.gallery && local.gallery.length > 0 && (
+            <Card
+              icon="🖼"
+              title="Galerie"
+              titleAccent={`${local.gallery.length} / 10`}
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {local.gallery.map((url, idx) => (
+                  <div
+                    key={url}
+                    className="relative aspect-[4/3] rounded-[var(--radius-md)] overflow-hidden border border-white/[0.06]"
+                  >
+                    <Image
+                      src={url}
+                      alt={`Image ${idx + 1}`}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
+          <Card icon="ⓘ" title="Informations">
+            <InfoList
+              items={[
+                {
+                  label: "Catégorie",
+                  value: (
+                    <span className="inline-flex items-center gap-1.5">
+                      {subIcon && <span className="text-[13px]">{subIcon}</span>}
+                      <span>{subLabel ?? "—"}</span>
+                    </span>
+                  ),
+                },
+                { label: "Créée le", value: formatDate(local.created_at) },
+                { label: "Modifiée", value: relativeTime(local.updated_at) },
+                {
+                  label: "Statut",
+                  value: (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          local.status === "valide"
+                            ? "bg-teal"
+                            : local.status === "archive"
+                              ? "bg-white/30"
+                              : "bg-[var(--color-accent)]"
+                        }`}
+                      />
+                      <span>
+                        {WB_STATUSES.find((s) => s.key === local.status)?.label ??
+                          local.status}
+                      </span>
+                    </span>
+                  ),
+                },
+              ]}
+            />
+          </Card>
+
+          <Card icon="🏷" title="Tags">
+            {local.tags && local.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {local.tags.map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center h-6 px-2.5 rounded-full text-[11px] bg-white/[0.03] border border-white/[0.06] text-text-tertiary"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12px] text-text-quaternary italic font-serif">
+                Aucun tag.
+              </p>
+            )}
+          </Card>
+
+          <Card
+            icon="🔗"
+            title="Liens"
+            titleAccent={entryLinks.length > 0 ? `${entryLinks.length}` : undefined}
+          >
+            {entryLinks.length === 0 ? (
+              <p className="text-[12px] text-text-quaternary italic font-serif">
+                Aucun lien.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {entryLinks.map((link) => {
+                  const otherId =
+                    link.from_entry_id === local.id
+                      ? link.to_entry_id
+                      : link.from_entry_id;
+                  const other = allEntries.find((e) => e.id === otherId);
+                  if (!other) return null;
+                  const otherCat = getCategoryDef(other.category);
+                  return (
+                    <li key={link.id}>
+                      <button
+                        onClick={() => onSelectEntry(other.id)}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-[var(--radius-md)] hover:bg-white/[0.03] cursor-pointer text-left transition-colors"
+                      >
+                        <span
+                          className="flex items-center justify-center w-7 h-7 rounded-[var(--radius-sm)] bg-white/[0.04] border border-white/[0.05] text-[12px] flex-shrink-0"
+                          aria-hidden
+                        >
+                          {otherCat?.icon ?? "✦"}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[12.5px] text-text-primary truncate">
+                            {other.title || "Sans titre"}
+                          </div>
+                          {other.subtitle && (
+                            <div className="text-[11px] text-text-quaternary truncate font-serif italic">
+                              {other.subtitle}
+                            </div>
+                          )}
+                        </div>
+                        <span
+                          className="text-[9.5px] font-medium uppercase text-text-quaternary flex-shrink-0"
+                          style={{ letterSpacing: "0.16em" }}
+                        >
+                          {link.link_type}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Rend le titre avec son dernier mot en serif italique accent (style mockup). */
+function splitLastWord(title: string): React.ReactNode {
+  const parts = title.trim().split(/\s+/);
+  if (parts.length <= 1) return title;
+  const last = parts.pop();
+  return (
+    <>
+      {parts.join(" ")}{" "}
+      <span className="italic text-[var(--color-accent)]/95">{last}</span>
+    </>
   );
 }
 
