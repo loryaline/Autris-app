@@ -11,11 +11,13 @@ export function WbGallery({
   projectId,
   value,
   onChange,
+  embedded = false,
 }: {
   entryId: string;
   projectId: string;
   value: string[];
   onChange: (urls: string[]) => void;
+  embedded?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -78,11 +80,17 @@ export function WbGallery({
   const canAdd = value.length < MAX_IMAGES;
 
   return (
-    <div className="mt-6 border-t border-border pt-4">
-      <div className="flex items-center justify-between mb-2">
-        <label className="block text-[11px] font-medium text-text-tertiary uppercase tracking-wider">
-          🖼 Galerie ({value.length}/{MAX_IMAGES})
-        </label>
+    <div className={embedded ? "" : "mt-6 border-t border-border pt-4"}>
+      <div className={`flex items-center justify-between ${embedded ? "mb-3" : "mb-2"}`}>
+        {embedded ? (
+          <span className="text-[11px] text-text-quaternary">
+            {value.length} / {MAX_IMAGES}
+          </span>
+        ) : (
+          <label className="block text-[11px] font-medium text-text-tertiary uppercase tracking-wider">
+            🖼 Galerie ({value.length}/{MAX_IMAGES})
+          </label>
+        )}
         <input
           ref={inputRef}
           type="file"

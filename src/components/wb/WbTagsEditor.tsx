@@ -8,11 +8,13 @@ export function WbTagsEditor({
   value,
   onChange,
   projectTags,
+  embedded = false,
 }: {
   entryId: string;
   value: string[];
   onChange: (tags: string[]) => void;
   projectTags: string[];
+  embedded?: boolean;
 }) {
   const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
@@ -43,10 +45,12 @@ export function WbTagsEditor({
   }
 
   return (
-    <div className="mt-6 border-t border-border pt-4">
-      <label className="block text-[11px] font-medium text-text-tertiary uppercase tracking-wider mb-2">
-        🏷 Tags
-      </label>
+    <div className={embedded ? "" : "mt-6 border-t border-border pt-4"}>
+      {!embedded && (
+        <label className="block text-[11px] font-medium text-text-tertiary uppercase tracking-wider mb-2">
+          🏷 Tags
+        </label>
+      )}
       <div className="flex flex-wrap gap-1.5 items-center">
         {value.map((t) => (
           <span

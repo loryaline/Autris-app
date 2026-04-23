@@ -21,32 +21,51 @@ export function WbSubSidebar({
   }, {});
 
   return (
-    <div className="w-[180px] shrink-0 border-r border-border bg-bg-secondary p-3 flex flex-col h-full overflow-y-auto">
+    <div className="w-[220px] shrink-0 border-r border-white/[0.05] bg-bg-secondary/50 px-3 py-4 flex flex-col h-full overflow-y-auto">
       {Object.entries(grouped).map(([group, items]) => (
-        <div key={group} className="mb-3">
-          <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider mb-1">
+        <div key={group} className="mb-5">
+          <div
+            className="px-2 text-[10px] font-medium text-text-quaternary uppercase mb-2"
+            style={{ letterSpacing: "0.18em" }}
+          >
             {group}
           </div>
           <div className="flex flex-col gap-0.5">
-            {items.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => onCategoryChange(c.key)}
-                className={`flex items-center gap-2 px-2 py-1.5 text-[12.5px] rounded cursor-pointer transition-colors text-left ${
-                  activeCategory === c.key
-                    ? "bg-primary-bg text-primary-dark font-medium"
-                    : "text-text-secondary hover:bg-bg-hover hover:text-text-primary"
-                }`}
-              >
-                <span className="text-[13px]">{c.icon}</span>
-                <span className="flex-1 truncate">{c.label}</span>
-                {counts[c.key] > 0 && (
-                  <span className="text-[10px] text-text-quaternary">
-                    {counts[c.key]}
+            {items.map((c) => {
+              const isActive = activeCategory === c.key;
+              const n = counts[c.key] ?? 0;
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => onCategoryChange(c.key)}
+                  className={`relative flex items-center gap-2.5 pl-3 pr-2 py-1.5 text-[12.5px] rounded-[var(--radius-md)] cursor-pointer transition-colors text-left ${
+                    isActive
+                      ? "bg-white/[0.04] text-text-primary"
+                      : "text-text-secondary hover:bg-white/[0.03] hover:text-text-primary"
+                  }`}
+                >
+                  {isActive && (
+                    <span
+                      className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full"
+                      style={{ background: "var(--color-accent)" }}
+                    />
+                  )}
+                  <span className="text-[14px] leading-none">{c.icon}</span>
+                  <span className="flex-1 truncate">{c.label}</span>
+                  <span
+                    className={`text-[10px] leading-none px-1.5 py-1 rounded-full min-w-[18px] text-center ${
+                      n > 0
+                        ? isActive
+                          ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent-border)]"
+                          : "bg-white/[0.05] text-text-tertiary border border-white/[0.05]"
+                        : "text-text-quaternary/60"
+                    }`}
+                  >
+                    {n}
                   </span>
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       ))}

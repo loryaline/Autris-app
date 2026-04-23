@@ -12,6 +12,7 @@ export function WbLinksEditor({
   onSelectEntry,
   onLinkAdded,
   onLinkRemoved,
+  embedded = false,
 }: {
   entry: WbEntry;
   allEntries: WbEntry[];
@@ -19,6 +20,7 @@ export function WbLinksEditor({
   onSelectEntry: (id: string) => void;
   onLinkAdded: (link: WbLink) => void;
   onLinkRemoved: (id: string) => void;
+  embedded?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [pickedType, setPickedType] = useState<string>(LINK_TYPES[0]);
@@ -93,10 +95,12 @@ export function WbLinksEditor({
   }, [links, allEntries, entry.id]);
 
   return (
-    <div className="mt-6 border-t border-border pt-4">
-      <label className="block text-[11px] font-medium text-text-tertiary uppercase tracking-wider mb-2">
-        🔗 Liens avec d&apos;autres fiches
-      </label>
+    <div className={embedded ? "" : "mt-6 border-t border-border pt-4"}>
+      {!embedded && (
+        <label className="block text-[11px] font-medium text-text-tertiary uppercase tracking-wider mb-2">
+          🔗 Liens avec d&apos;autres fiches
+        </label>
+      )}
 
       {/* Form d'ajout */}
       <div className="flex gap-2 items-start mb-3 flex-wrap">
