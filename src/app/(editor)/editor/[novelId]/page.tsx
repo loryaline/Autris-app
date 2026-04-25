@@ -9,6 +9,17 @@ export default async function EditorPage({
   const { novelId } = await params;
   const supabase = await createClient();
 
+  const { data: { user } } = await supabase.auth.getUser();
+  let pomoDuration = 25;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("pomo_duration")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.pomo_duration) pomoDuration = profile.pomo_duration;
+  }
+
   const { data: novel } = await supabase
     .from("novels")
     .select("id, title, current_words, word_goal, project_id, chapters(id, title, content, word_count, position, status, synopsis)")
@@ -52,6 +63,7 @@ export default async function EditorPage({
       initialChapterId={firstChapter?.id ?? null}
       wordGoal={novel.word_goal}
       wbEntries={wbEntries ?? []}
+      pomoDuration={pomoDuration}
     />
   );
 }

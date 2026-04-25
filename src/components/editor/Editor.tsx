@@ -13,6 +13,7 @@ import { Toolbar } from "./Toolbar";
 import { StatusBar } from "./StatusBar";
 import { StructurePanel } from "./StructurePanel";
 import { ContextPanel } from "./ContextPanel";
+import { Pomodoro } from "./Pomodoro";
 
 interface ChapterData {
   id: string;
@@ -43,6 +44,7 @@ interface EditorProps {
   initialChapterId: string | null;
   wordGoal: number | null;
   wbEntries: WbEntryLite[];
+  pomoDuration: number;
 }
 
 function countWords(text: string): number {
@@ -60,6 +62,7 @@ export function NovelEditor({
   initialChapterId,
   wordGoal,
   wbEntries,
+  pomoDuration,
 }: EditorProps) {
   const [activeChapterId, setActiveChapterId] = useState<string | null>(initialChapterId);
   const activeChapterIdRef = useRef<string | null>(initialChapterId);
@@ -454,7 +457,9 @@ export function NovelEditor({
               </button>
             </>
           )}
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-2">
+            <Pomodoro defaultDuration={pomoDuration} />
+            <span className="w-px h-4 bg-white/[0.08]" />
             {syncStatus === "saved" && (
               <span className="text-[11px] font-medium text-teal-dark bg-teal-bg px-1.5 py-0.5 rounded">sauvegardé</span>
             )}
@@ -480,7 +485,9 @@ export function NovelEditor({
               </span>
             </>
           )}
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-2">
+            <Pomodoro defaultDuration={pomoDuration} />
+            <span className="w-px h-4 bg-white/[0.08]" />
             {syncStatus === "saved" && (
               <span className="text-[11px] font-medium text-teal-dark bg-teal-bg px-1.5 py-0.5 rounded">sauvegardé</span>
             )}

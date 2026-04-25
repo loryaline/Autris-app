@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { GENRES } from "@/lib/constants";
-import type { Genre, Persona } from "@/types/database";
+import type { Genre, NarrativeTemplate, Persona } from "@/types/database";
 
 /* ---- Constants ---- */
 const PERSONAS: { value: Persona; label: string; desc: string }[] = [
@@ -23,8 +23,22 @@ const FREQUENCIES = [
 
 const POMO_DURATIONS = [15, 20, 25, 30, 45, 60];
 
-type Step = "accueil" | "persona" | "projet" | "objectifs" | "final";
-const STEPS: Step[] = ["accueil", "persona", "projet", "objectifs", "final"];
+type NarrativeOption = {
+  value: NarrativeTemplate;
+  label: string;
+  desc: string;
+  badge: string;
+};
+const NARRATIVE_TEMPLATES: NarrativeOption[] = [
+  { value: "libre",      label: "Libre",                 desc: "Pas de structure imposée. Vous écrivez à votre rythme.", badge: "✎" },
+  { value: "3actes",     label: "Trois actes",           desc: "Exposition · Confrontation · Résolution. Le classique.", badge: "▦" },
+  { value: "heros",      label: "Voyage du héros",       desc: "Campbell · 12 étapes du départ au retour transformé.",   badge: "✦" },
+  { value: "savethecat", label: "Save the Cat",          desc: "Snyder · 15 beats narratifs, idéal pour le rythme.",     badge: "◆" },
+  { value: "snowflake",  label: "Flocon (Snowflake)",    desc: "Ingermanson · de la phrase au synopsis détaillé.",       badge: "❄" },
+];
+
+type Step = "accueil" | "persona" | "projet" | "template" | "objectifs" | "final";
+const STEPS: Step[] = ["accueil", "persona", "projet", "template", "objectifs", "final"];
 
 export function OnboardingClient() {
   const router = useRouter();
@@ -38,6 +52,7 @@ export function OnboardingClient() {
   const [wordGoalPerSession, setWordGoalPerSession] = useState("500");
   const [frequency, setFrequency] = useState("flexible");
   const [pomoDuration, setPomoDuration] = useState(25);
+  const [narrativeTemplate, setNarrativeTemplate] = useState<NarrativeTemplate>("libre");
 
   const stepIndex = STEPS.indexOf(step);
 
@@ -89,6 +104,7 @@ export function OnboardingClient() {
         user_id: user.id,
         title: "Mon roman",
         ui_theme: "blanc",
+        narrative_template: narrativeTemplate,
         word_goal: parseInt(wordGoalPerSession) * 120 || 60000,
         is_active: true,
       })
@@ -112,13 +128,11 @@ export function OnboardingClient() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Mark onboarding done + award "Première ligne" via autarie_showcase
+    // Mark onboarding done — l'achievement « Première ligne » est posé
+    // séparément côté gamification (V2). Pour V1 on se contente du flag.
     await supabase
       .from("profiles")
-      .update({
-        onboarding_done: true,
-        autarie_showcase: ["premiere_ligne"],
-      })
+      .update({ onboarding_done: true })
       .eq("id", user.id);
 
     if (!createdIds) { router.push("/"); return; }
@@ -311,6 +325,66 @@ export function OnboardingClient() {
                     ? "bg-primary text-white hover:bg-primary-dark"
                     : "bg-border text-text-quaternary cursor-not-allowed"
                 }`}
+              >
+                Continuer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ===== STEP: TEMPLATE NARRATIF ===== */}
+        {step === "template" && (
+          <div>
+            <h2 className="text-[20px] font-bold text-text-primary mb-1">
+              Une <span className="font-serif italic text-[var(--color-accent)]">structure</span> pour vous guider&nbsp;?
+            </h2>
+            <p className="text-[13px] text-text-tertiary mb-6">
+              Choisissez un cadre narratif. Il préremplira votre planification — vous pourrez tout réécrire ou changer plus tard.
+            </p>
+
+            <div className="flex flex-col gap-2 mb-8">
+              {NARRATIVE_TEMPLATES.map((t) => {
+                const active = narrativeTemplate === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    onClick={() => setNarrativeTemplate(t.value)}
+                    className={`flex items-start gap-3 text-left px-4 py-3.5 rounded-[var(--radius-md)] border cursor-pointer transition-colors ${
+                      active
+                        ? "bg-primary-bg border-primary-border"
+                        : "bg-bg-secondary border-border hover:bg-bg-hover"
+                    }`}
+                  >
+                    <span
+                      className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-[14px] ${
+                        active
+                          ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent-border)]"
+                          : "bg-white/[0.04] text-text-tertiary border border-border"
+                      }`}
+                    >
+                      {t.badge}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[14px] font-medium ${active ? "text-primary" : "text-text-primary"}`}>
+                        {t.label}
+                      </div>
+                      <div className="text-[12px] text-text-tertiary mt-0.5">{t.desc}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={prev}
+                className="h-10 px-4 text-[13px] text-text-tertiary border border-border rounded-[var(--radius-md)] cursor-pointer bg-transparent hover:bg-bg-hover transition-colors"
+              >
+                Retour
+              </button>
+              <button
+                onClick={next}
+                className="flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors bg-primary text-white hover:bg-primary-dark"
               >
                 Continuer
               </button>

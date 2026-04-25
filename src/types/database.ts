@@ -37,6 +37,12 @@ export interface Profile {
   plan: Plan;
   persona: Persona | null;
   onboarding_done: boolean;
+  /** Durée Pomodoro en minutes (default 25). */
+  pomo_duration: number;
+  /** Début de la période d'essai 3 mois (timestamptz ISO). */
+  trial_started_at: string;
+  /** Fin de l'essai / fin de la période payée (timestamptz ISO). */
+  plan_expires_at: string;
   created_at: string;
 }
 
@@ -49,6 +55,13 @@ export interface Project {
   updated_at: string;
 }
 
+export type NarrativeTemplate =
+  | "libre"
+  | "3actes"
+  | "snowflake"
+  | "savethecat"
+  | "heros";
+
 export interface Novel {
   id: string;
   project_id: string;
@@ -57,6 +70,7 @@ export interface Novel {
   current_words: number;
   word_goal: number | null;
   ui_theme: string;
+  narrative_template: NarrativeTemplate;
   created_at: string;
   updated_at: string;
 }
