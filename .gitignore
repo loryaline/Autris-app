@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local scratch
+.brief-extracted.md
+.brief-tables.md
+.claude/settings.local.json
+supabase/seed-*.sql
