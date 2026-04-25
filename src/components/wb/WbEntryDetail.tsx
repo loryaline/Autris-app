@@ -12,6 +12,7 @@ import {
 import { getTemplate } from "@/lib/wb-templates";
 import { toneFor } from "@/lib/wb-tones";
 import { DynamicTemplate } from "./DynamicTemplate";
+import { WbCustomBlocks, readCustomBlocks, writeCustomBlocks, type CustomBlock } from "./WbCustomBlocks";
 import { WbMainImage } from "./WbMainImage";
 import { WbGallery } from "./WbGallery";
 import { WbTagsEditor } from "./WbTagsEditor";
@@ -482,6 +483,20 @@ export function WbEntryDetail({
               </Card>
             )}
 
+            {/* Blocs personnalisés (texte / notes / tableau) */}
+            <WbCustomBlocks
+              blocks={readCustomBlocks(local.template_data as Record<string, unknown> | null)}
+              onChange={(next: CustomBlock[]) =>
+                scheduleSave({
+                  ...local,
+                  template_data: writeCustomBlocks(
+                    local.template_data as Record<string, unknown> | null,
+                    next,
+                  ),
+                })
+              }
+            />
+
             <Card
               icon="💬"
               title={
@@ -783,6 +798,13 @@ function ViewBody({
               )}
             </Card>
           )}
+
+          {/* Blocs personnalisés (lecture seule) */}
+          <WbCustomBlocks
+            blocks={readCustomBlocks(local.template_data as Record<string, unknown> | null)}
+            onChange={() => {}}
+            readOnly
+          />
 
           {local.personal_notes?.trim() && (
             <Card
