@@ -170,9 +170,66 @@ export function ChapterTable({
 
   // Multi-sélection de cellules : clé "chapterId::colKey"
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+  // Drag-select actif (au moins un mouvement détecté)
+  const [dragSelecting, setDragSelecting] = useState(false);
 
   function cellKey(chapterId: string, colKey: string): string {
     return `${chapterId}::${colKey}`;
+  }
+
+  /**
+   * Démarre une sélection par glisser depuis une pastille de cellule.
+   * - On capture mousemove / mouseup au niveau du document.
+   * - À chaque mousemove on cherche l'élément `data-cell-key` sous le curseur
+   *   et on l'ajoute à la sélection.
+   * - Sur mouseup, si la sélection a changé, on ouvre la palette ancrée près
+   *   de la pastille initiale. Si pas de drag (juste un click), même chose
+   *   sur la cellule unique.
+   */
+  function startCellDragSelect(
+    chapterId: string,
+    colKey: string,
+    anchor: { top: number; left: number },
+  ) {
+    const initialKey = cellKey(chapterId, colKey);
+    setSelectedCells(new Set([initialKey]));
+    setDragSelecting(false);
+    let moved = false;
+
+    const onMove = (ev: MouseEvent) => {
+      const target = document.elementFromPoint(ev.clientX, ev.clientY);
+      if (!target) return;
+      const cellEl = (target as HTMLElement).closest("[data-cell-key]") as HTMLElement | null;
+      if (!cellEl) return;
+      const key = cellEl.getAttribute("data-cell-key");
+      if (!key) return;
+      if (!moved) {
+        moved = true;
+        setDragSelecting(true);
+      }
+      setSelectedCells((prev) => {
+        if (prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+    };
+
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      setDragSelecting(false);
+      // On ouvre la palette quoi qu'il arrive (click simple ou drag)
+      setPalette({
+        kind: "cell",
+        chapterId,
+        colKey,
+        anchor,
+      });
+    };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
   }
 
   // Column order: default columns + custom columns
@@ -828,7 +885,9 @@ export function ChapterTable({
 
         <div
           ref={tableWrapperRef}
-          className="overflow-auto h-full border border-white/[0.06] rounded-[var(--radius-lg)] bg-bg-secondary/30"
+          className={`overflow-auto h-full border border-white/[0.06] rounded-[var(--radius-lg)] bg-bg-secondary/30 ${
+            dragSelecting ? "select-none" : ""
+          }`}
         >
           <div style={{ minWidth: "max-content" }}>
             {/* Header — opaque pour ne pas laisser transparaître les lignes au scroll */}
@@ -960,6 +1019,7 @@ export function ChapterTable({
                     return (
                       <div
                         key={col.key}
+                        data-cell-key={k}
                         className={`group/cell relative last:border-r-0 ${
                           isSelected
                             ? "outline outline-2 outline-[var(--color-accent)] outline-offset-[-2px]"
@@ -971,51 +1031,23 @@ export function ChapterTable({
                       >
                         {renderCell(col, chapter)}
                         {/* Pastille de coloration cellule — coin sup. droit.
-                            Click  : ouvre la palette pour cette cellule (et l'ensemble si multi-sélection)
-                            Shift+click : ajoute / retire la cellule de la sélection */}
+                            Click  : ouvre la palette pour la cellule
+                            Drag   : étend la sélection aux cases survolées */}
                         <button
                           type="button"
-                          onClick={(e) => {
+                          onMouseDown={(e) => {
+                            e.preventDefault();
                             e.stopPropagation();
-                            if (e.shiftKey) {
-                              // Multi-sélection
-                              setSelectedCells((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(k)) next.delete(k);
-                                else next.add(k);
-                                return next;
-                              });
-                              // Si la palette n'est pas ouverte, on l'ouvre sur cette cellule.
-                              if (!palette || palette.kind !== "cell") {
-                                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                setPalette({
-                                  kind: "cell",
-                                  chapterId: chapter.id,
-                                  colKey: col.key,
-                                  anchor: { top: r.bottom + 4, left: r.left - 80 },
-                                });
-                              }
-                            } else {
-                              // Click simple : si la cellule fait partie d'une sélection
-                              // existante, on garde cette sélection. Sinon on la
-                              // remplace par celle-ci uniquement.
-                              setSelectedCells((prev) => {
-                                if (prev.has(k) && prev.size > 1) return prev;
-                                return new Set([k]);
-                              });
-                              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                              setPalette({
-                                kind: "cell",
-                                chapterId: chapter.id,
-                                colKey: col.key,
-                                anchor: { top: r.bottom + 4, left: r.left - 80 },
-                              });
-                            }
+                            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            startCellDragSelect(chapter.id, col.key, {
+                              top: r.bottom + 4,
+                              left: r.left - 80,
+                            });
                           }}
                           title={
                             selectedCells.size > 1 && selectedCells.has(k)
                               ? `Couleur (${selectedCells.size} cellules)`
-                              : "Couleur · Maj+clic pour sélectionner plusieurs"
+                              : "Couleur · maintenez et glissez pour sélectionner plusieurs"
                           }
                           className={`absolute top-1 right-1 w-3 h-3 rounded-full transition-opacity cursor-pointer z-10 border ${
                             isSelected
@@ -1083,7 +1115,7 @@ export function ChapterTable({
             </div>
             {palette.kind === "cell" && selectedCells.size <= 1 && (
               <div className="px-1 pb-1 text-[10px] text-text-quaternary italic font-serif">
-                Maj+clic pour sélectionner plusieurs cases.
+                Glissez depuis la pastille pour sélectionner plusieurs cases.
               </div>
             )}
             <div className="grid grid-cols-4 gap-1">
