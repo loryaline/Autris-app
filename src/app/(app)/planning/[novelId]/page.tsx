@@ -15,7 +15,7 @@ export default async function PlanningPage({
   // Fetch novel with project
   const { data: novel } = await supabase
     .from("novels")
-    .select("id, title, project_id, column_order, projects(title)")
+    .select("id, title, project_id, column_order, column_colors, projects(title)")
     .eq("id", novelId)
     .eq("user_id", user.id)
     .single();
@@ -31,7 +31,7 @@ export default async function PlanningPage({
   // Fetch chapters with planning fields
   const { data: chapters } = await supabase
     .from("chapters")
-    .select("id, title, position, status, synopsis, word_count, themes, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
+    .select("id, title, position, status, synopsis, word_count, themes, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot, row_color, cell_colors")
     .eq("novel_id", novelId)
     .eq("user_id", user.id)
     .order("position", { ascending: true });
@@ -75,6 +75,7 @@ export default async function PlanningPage({
 
   const projectTitle = (novel as unknown as { projects: { title: string } }).projects?.title ?? "";
   const columnOrder = (novel as unknown as { column_order: string[] | null }).column_order;
+  const columnColors = (novel as unknown as { column_colors: Record<string, string> | null }).column_colors ?? {};
 
   return (
     <PlanningClient
@@ -87,6 +88,7 @@ export default async function PlanningPage({
       scenes={scenes ?? []}
       milestones={milestones ?? []}
       columnOrder={columnOrder}
+      columnColors={columnColors}
     />
   );
 }

@@ -148,6 +148,10 @@ export interface ChapterData {
   tension_indices: string | null;
   pivot: string | null;
   narrative_knot: string | null;
+  /** Tint de fond de la ligne entière (hex, ex. "#fde68a"). Null = aucune. */
+  row_color?: string | null;
+  /** Map { [colKey]: hex } pour les cases de colonnes par défaut. */
+  cell_colors?: Record<string, string>;
 }
 
 export interface SceneData {
@@ -170,6 +174,7 @@ export interface CellValue {
   column_id: string;
   chapter_id: string;
   value: string | null;
+  color?: string | null;
 }
 
 interface Milestone {
@@ -191,6 +196,7 @@ export function PlanningClient({
   scenes: initialScenes,
   milestones,
   columnOrder,
+  columnColors: initialColumnColors,
 }: {
   novelId: string;
   novelTitle: string;
@@ -201,6 +207,7 @@ export function PlanningClient({
   scenes: SceneData[];
   milestones: Milestone[];
   columnOrder?: string[] | null;
+  columnColors?: Record<string, string>;
 }) {
   const [activeView, setActiveView] = useState<PlanningView>("tableau");
   const [chapters, setChapters] = useState<ChapterData[]>(initialChapters);
@@ -366,6 +373,7 @@ export function PlanningClient({
             cellValues={cellValues}
             setCellValues={setCellValues}
             initialColumnOrder={columnOrder}
+            initialColumnColors={initialColumnColors}
           />
         )}
 

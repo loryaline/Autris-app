@@ -116,6 +116,21 @@ function EditableCell(props: {
 }
 
 /* ---- Main Table ---- */
+/* ---- Palette de couleurs ----
+ * On utilise des rgba semi-transparents pour rester lisibles sur le fond
+ * navy de l'app sans casser la couleur du texte des cellules.
+ */
+const COLOR_PALETTE: { hex: string; label: string }[] = [
+  { hex: "rgba(248, 113, 113, 0.22)", label: "Rouge" },
+  { hex: "rgba(251, 146, 60, 0.22)",  label: "Orange" },
+  { hex: "rgba(228, 180, 140, 0.22)", label: "Pêche" },
+  { hex: "rgba(250, 204, 21, 0.22)",  label: "Jaune" },
+  { hex: "rgba(93, 202, 165, 0.22)",  label: "Menthe" },
+  { hex: "rgba(96, 165, 250, 0.22)",  label: "Bleu" },
+  { hex: "rgba(192, 132, 252, 0.22)", label: "Lavande" },
+  { hex: "rgba(255, 255, 255, 0.07)", label: "Gris" },
+];
+
 export function ChapterTable({
   novelId,
   chapters,
@@ -125,6 +140,7 @@ export function ChapterTable({
   cellValues,
   setCellValues,
   initialColumnOrder,
+  initialColumnColors,
 }: {
   novelId: string;
   chapters: ChapterRow[];
@@ -134,9 +150,23 @@ export function ChapterTable({
   cellValues: CellValue[];
   setCellValues: Dispatch<SetStateAction<CellValue[]>>;
   initialColumnOrder?: string[] | null;
+  initialColumnColors?: Record<string, string>;
 }) {
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
+
+  // Couleurs des colonnes (persistées sur le roman)
+  const [columnColors, setColumnColors] = useState<Record<string, string>>(
+    initialColumnColors ?? {},
+  );
+
+  // État de la palette ouverte (anchor + cible)
+  const [palette, setPalette] = useState<
+    | null
+    | { kind: "row";    chapterId: string; anchor: { top: number; left: number } }
+    | { kind: "col";    colKey: string;    anchor: { top: number; left: number } }
+    | { kind: "cell";   chapterId: string; colKey: string; anchor: { top: number; left: number } }
+  >(null);
 
   // Column order: default columns + custom columns
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
@@ -267,6 +297,114 @@ export function ChapterTable({
     },
     [setChapters]
   );
+
+  /* ---- Color save : ligne ---- */
+  async function saveRowColor(chapterId: string, color: string | null) {
+    setChapters((prev) =>
+      prev.map((c) => (c.id === chapterId ? { ...c, row_color: color } : c)),
+    );
+    await supabaseRef.current
+      .from("chapters")
+      .update({ row_color: color })
+      .eq("id", chapterId);
+  }
+
+  /* ---- Color save : colonne (toutes lignes) ---- */
+  async function saveColumnColor(colKey: string, color: string | null) {
+    const next = { ...columnColors };
+    if (color) next[colKey] = color;
+    else delete next[colKey];
+    setColumnColors(next);
+    await supabaseRef.current
+      .from("novels")
+      .update({ column_colors: next })
+      .eq("id", novelId);
+  }
+
+  /* ---- Color save : cellule (colonne par défaut) ---- */
+  async function saveDefaultCellColor(
+    chapterId: string,
+    colKey: string,
+    color: string | null,
+  ) {
+    setChapters((prev) =>
+      prev.map((c) => {
+        if (c.id !== chapterId) return c;
+        const cur = c.cell_colors ?? {};
+        const next = { ...cur };
+        if (color) next[colKey] = color;
+        else delete next[colKey];
+        return { ...c, cell_colors: next };
+      }),
+    );
+    const chapter = chapters.find((c) => c.id === chapterId);
+    const cur = chapter?.cell_colors ?? {};
+    const next = { ...cur };
+    if (color) next[colKey] = color;
+    else delete next[colKey];
+    await supabaseRef.current
+      .from("chapters")
+      .update({ cell_colors: next })
+      .eq("id", chapterId);
+  }
+
+  /* ---- Color save : cellule (colonne custom) ---- */
+  async function saveCustomCellColor(
+    columnId: string,
+    chapterId: string,
+    color: string | null,
+  ) {
+    const supabase = supabaseRef.current;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setCellValues((prev) => {
+      const existing = prev.find(
+        (cv) => cv.column_id === columnId && cv.chapter_id === chapterId,
+      );
+      if (existing) {
+        return prev.map((cv) =>
+          cv.id === existing.id ? { ...cv, color } : cv,
+        );
+      }
+      return [...prev, { id: "temp", column_id: columnId, chapter_id: chapterId, value: null, color }];
+    });
+    await supabase.from("planning_cell_values").upsert(
+      { column_id: columnId, chapter_id: chapterId, user_id: user.id, color },
+      { onConflict: "column_id,chapter_id" },
+    );
+  }
+
+  /* ---- Helpers cellule ---- */
+  function getCellColor(
+    chapter: ChapterRow,
+    col: ColumnDef & { customId?: string },
+  ): string | undefined {
+    if (col.type === "custom" && col.customId) {
+      const cv = cellValues.find(
+        (v) => v.column_id === col.customId && v.chapter_id === chapter.id,
+      );
+      return cv?.color ?? undefined;
+    }
+    return chapter.cell_colors?.[col.key];
+  }
+
+  function applyPaletteColor(color: string | null) {
+    if (!palette) return;
+    if (palette.kind === "row") {
+      saveRowColor(palette.chapterId, color);
+    } else if (palette.kind === "col") {
+      saveColumnColor(palette.colKey, color);
+    } else if (palette.kind === "cell") {
+      // Distinguer custom vs default
+      const def = allColumnDefs.find((c) => c.key === palette.colKey);
+      if (def?.type === "custom" && def.customId) {
+        saveCustomCellColor(def.customId, palette.chapterId, color);
+      } else {
+        saveDefaultCellColor(palette.chapterId, palette.colKey, color);
+      }
+    }
+    setPalette(null);
+  }
 
   /* ---- Status cycle ---- */
   function cycleStatus(chapterId: string, current: ChapterStatus) {
@@ -681,84 +819,157 @@ export function ChapterTable({
                 background: "var(--color-bg-tertiary)",
               }}
             >
-              {visibleColumns.map((col) => (
-                <div
-                  key={col.key}
-                  className={`relative flex items-center transition-colors ${
-                    dragOverColKey === col.key && dragColKey !== col.key
-                      ? "bg-[var(--color-accent-bg)]"
-                      : ""
-                  }`}
-                >
+              {visibleColumns.map((col) => {
+                const colColor = columnColors[col.key];
+                const isDragOver = dragOverColKey === col.key && dragColKey !== col.key;
+                return (
                   <div
-                    draggable
-                    onDragStart={() => setDragColKey(col.key)}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setDragOverColKey(col.key);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleColDrop();
-                    }}
-                    onDragEnd={() => {
-                      setDragColKey(null);
-                      setDragOverColKey(null);
-                    }}
-                    className="flex-1 px-3 py-2.5 text-[10px] font-medium text-text-quaternary uppercase cursor-grab select-none whitespace-nowrap overflow-hidden text-ellipsis"
-                    style={{ letterSpacing: "0.16em" }}
-                    title={col.label}
+                    key={col.key}
+                    className={`relative flex flex-col group/col transition-colors ${
+                      isDragOver ? "bg-[var(--color-accent-bg)]" : ""
+                    }`}
                   >
-                    {col.label}
+                    <div
+                      className="flex-1 px-3 py-2.5 text-[10px] font-medium text-text-quaternary uppercase select-none whitespace-nowrap overflow-hidden text-ellipsis"
+                      style={{ letterSpacing: "0.16em" }}
+                      title={col.label}
+                    >
+                      {col.label}
+                    </div>
+                    {/* Poignée colonne — visible au hover du header. Sert à
+                        ouvrir la palette ET à drag-and-drop pour réordonner. */}
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={() => setDragColKey(col.key)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragOverColKey(col.key);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleColDrop();
+                      }}
+                      onDragEnd={() => {
+                        setDragColKey(null);
+                        setDragOverColKey(null);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setPalette({
+                          kind: "col",
+                          colKey: col.key,
+                          anchor: { top: r.bottom + 4, left: r.left },
+                        });
+                      }}
+                      title="Couleur · glisser pour réordonner"
+                      className="h-1.5 mx-2 mb-1 rounded-full opacity-0 group-hover/col:opacity-100 transition-opacity cursor-grab"
+                      style={{
+                        background: colColor ?? "rgba(255,255,255,0.18)",
+                        outline: colColor ? "1px solid rgba(0,0,0,0.15)" : undefined,
+                      }}
+                    />
+                    {/* Resize handle */}
+                    <div
+                      onMouseDown={(e) => handleColumnResize(col.key, e)}
+                      className="absolute right-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-[var(--color-accent-border)] z-10"
+                    />
                   </div>
-                  {/* Resize handle */}
-                  <div
-                    onMouseDown={(e) => handleColumnResize(col.key, e)}
-                    className="absolute right-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-[var(--color-accent-border)] z-10"
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Rows */}
-            {sorted.map((chapter, idx) => (
-              <div
-                key={chapter.id}
-                className={`grid border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.015] transition-colors items-start ${
-                  dragOverRowIdx === idx && dragRowIdx !== idx
-                    ? "border-t-2 border-t-[var(--color-accent)]"
-                    : ""
-                }`}
-                style={{ gridTemplateColumns: gridTemplate }}
-                draggable
-                onMouseDownCapture={(e) => {
-                  const t = e.target as HTMLElement;
-                  const inEditor = !!t.closest(
-                    '.ProseMirror, [contenteditable="true"], input, textarea'
-                  );
-                  (e.currentTarget as HTMLElement).draggable = !inEditor;
-                }}
-                onDragStart={(e) => {
-                  setDragRowIdx(idx);
-                  e.dataTransfer.effectAllowed = "move";
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (dragRowIdx !== null) setDragOverRowIdx(idx);
-                }}
-                onDragEnd={() => {
-                  if (dragRowIdx !== null) handleRowDrop();
-                }}
-              >
-                {visibleColumns.map((col) => (
-                  <div key={col.key} className="last:border-r-0">
-                    {renderCell(col, chapter)}
-                  </div>
-                ))}
-              </div>
-            ))}
+            {sorted.map((chapter, idx) => {
+              const rowColor = chapter.row_color ?? null;
+              return (
+                <div
+                  key={chapter.id}
+                  className={`group/row relative grid border-b border-white/[0.04] last:border-b-0 transition-colors items-start ${
+                    dragOverRowIdx === idx && dragRowIdx !== idx
+                      ? "border-t-2 border-t-[var(--color-accent)]"
+                      : ""
+                  }`}
+                  style={{
+                    gridTemplateColumns: gridTemplate,
+                    background: rowColor ?? undefined,
+                  }}
+                  onDragOver={(e) => {
+                    if (dragRowIdx !== null) {
+                      e.preventDefault();
+                      setDragOverRowIdx(idx);
+                    }
+                  }}
+                >
+                  {/* Poignée ligne — visible au hover. Click ouvre la palette,
+                      drag réordonne. Largeur 5px sur le bord gauche. */}
+                  <button
+                    type="button"
+                    draggable
+                    onDragStart={(e) => {
+                      setDragRowIdx(idx);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragEnd={() => {
+                      if (dragRowIdx !== null) handleRowDrop();
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setPalette({
+                        kind: "row",
+                        chapterId: chapter.id,
+                        anchor: { top: r.bottom + 4, left: r.right + 4 },
+                      });
+                    }}
+                    title="Couleur · glisser pour réordonner"
+                    className="absolute left-0 top-1 bottom-1 w-1 rounded-full opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab z-10"
+                    style={{
+                      background: rowColor ?? "var(--color-accent)",
+                    }}
+                  />
+
+                  {visibleColumns.map((col) => {
+                    const cellColor = getCellColor(chapter, col);
+                    const colColor = columnColors[col.key];
+                    return (
+                      <div
+                        key={col.key}
+                        className="group/cell relative last:border-r-0"
+                        style={{
+                          background: cellColor ?? colColor ?? undefined,
+                        }}
+                      >
+                        {renderCell(col, chapter)}
+                        {/* Pastille de coloration cellule — coin sup. droit */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            setPalette({
+                              kind: "cell",
+                              chapterId: chapter.id,
+                              colKey: col.key,
+                              anchor: { top: r.bottom + 4, left: r.left - 80 },
+                            });
+                          }}
+                          title="Couleur de la cellule"
+                          className="absolute top-1 right-1 w-3 h-3 rounded-full opacity-0 group-hover/cell:opacity-90 transition-opacity cursor-pointer z-10 border border-white/40"
+                          style={{
+                            background: cellColor ?? "rgba(255,255,255,0.25)",
+                            boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
 
             {/* Add row — "+" discret après la dernière ligne */}
             <button
@@ -780,6 +991,47 @@ export function ChapterTable({
           className="fixed inset-0 z-40"
           onClick={() => setShowColumnMenu(false)}
         />
+      )}
+
+      {/* Palette flottante — couleurs ligne / colonne / cellule */}
+      {palette && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setPalette(null)}
+          />
+          <div
+            className="fixed z-50 bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-md)] shadow-xl p-2 flex flex-col gap-1"
+            style={{
+              top: Math.min(palette.anchor.top, window.innerHeight - 100),
+              left: Math.max(8, Math.min(palette.anchor.left, window.innerWidth - 220)),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-1 pb-1 text-[9px] uppercase text-text-quaternary tracking-wider">
+              {palette.kind === "row" ? "Couleur de la ligne"
+                : palette.kind === "col" ? "Couleur de la colonne"
+                : "Couleur de la cellule"}
+            </div>
+            <div className="grid grid-cols-4 gap-1">
+              {COLOR_PALETTE.map((c) => (
+                <button
+                  key={c.hex}
+                  onClick={() => applyPaletteColor(c.hex)}
+                  title={c.label}
+                  className="w-8 h-8 rounded-[var(--radius-sm)] border border-white/[0.08] cursor-pointer hover:scale-110 transition-transform"
+                  style={{ background: c.hex }}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => applyPaletteColor(null)}
+              className="mt-1 h-7 px-2 text-[11px] text-text-tertiary border border-white/[0.08] rounded-[var(--radius-sm)] bg-transparent hover:bg-bg-hover cursor-pointer transition-colors"
+            >
+              Effacer la couleur
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
