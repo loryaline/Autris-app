@@ -84,6 +84,15 @@ export function Topbar({ username }: { username?: string | null }) {
                 </div>
               )}
               <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push("/settings");
+                }}
+                className="w-full text-left px-3 py-1.5 text-[13px] text-text-secondary hover:bg-bg-hover cursor-pointer"
+              >
+                Paramètres
+              </button>
+              <button
                 onClick={handleLogout}
                 className="w-full text-left px-3 py-1.5 text-[13px] text-text-secondary hover:bg-bg-hover cursor-pointer"
               >
