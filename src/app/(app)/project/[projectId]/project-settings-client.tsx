@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ImportManuscriptDialog } from "@/components/import/ImportManuscriptDialog";
+import { downloadNovelDocx } from "@/lib/export/exportNovelDocx";
 import { GENRES } from "@/lib/constants";
 import type { Genre } from "@/types/database";
 
@@ -420,6 +421,8 @@ function NovelSettings({
   );
   const [saved, setSaved] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const wps = parseInt(wordsPerSession, 10) || 0;
   const spw = parseInt(sessionsPerWeek, 10) || 0;
@@ -615,7 +618,50 @@ function NovelSettings({
         <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
           📄 Importer un manuscrit
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={async () => {
+            setExporting(true);
+            setExportError(null);
+            try {
+              const supabase = createClient();
+              const { data: chapters, error } = await supabase
+                .from("chapters")
+                .select("title, content, position")
+                .eq("novel_id", novel.id)
+                .order("position", { ascending: true });
+              if (error) throw error;
+              const { data: { user } } = await supabase.auth.getUser();
+              const { data: profile } = user
+                ? await supabase
+                    .from("profiles")
+                    .select("username")
+                    .eq("id", user.id)
+                    .maybeSingle()
+                : { data: null };
+              await downloadNovelDocx({
+                novelTitle: novel.title,
+                authorName: profile?.username ?? "Auteur",
+                chapters: (chapters ?? []).map((c, i) => ({
+                  title: c.title || `Chapitre ${i + 1}`,
+                  contentHtml: c.content ?? "",
+                  position: c.position ?? i,
+                })),
+              });
+            } catch (e) {
+              setExportError(e instanceof Error ? e.message : "Export échoué.");
+            } finally {
+              setExporting(false);
+            }
+          }}
+          disabled={exporting || novel.chapter_count === 0}
+          title={novel.chapter_count === 0 ? "Aucun chapitre à exporter" : undefined}
+        >
+          {exporting ? "Export…" : "↓ Exporter en DOCX"}
+        </Button>
         {saved && <span className="text-[12px] text-teal-dark">Sauvegardé</span>}
+        {exportError && <span className="text-[12px] text-red">{exportError}</span>}
       </div>
 
       {showImport && (

@@ -53,13 +53,23 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If logged in but onboarding not done, redirect to onboarding
+  // If logged in but onboarding not done, redirect to onboarding.
+  // Si le profil est marqué deleted_at (RGPD soft delete), on déconnecte
+  // et on renvoie vers /login — quel que soit l'état de l'onboarding.
   if (user && !isAuthRoute && !isAuthCallback && !isOnboarding) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("onboarding_done")
+      .select("onboarding_done, deleted_at")
       .eq("id", user.id)
       .single();
+
+    if (profile?.deleted_at) {
+      await supabase.auth.signOut();
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("deleted", "1");
+      return NextResponse.redirect(url);
+    }
 
     if (profile && !profile.onboarding_done) {
       const url = request.nextUrl.clone();

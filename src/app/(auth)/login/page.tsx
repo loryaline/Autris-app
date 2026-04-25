@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justDeleted = searchParams.get("deleted") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +60,17 @@ export default function LoginPage() {
           <h2 className="text-[16px] font-medium text-text-primary mb-4">
             Connexion
           </h2>
+
+          {justDeleted && (
+            <div className="mb-3 p-2.5 rounded-[var(--radius-sm)] bg-teal-bg border border-teal-border text-teal-dark text-[12.5px] leading-snug">
+              Votre compte a été marqué pour suppression. Vous avez 30 jours
+              pour annuler en écrivant à{" "}
+              <a href="mailto:bonjour@autris.fr" className="underline">
+                bonjour@autris.fr
+              </a>
+              .
+            </div>
+          )}
 
           {error && (
             <div className="mb-3 p-2 rounded-[var(--radius-sm)] bg-red-bg text-red text-[13px]">

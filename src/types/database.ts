@@ -43,6 +43,8 @@ export interface Profile {
   trial_started_at: string;
   /** Fin de l'essai / fin de la période payée (timestamptz ISO). */
   plan_expires_at: string;
+  /** Soft delete RGPD : null = compte actif, sinon date de demande. */
+  deleted_at: string | null;
   created_at: string;
 }
 
