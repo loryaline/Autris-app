@@ -693,6 +693,8 @@ export function getTemplate(
   category: string,
   subcategory?: string | null
 ): Template | null {
+  // Fiche libre : pas de template, seuls les blocs personnalisés s'affichent.
+  if (subcategory === "__libre__") return null;
   if (category === "univers_monde") {
     if (subcategory === "pays") return COUNTRY_TEMPLATE;
     return null; // autres sous-types → description libre

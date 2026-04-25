@@ -338,6 +338,15 @@ export function WbClient({
 
               {/* Actions à droite : Grille/Tableau + Nouvelle fiche */}
               <div className="flex items-center gap-2 shrink-0">
+                {/* Fiche libre — sans modèle imposé. Toutes catégories. */}
+                <button
+                  onClick={() => createEntry("__libre__")}
+                  title="Créer une fiche sans modèle — vous ajoutez les blocs vous-même"
+                  className="h-9 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] text-[12.5px] cursor-pointer transition-colors"
+                >
+                  <span className="text-[13px]">✎</span>
+                  Fiche libre
+                </button>
                 {showMoeursToggle && (
                   <div className="flex items-center h-9 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.06] overflow-hidden">
                     <button

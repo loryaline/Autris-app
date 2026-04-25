@@ -168,6 +168,13 @@ export function ChapterTable({
     | { kind: "cell";   chapterId: string; colKey: string; anchor: { top: number; left: number } }
   >(null);
 
+  // Multi-sélection de cellules : clé "chapterId::colKey"
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+
+  function cellKey(chapterId: string, colKey: string): string {
+    return `${chapterId}::${colKey}`;
+  }
+
   // Column order: default columns + custom columns
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
     if (initialColumnOrder && initialColumnOrder.length > 0) return initialColumnOrder;
@@ -388,6 +395,15 @@ export function ChapterTable({
     return chapter.cell_colors?.[col.key];
   }
 
+  function applyCellColor(chapterId: string, colKey: string, color: string | null) {
+    const def = allColumnDefs.find((c) => c.key === colKey);
+    if (def?.type === "custom" && def.customId) {
+      saveCustomCellColor(def.customId, chapterId, color);
+    } else {
+      saveDefaultCellColor(chapterId, colKey, color);
+    }
+  }
+
   function applyPaletteColor(color: string | null) {
     if (!palette) return;
     if (palette.kind === "row") {
@@ -395,14 +411,18 @@ export function ChapterTable({
     } else if (palette.kind === "col") {
       saveColumnColor(palette.colKey, color);
     } else if (palette.kind === "cell") {
-      // Distinguer custom vs default
-      const def = allColumnDefs.find((c) => c.key === palette.colKey);
-      if (def?.type === "custom" && def.customId) {
-        saveCustomCellColor(def.customId, palette.chapterId, color);
+      // Si plusieurs cellules sont sélectionnées, on applique à toutes.
+      // Sinon, juste à la cellule cible de la palette.
+      if (selectedCells.size > 1) {
+        for (const k of selectedCells) {
+          const [chId, colK] = k.split("::");
+          applyCellColor(chId, colK, color);
+        }
       } else {
-        saveDefaultCellColor(palette.chapterId, palette.colKey, color);
+        applyCellColor(palette.chapterId, palette.colKey, color);
       }
     }
+    setSelectedCells(new Set());
     setPalette(null);
   }
 
@@ -935,30 +955,73 @@ export function ChapterTable({
                   {visibleColumns.map((col) => {
                     const cellColor = getCellColor(chapter, col);
                     const colColor = columnColors[col.key];
+                    const k = cellKey(chapter.id, col.key);
+                    const isSelected = selectedCells.has(k);
                     return (
                       <div
                         key={col.key}
-                        className="group/cell relative last:border-r-0"
+                        className={`group/cell relative last:border-r-0 ${
+                          isSelected
+                            ? "outline outline-2 outline-[var(--color-accent)] outline-offset-[-2px]"
+                            : ""
+                        }`}
                         style={{
                           background: cellColor ?? colColor ?? undefined,
                         }}
                       >
                         {renderCell(col, chapter)}
-                        {/* Pastille de coloration cellule — coin sup. droit */}
+                        {/* Pastille de coloration cellule — coin sup. droit.
+                            Click  : ouvre la palette pour cette cellule (et l'ensemble si multi-sélection)
+                            Shift+click : ajoute / retire la cellule de la sélection */}
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                            setPalette({
-                              kind: "cell",
-                              chapterId: chapter.id,
-                              colKey: col.key,
-                              anchor: { top: r.bottom + 4, left: r.left - 80 },
-                            });
+                            if (e.shiftKey) {
+                              // Multi-sélection
+                              setSelectedCells((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(k)) next.delete(k);
+                                else next.add(k);
+                                return next;
+                              });
+                              // Si la palette n'est pas ouverte, on l'ouvre sur cette cellule.
+                              if (!palette || palette.kind !== "cell") {
+                                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                setPalette({
+                                  kind: "cell",
+                                  chapterId: chapter.id,
+                                  colKey: col.key,
+                                  anchor: { top: r.bottom + 4, left: r.left - 80 },
+                                });
+                              }
+                            } else {
+                              // Click simple : si la cellule fait partie d'une sélection
+                              // existante, on garde cette sélection. Sinon on la
+                              // remplace par celle-ci uniquement.
+                              setSelectedCells((prev) => {
+                                if (prev.has(k) && prev.size > 1) return prev;
+                                return new Set([k]);
+                              });
+                              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                              setPalette({
+                                kind: "cell",
+                                chapterId: chapter.id,
+                                colKey: col.key,
+                                anchor: { top: r.bottom + 4, left: r.left - 80 },
+                              });
+                            }
                           }}
-                          title="Couleur de la cellule"
-                          className="absolute top-1 right-1 w-3 h-3 rounded-full opacity-0 group-hover/cell:opacity-90 transition-opacity cursor-pointer z-10 border border-white/40"
+                          title={
+                            selectedCells.size > 1 && selectedCells.has(k)
+                              ? `Couleur (${selectedCells.size} cellules)`
+                              : "Couleur · Maj+clic pour sélectionner plusieurs"
+                          }
+                          className={`absolute top-1 right-1 w-3 h-3 rounded-full transition-opacity cursor-pointer z-10 border ${
+                            isSelected
+                              ? "opacity-100 border-[var(--color-accent)]"
+                              : "opacity-0 group-hover/cell:opacity-90 border-white/40"
+                          }`}
                           style={{
                             background: cellColor ?? "rgba(255,255,255,0.25)",
                             boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
@@ -998,7 +1061,10 @@ export function ChapterTable({
         <>
           <div
             className="fixed inset-0 z-40"
-            onClick={() => setPalette(null)}
+            onClick={() => {
+              setPalette(null);
+              setSelectedCells(new Set());
+            }}
           />
           <div
             className="fixed z-50 bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-md)] shadow-xl p-2 flex flex-col gap-1"
@@ -1011,8 +1077,15 @@ export function ChapterTable({
             <div className="px-1 pb-1 text-[9px] uppercase text-text-quaternary tracking-wider">
               {palette.kind === "row" ? "Couleur de la ligne"
                 : palette.kind === "col" ? "Couleur de la colonne"
-                : "Couleur de la cellule"}
+                : selectedCells.size > 1
+                  ? `Couleur · ${selectedCells.size} cellules`
+                  : "Couleur de la cellule"}
             </div>
+            {palette.kind === "cell" && selectedCells.size <= 1 && (
+              <div className="px-1 pb-1 text-[10px] text-text-quaternary italic font-serif">
+                Maj+clic pour sélectionner plusieurs cases.
+              </div>
+            )}
             <div className="grid grid-cols-4 gap-1">
               {COLOR_PALETTE.map((c) => (
                 <button
