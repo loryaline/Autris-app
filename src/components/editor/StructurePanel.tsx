@@ -3,11 +3,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
 const STATUS_DOT: Record<string, string> = {
-  a_ecrire: "bg-text-quaternary",
-  premier_jet: "bg-[#888780]",
-  revision: "bg-amber",
-  reecriture: "bg-primary",
-  correction: "bg-teal",
+  a_ecrire: "bg-white/30",
+  premier_jet: "bg-[#7B6FDE]",
+  revision: "bg-[#EF9F27]",
+  reecriture: "bg-[#e4b48c]",
+  correction: "bg-[#5DCAA5]",
   termine: "bg-[#1D9E75]",
 };
 
@@ -125,14 +125,20 @@ function ChapterRow({
           ref={buttonRef}
           onClick={onSelect}
           onDoubleClick={() => { setEditing(true); setEditValue(chapter.title); }}
-          className={`flex items-center gap-1.5 w-full text-left px-2 py-[5px] text-[12px] rounded cursor-grab transition-colors outline-none ${
+          className={`relative flex items-center gap-2 w-full text-left pl-3 pr-2 py-[7px] text-[12.5px] rounded-[var(--radius-md)] cursor-grab transition-colors outline-none ${
             isActive
-              ? "bg-bg-tertiary text-text-primary font-medium border-l-2 border-l-primary pl-1.5"
-              : "text-text-secondary hover:text-text-primary hover:bg-bg-hover border-l-2 border-l-transparent"
+              ? "bg-white/[0.035] text-text-primary font-medium"
+              : "text-text-secondary hover:text-text-primary hover:bg-white/[0.02]"
           }`}
         >
+          {isActive && (
+            <span
+              className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full"
+              style={{ background: "var(--color-accent)" }}
+            />
+          )}
           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[chapter.status] ?? STATUS_DOT.a_ecrire}`} />
-          {chapter.title}
+          <span className="truncate">{chapter.title}</span>
         </button>
       )}
 
@@ -206,34 +212,28 @@ export function StructurePanel({
   return (
     <div
       ref={panelRef}
-      className="h-full border-r border-border p-2.5 bg-bg-secondary overflow-y-auto flex flex-col outline-none"
+      className="h-full border-r border-white/[0.05] bg-bg-secondary overflow-y-auto flex flex-col outline-none"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
     >
-      {/* Novel title */}
-      <div className="text-[13px] font-semibold text-text-primary mb-3 px-1">
-        {novelTitle}
-      </div>
-
-      {/* Chapter list */}
-      <div className="flex items-center justify-between mb-1.5 px-1">
-        <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">
-          Chapitres
-        </span>
+      {/* Header : titre "Chapitres" + bouton + (haut à droite) */}
+      <div className="flex items-center justify-between px-4 pt-5 pb-3">
+        <span className="font-serif italic text-[16px] text-text-primary">Chapitres</span>
         <button
           onClick={onAddChapter}
           title="Ajouter un chapitre"
-          className="w-4 h-4 flex items-center justify-center text-[12px] text-text-tertiary hover:text-primary hover:bg-primary-bg rounded cursor-pointer border-none bg-transparent transition-colors"
+          className="w-6 h-6 flex items-center justify-center text-[16px] leading-none text-text-quaternary hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-bg)] rounded-full cursor-pointer border-none bg-transparent transition-colors"
         >
           +
         </button>
       </div>
 
-      <div className="flex-1">
+      {/* Liste des chapitres */}
+      <div className="flex-1 px-2">
         {sorted.length === 0 ? (
-          <div className="text-[12px] text-text-quaternary italic px-1">
+          <div className="text-[12px] text-text-quaternary italic px-2">
             Aucun chapitre
           </div>
         ) : (
@@ -256,13 +256,10 @@ export function StructurePanel({
         )}
       </div>
 
-      {/* Add chapter button */}
-      <button
-        onClick={onAddChapter}
-        className="mt-2 w-full py-1 text-[12px] text-primary border border-dashed border-primary-border rounded-[var(--radius-sm)] bg-transparent cursor-pointer hover:bg-primary-bg transition-colors"
-      >
-        + Chapitre
-      </button>
+      {/* Nom du roman en pied de panneau (rappel léger) */}
+      <div className="px-4 py-3 border-t border-white/[0.04] text-[11px] text-text-quaternary truncate">
+        {novelTitle}
+      </div>
     </div>
   );
 }

@@ -186,26 +186,46 @@ export function Sidebar({
 
                       {isNovelOpen(novel.id) && (
                         <div className="ml-3 border-l border-white/5 pl-2">
-                          <Link
-                            href={`/planning/${novel.id}`}
-                            className={`block px-2 py-[4px] text-[12px] rounded-[var(--radius-sm)] transition-colors duration-150 no-underline ${
-                              pathname === `/planning/${novel.id}`
-                                ? "text-[var(--color-accent)]"
-                                : "text-text-tertiary hover:text-text-secondary"
-                            }`}
-                          >
-                            Planification
-                          </Link>
-                          <Link
-                            href={`/editor/${novel.id}`}
-                            className={`block px-2 py-[4px] text-[12px] rounded-[var(--radius-sm)] transition-colors duration-150 no-underline ${
-                              pathname === `/editor/${novel.id}`
-                                ? "text-[var(--color-accent)]"
-                                : "text-text-tertiary hover:text-text-secondary"
-                            }`}
-                          >
-                            Rédaction
-                          </Link>
+                          {(() => {
+                            const planActive = pathname === `/planning/${novel.id}`;
+                            const edActive = pathname === `/editor/${novel.id}`;
+                            return (
+                              <>
+                                <Link
+                                  href={`/planning/${novel.id}`}
+                                  className={`relative block px-2 py-[5px] text-[12px] rounded-[var(--radius-sm)] transition-colors duration-150 no-underline ${
+                                    planActive
+                                      ? "text-[var(--color-accent)] bg-white/[0.035] font-medium"
+                                      : "text-text-tertiary hover:text-text-secondary hover:bg-white/[0.02]"
+                                  }`}
+                                >
+                                  {planActive && (
+                                    <span
+                                      className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full"
+                                      style={{ background: "var(--color-accent)" }}
+                                    />
+                                  )}
+                                  Planification
+                                </Link>
+                                <Link
+                                  href={`/editor/${novel.id}`}
+                                  className={`relative block px-2 py-[5px] text-[12px] rounded-[var(--radius-sm)] transition-colors duration-150 no-underline ${
+                                    edActive
+                                      ? "text-[var(--color-accent)] bg-white/[0.035] font-medium"
+                                      : "text-text-tertiary hover:text-text-secondary hover:bg-white/[0.02]"
+                                  }`}
+                                >
+                                  {edActive && (
+                                    <span
+                                      className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full"
+                                      style={{ background: "var(--color-accent)" }}
+                                    />
+                                  )}
+                                  Rédaction
+                                </Link>
+                              </>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>

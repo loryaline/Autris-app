@@ -304,9 +304,9 @@ export function DashboardClient({
         </div>
       ) : (
         <div className="rounded-[var(--radius-xl)] border border-white/[0.06] bg-bg-tertiary/40 p-6 text-center">
-          <div className="text-[28px] mb-2">🦭</div>
-          <div className="text-[14px] text-text-primary mb-1">
-            Aucun projet pour l&apos;instant
+          <div className="text-[20px] text-[var(--color-accent)] mb-2">◆</div>
+          <div className="text-[14px] text-text-primary mb-1" style={{ fontFamily: "var(--font-serif)" }}>
+            <span className="italic">La page est blanche.</span>
           </div>
           <div className="text-[12px] text-text-tertiary mb-3">
             Créez votre premier projet et commencez à écrire votre roman.
@@ -329,7 +329,7 @@ export function DashboardClient({
           />
           <div className="relative bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-xl)] p-5 w-full max-w-[440px] mx-4 shadow-2xl">
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-[18px]">🦭</span>
+              <span className="text-[14px] text-[var(--color-accent)]">◆</span>
               <h2 className="text-[16px] text-text-primary">
                 Nouveau <span className="font-serif italic text-[var(--color-accent)]">projet</span>
               </h2>

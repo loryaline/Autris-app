@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Genre, WbEntry, WbLink, WbStatus } from "@/types/database";
 import {
@@ -9,10 +10,13 @@ import {
   MOEURS_TABLE_GENRES,
   UNIVERS_SUBTYPES,
   BESTIAIRE_SUBCATEGORIES,
+  MAGIC_SUBTYPES,
+  MONEY_SUBTYPES,
   type WbCategory,
 } from "@/lib/wb-constants";
 import { WbSubSidebar } from "@/components/wb/WbSubSidebar";
 import { WbEntryDetail } from "@/components/wb/WbEntryDetail";
+import { WbHome } from "@/components/wb/WbHome";
 import { Moodboard } from "@/components/wb/Moodboard";
 import { WbCommandPalette } from "@/components/wb/WbCommandPalette";
 import { WbMoeursTable } from "@/components/wb/WbMoeursTable";
@@ -22,6 +26,8 @@ import { toneFor } from "@/lib/wb-tones";
 type SortMode = "recent" | "alpha" | "old";
 type StatusFilter = "all" | WbStatus;
 type UniversView = "grid" | "moeurs";
+/** Vue active : soit une catégorie WB classique, soit l'accueil (dashboard). */
+type ActiveView = "home" | WbCategory;
 
 /**
  * Rend un titre de catégorie en "serif mixte" : la dernière partie
@@ -46,29 +52,48 @@ export function WbClient({
   genre,
   initialEntries,
   initialLinks,
+  novels,
 }: {
   projectId: string;
   projectTitle: string;
   genre: Genre;
   initialEntries: WbEntry[];
   initialLinks: WbLink[];
+  novels: { id: string; title: string }[];
 }) {
   const [entries, setEntries] = useState<WbEntry[]>(initialEntries);
   const [links, setLinks] = useState<WbLink[]>(initialLinks);
-  const [activeCategory, setActiveCategory] = useState<WbCategory>(() => {
-    return categoriesForGenre(genre)[0]?.key ?? "univers_monde";
-  });
+  // La vue démarre sur l'accueil (dashboard des catégories) pour donner
+  // une vision d'ensemble au lieu d'atterrir directement sur Univers & Monde.
+  const [activeCategory, setActiveCategory] = useState<ActiveView>("home");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [universSubFilter, setUniversSubFilter] = useState<string>("all");
   const [bestiaireSubFilter, setBestiaireSubFilter] = useState<string>("all");
+  const [magicSubFilter, setMagicSubFilter] = useState<string>("all");
+  const [moneySubFilter, setMoneySubFilter] = useState<string>("all");
   const [showSubtypeMenu, setShowSubtypeMenu] = useState(false);
   const [showBestiaireMenu, setShowBestiaireMenu] = useState(false);
+  const [showMagicMenu, setShowMagicMenu] = useState(false);
+  const [showMoneyMenu, setShowMoneyMenu] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [tagFilter, setTagFilter] = useState<string>("all");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [universView, setUniversView] = useState<UniversView>("grid");
   const supabase = createClient();
+  const searchParams = useSearchParams();
+
+  // Deep-link ?entry=<id> : ouvre automatiquement la fiche + bascule sur sa catégorie.
+  useEffect(() => {
+    const entryId = searchParams.get("entry");
+    if (!entryId) return;
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry) return;
+    setSelectedId(entryId);
+    setActiveCategory(entry.category as WbCategory);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Raccourci Ctrl+K / Cmd+K pour ouvrir la palette de recherche
   useEffect(() => {
@@ -104,8 +129,17 @@ export function WbClient({
     if (activeCategory === "bestiaire" && bestiaireSubFilter !== "all") {
       list = list.filter((e) => e.subcategory === bestiaireSubFilter);
     }
+    if (activeCategory === "magie_divinites" && magicSubFilter !== "all") {
+      list = list.filter((e) => e.subcategory === magicSubFilter);
+    }
+    if (activeCategory === "systeme_monetaire" && moneySubFilter !== "all") {
+      list = list.filter((e) => e.subcategory === moneySubFilter);
+    }
     if (tagFilter !== "all") {
       list = list.filter((e) => (e.tags ?? []).includes(tagFilter));
+    }
+    if (activeCategory === "personnages" && groupFilter !== "all") {
+      list = list.filter((e) => (e.groups ?? []).includes(groupFilter));
     }
     // Tri
     list = [...list].sort((a, b) => {
@@ -124,8 +158,11 @@ export function WbClient({
     activeCategory,
     universSubFilter,
     bestiaireSubFilter,
+    magicSubFilter,
+    moneySubFilter,
     statusFilter,
     tagFilter,
+    groupFilter,
     sortMode,
   ]);
 
@@ -143,6 +180,12 @@ export function WbClient({
     const set = new Set<string>();
     for (const e of entries) for (const t of e.tags ?? []) set.add(t);
     return Array.from(set).sort();
+  }, [entries]);
+
+  const projectGroups = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of entries) for (const g of e.groups ?? []) set.add(g);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "fr"));
   }, [entries]);
 
   // Index des liens par id de fiche (inclut les deux extrémités)
@@ -222,6 +265,8 @@ export function WbClient({
           projectId={projectId}
           allEntries={entries}
           projectTags={projectTags}
+          projectGroups={projectGroups}
+          novels={novels}
           entryLinks={linksByEntryId.get(selectedEntry.id) ?? []}
           onSelectEntry={selectEntry}
           onLinkAdded={addLink}
@@ -229,6 +274,18 @@ export function WbClient({
           onUpdate={updateEntry}
           onDelete={deleteEntry}
           onClose={() => setSelectedId(null)}
+        />
+      ) : activeCategory === "home" ? (
+        <WbHome
+          projectTitle={projectTitle}
+          genre={genre}
+          counts={counts}
+          entries={entries}
+          onPickCategory={(c) => {
+            setActiveCategory(c);
+            setSelectedId(null);
+          }}
+          onSelectEntry={selectEntry}
         />
       ) : activeCategory === "moodboard" ? (
         <Moodboard
@@ -343,6 +400,72 @@ export function WbClient({
                       </>
                     )}
                   </div>
+                ) : activeCategory === "magie_divinites" ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMagicMenu((s) => !s)}
+                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12.5px] cursor-pointer transition-colors"
+                    >
+                      <span className="text-[13px]">+</span>
+                      Nouvelle fiche
+                    </button>
+                    {showMagicMenu && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setShowMagicMenu(false)}
+                        />
+                        <div className="absolute right-0 top-full mt-1 w-[240px] bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-md)] shadow-xl z-20 py-1.5">
+                          {MAGIC_SUBTYPES.map((s) => (
+                            <button
+                              key={s.key}
+                              onClick={() => {
+                                createEntry(s.key);
+                                setShowMagicMenu(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary flex items-center gap-2.5 cursor-pointer"
+                            >
+                              <span>{s.icon}</span>
+                              <span className="flex-1">{s.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : activeCategory === "systeme_monetaire" ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMoneyMenu((s) => !s)}
+                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12.5px] cursor-pointer transition-colors"
+                    >
+                      <span className="text-[13px]">+</span>
+                      Nouvelle fiche
+                    </button>
+                    {showMoneyMenu && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setShowMoneyMenu(false)}
+                        />
+                        <div className="absolute right-0 top-full mt-1 w-[240px] bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-md)] shadow-xl z-20 py-1.5">
+                          {MONEY_SUBTYPES.map((s) => (
+                            <button
+                              key={s.key}
+                              onClick={() => {
+                                createEntry(s.key);
+                                setShowMoneyMenu(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary flex items-center gap-2.5 cursor-pointer"
+                            >
+                              <span>{s.icon}</span>
+                              <span className="flex-1">{s.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 ) : activeCategory === "bestiaire" ? (
                   <div className="relative">
                     <button
@@ -426,6 +549,46 @@ export function WbClient({
               </div>
             )}
 
+            {/* Chips sous-catégories Système monétaire */}
+            {activeCategory === "systeme_monetaire" && (
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <SubChip
+                  active={moneySubFilter === "all"}
+                  onClick={() => setMoneySubFilter("all")}
+                  label="Tout"
+                />
+                {MONEY_SUBTYPES.map((s) => (
+                  <SubChip
+                    key={s.key}
+                    active={moneySubFilter === s.key}
+                    onClick={() => setMoneySubFilter(s.key)}
+                    icon={s.icon}
+                    label={s.label}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Chips sous-catégories Magie & Divinités */}
+            {activeCategory === "magie_divinites" && (
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <SubChip
+                  active={magicSubFilter === "all"}
+                  onClick={() => setMagicSubFilter("all")}
+                  label="Tout"
+                />
+                {MAGIC_SUBTYPES.map((s) => (
+                  <SubChip
+                    key={s.key}
+                    active={magicSubFilter === s.key}
+                    onClick={() => setMagicSubFilter(s.key)}
+                    icon={s.icon}
+                    label={s.label}
+                  />
+                ))}
+              </div>
+            )}
+
             {/* Barre filtres discrète + compteur */}
             {!(activeCategory === "univers_monde" && universView === "moeurs") && (
               <div className="flex items-center gap-2 mb-5 flex-wrap text-[11px]">
@@ -448,13 +611,25 @@ export function WbClient({
                     ...projectTags.map((t) => ({ value: t, label: `#${t}` })),
                   ]}
                 />
+                {activeCategory === "personnages" && projectGroups.length > 0 && (
+                  <FilterSelect
+                    value={groupFilter}
+                    onChange={setGroupFilter}
+                    options={[
+                      { value: "all", label: "Tous les groupes" },
+                      ...projectGroups.map((g) => ({ value: g, label: `👥 ${g}` })),
+                    ]}
+                  />
+                )}
                 {(statusFilter !== "all" ||
                   tagFilter !== "all" ||
+                  groupFilter !== "all" ||
                   sortMode !== "recent") && (
                   <button
                     onClick={() => {
                       setStatusFilter("all");
                       setTagFilter("all");
+                      setGroupFilter("all");
                       setSortMode("recent");
                     }}
                     className="px-2 h-7 rounded-[var(--radius-sm)] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors"
@@ -504,6 +679,32 @@ export function WbClient({
                       </button>
                     ))}
                   </div>
+                ) : activeCategory === "systeme_monetaire" ? (
+                  <div className="mt-4 flex flex-wrap justify-center gap-1.5 not-italic font-sans">
+                    {MONEY_SUBTYPES.map((s) => (
+                      <button
+                        key={s.key}
+                        onClick={() => createEntry(s.key)}
+                        className="text-[11px] px-2.5 py-1.5 bg-bg-secondary border border-white/[0.06] rounded-[var(--radius-sm)] hover:border-[var(--color-accent-border)] hover:text-text-primary cursor-pointer flex items-center gap-1.5 transition-colors"
+                      >
+                        <span>{s.icon}</span>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : activeCategory === "magie_divinites" ? (
+                  <div className="mt-4 flex flex-wrap justify-center gap-1.5 not-italic font-sans">
+                    {MAGIC_SUBTYPES.map((s) => (
+                      <button
+                        key={s.key}
+                        onClick={() => createEntry(s.key)}
+                        className="text-[11px] px-2.5 py-1.5 bg-bg-secondary border border-white/[0.06] rounded-[var(--radius-sm)] hover:border-[var(--color-accent-border)] hover:text-text-primary cursor-pointer flex items-center gap-1.5 transition-colors"
+                      >
+                        <span>{s.icon}</span>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
                 ) : (
                   <>
                     <br />
@@ -524,7 +725,11 @@ export function WbClient({
                   const subDef =
                     activeCategory === "univers_monde" && e.subcategory
                       ? UNIVERS_SUBTYPES.find((s) => s.key === e.subcategory)
-                      : null;
+                      : activeCategory === "magie_divinites" && e.subcategory
+                        ? MAGIC_SUBTYPES.find((s) => s.key === e.subcategory)
+                        : activeCategory === "systeme_monetaire" && e.subcategory
+                          ? MONEY_SUBTYPES.find((s) => s.key === e.subcategory)
+                          : null;
                   const tone = toneFor(e.category, e.subcategory);
                   const badgeLabel = subDef
                     ? `${catDef?.group ?? ""} · ${subDef.label}`.trim()

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { WbEntry, WbLink } from "@/types/database";
-import { LINK_TYPES, getCategoryDef } from "@/lib/wb-constants";
+import { LINK_TYPES, LINK_TYPE_GROUPS, getCategoryDef } from "@/lib/wb-constants";
 
 export function WbLinksEditor({
   entry,
@@ -144,10 +144,14 @@ export function WbLinksEditor({
           onChange={(e) => setPickedType(e.target.value)}
           className="text-[11px] px-2 py-1.5 bg-bg-secondary border border-border rounded cursor-pointer"
         >
-          {LINK_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
+          {LINK_TYPE_GROUPS.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.types.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         {pickedType === "autre" && (

@@ -13,7 +13,7 @@ export interface ChapterData {
   status: ChapterStatus;
   synopsis: string | null;
   word_count: number;
-  theme: string | null;
+  themes: string[];
   plot_elements: string | null;
   minor_elements: string | null;
   observations: string | null;
@@ -80,6 +80,17 @@ export function PlanningClient({
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>(initialCustomColumns);
   const [cellValues, setCellValues] = useState<CellValue[]>(initialCellValues);
 
+  const chapterCount = chapters.length;
+  const sceneCount = scenes.length;
+  const viewLabel =
+    activeView === "tableau"
+      ? "Chapitrage"
+      : activeView === "outline"
+        ? "Outline"
+        : activeView === "postits"
+          ? "Post-its"
+          : "Gantt";
+
   return (
     <div className="flex h-full">
       {/* Sub-sidebar */}
@@ -91,19 +102,121 @@ export function PlanningClient({
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div className="h-10 flex items-center px-4 border-b border-border bg-bg-primary shrink-0">
-          <span className="text-[13px] text-text-tertiary">
-            {projectTitle}
+      <div className="flex-1 flex flex-col min-w-0 bg-bg-primary">
+        {/* Breadcrumb */}
+        <div className="h-10 flex items-center px-6 border-b border-white/[0.04] shrink-0">
+          <span className="text-[12.5px] text-text-tertiary">{projectTitle}</span>
+          <span className="mx-2 text-text-quaternary/60 text-[11px]">/</span>
+          <span className="text-[12.5px] text-text-tertiary">{novelTitle}</span>
+          <span className="mx-2 text-text-quaternary/60 text-[11px]">/</span>
+          <span className="text-[12.5px] text-text-primary font-medium">
+            Planification
+            {activeView !== "tableau" && (
+              <span className="text-text-tertiary font-normal">
+                {" · "}
+                {viewLabel}
+              </span>
+            )}
           </span>
-          <span className="mx-1.5 text-text-quaternary">/</span>
-          <span className="text-[13px] text-text-primary font-medium">
-            {novelTitle}
-          </span>
-          <span className="mx-1.5 text-text-quaternary">/</span>
-          <span className="text-[13px] text-text-tertiary">Planification</span>
         </div>
+
+        {/* Hero title zone */}
+        {activeView === "outline" ? (
+          <div className="px-6 pt-8 pb-6 border-b border-white/[0.04] shrink-0 text-center">
+            <div
+              className="text-[10px] font-medium text-text-quaternary uppercase mb-2 flex items-center justify-center gap-2.5"
+              style={{ letterSpacing: "0.18em" }}
+            >
+              <span className="text-[var(--color-accent)]">◆</span>
+              <span>Déroulé narratif</span>
+              <span className="text-text-quaternary/40">·</span>
+              <span>Vue scènes</span>
+            </div>
+            <h1 className="font-serif text-[38px] leading-[1.05] tracking-tight text-text-primary">
+              L&apos;histoire,{" "}
+              <span className="italic text-[var(--color-accent)]/95">
+                scène par scène
+              </span>
+            </h1>
+            <div className="mt-2 text-[12.5px] text-text-tertiary font-serif italic">
+              {novelTitle}
+              <span className="mx-2 text-text-quaternary/50 not-italic">·</span>
+              <span className="not-italic">
+                {chapterCount} chapitre{chapterCount > 1 ? "s" : ""}
+              </span>
+              <span className="mx-2 text-text-quaternary/50 not-italic">·</span>
+              <span className="not-italic">
+                {sceneCount} scène{sceneCount > 1 ? "s" : ""} planifiée
+                {sceneCount > 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="px-6 pt-5 pb-4 border-b border-white/[0.04] shrink-0">
+            <div className="flex items-start justify-between gap-6">
+              <div className="min-w-0">
+                <div
+                  className="text-[10px] font-medium text-text-quaternary uppercase mb-2 flex items-center gap-2"
+                  style={{ letterSpacing: "0.18em" }}
+                >
+                  <span>Planification</span>
+                  <span className="text-text-quaternary/40">·</span>
+                  <span>{viewLabel}</span>
+                </div>
+                <h1 className="font-serif text-[34px] leading-[1.05] tracking-tight text-text-primary">
+                  {renderSerifTitle(novelTitle)}
+                </h1>
+                <div className="mt-1.5 text-[12px] text-text-tertiary">
+                  <span>
+                    {chapterCount} chapitre{chapterCount > 1 ? "s" : ""}
+                  </span>
+                  {milestones.length > 0 && (
+                    <>
+                      <span className="mx-2 text-text-quaternary/50">·</span>
+                      <span>
+                        {milestones.length} jalon
+                        {milestones.length > 1 ? "s" : ""}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {activeView === "tableau" && (
+                <div className="flex items-center gap-2 pt-1 shrink-0">
+                  <button
+                    onClick={() => window.print()}
+                    className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12.5px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                      <path
+                        d="M7 2V9M7 9L4 6M7 9L10 6M2.5 11H11.5"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    Exporter
+                  </button>
+                  <button
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent("autris:add-chapter"))
+                    }
+                    className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] font-medium cursor-pointer transition-colors"
+                    style={{
+                      background: "var(--color-accent)",
+                      color: "#1a1410",
+                    }}
+                  >
+                    <span className="text-[14px] leading-none">+</span>
+                    Nouveau chapitre
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Active view */}
         {activeView === "tableau" && (
@@ -148,5 +261,20 @@ export function PlanningClient({
         )}
       </div>
     </div>
+  );
+}
+
+/** Titre serif avec le dernier mot mis en italique accent. */
+function renderSerifTitle(title: string): React.ReactNode {
+  const t = (title ?? "").trim();
+  if (!t) return <span className="text-text-quaternary italic">Sans titre</span>;
+  const parts = t.split(/\s+/);
+  if (parts.length <= 1) return t;
+  const last = parts.pop();
+  return (
+    <>
+      {parts.join(" ")}{" "}
+      <span className="italic text-[var(--color-accent)]/95">{last}</span>
+    </>
   );
 }

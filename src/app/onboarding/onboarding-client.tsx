@@ -155,15 +155,14 @@ export function OnboardingClient() {
         {/* ===== STEP: ACCUEIL ===== */}
         {step === "accueil" && (
           <div className="text-center">
-            <div className="text-[48px] mb-4">🦭</div>
-            <h1 className="text-[24px] font-bold text-text-primary mb-2">
-              Bienvenue sur Autris
+            <h1 className="text-[28px] text-text-primary mb-3" style={{ fontFamily: "var(--font-serif)" }}>
+              Bienvenue sur <span className="italic text-[var(--color-accent)]">Autris</span>
             </h1>
             <p className="text-[14px] text-text-secondary mb-1 leading-relaxed">
-              Je suis Autarie, votre compagnon d&apos;ecriture.
+              L&apos;espace d&apos;écriture des romanciers francophones.
             </p>
             <p className="text-[14px] text-text-secondary mb-8 leading-relaxed">
-              Je vais vous guider pour configurer votre espace en 5 minutes.
+              Quelques minutes pour configurer votre univers — vous pourrez tout modifier ensuite.
             </p>
 
             <button
@@ -416,15 +415,14 @@ export function OnboardingClient() {
         {/* ===== STEP: FINAL ===== */}
         {step === "final" && (
           <div className="text-center">
-            <div className="text-[48px] mb-3">🦭</div>
             <div className="inline-block bg-primary-bg text-primary text-[12px] font-medium px-3 py-1 rounded-full mb-4">
-              Badge debloque : Premiere ligne
+              ◆ Première ligne
             </div>
-            <h2 className="text-[22px] font-bold text-text-primary mb-2">
-              Votre espace est pret !
+            <h2 className="text-[24px] text-text-primary mb-2" style={{ fontFamily: "var(--font-serif)" }}>
+              Votre espace est <span className="italic text-[var(--color-accent)]">prêt</span>.
             </h2>
             <p className="text-[14px] text-text-secondary mb-8 leading-relaxed">
-              Autarie est impatiente de vous accompagner. Par ou commencez-vous ?
+              Par où commencez-vous ?
             </p>
 
             <div className="grid grid-cols-3 gap-2">

@@ -1,6 +1,6 @@
 // Templates de fiches pour chaque catégorie/sous-type World Building
 
-export type FieldType = "textarea" | "input" | "quad";
+export type FieldType = "textarea" | "input" | "quad" | "table";
 
 export interface TemplateField {
   key: string;
@@ -8,14 +8,22 @@ export interface TemplateField {
   placeholder?: string;
   type?: FieldType; // default textarea
   rows?: number;
+  /** Note affichée sous le label (italique, aide rédactionnelle). */
+  note?: string;
   // pour quad: 4 colonnes
   columns?: [string, string, string, string];
+  // pour table: colonnes dynamiques
+  tableColumns?: string[];
+  /** Nombre minimum de lignes affichées en édition (rempli de cellules vides). */
+  minRows?: number;
 }
 
 export interface TemplateSection {
   group: string;
   icon: string;
   fields: TemplateField[];
+  /** Note optionnelle affichée sous l'en-tête de la section (italique). */
+  note?: string;
 }
 
 export interface Template {
@@ -94,7 +102,8 @@ export const CHARACTER_TEMPLATE: Template = {
       group: "Identité",
       icon: "👤",
       fields: [
-        { key: "etat_civil", label: "État civil", placeholder: "Âge, sexe, origine...", type: "input" },
+        { key: "age", label: "Âge", placeholder: "Ex. 27 ans, « environ trente »…", type: "input" },
+        { key: "etat_civil", label: "État civil", placeholder: "Sexe, origine, statut…", type: "input" },
         { key: "role_famille", label: "Rôle de famille", placeholder: "Mère, sœur, fondatrice...", type: "input" },
         { key: "role_narratif", label: "Rôle narratif", placeholder: "Principal / secondaire / antagoniste", type: "input" },
       ],
@@ -142,12 +151,14 @@ export const CHARACTER_TEMPLATE: Template = {
     {
       group: "Qualités / Défauts / Forces / Faiblesses",
       icon: "⚖️",
+      note: "Remplis les quatre lignes et les quatre colonnes : c'est la grille qui donne le personnage le plus cohérent possible.",
       fields: [
         {
-          key: "qdfp",
+          key: "qdfp_table",
           label: "",
-          type: "quad",
-          columns: ["Qualités", "Défauts", "Forces", "Faiblesses"],
+          type: "table",
+          tableColumns: ["Qualités", "Défauts", "Forces", "Faiblesses"],
+          minRows: 4,
         },
       ],
     },
@@ -277,37 +288,160 @@ export const SOCIETY_TEMPLATE: Template = {
 };
 
 // ---------- MAGIE & DIVINITÉS ----------
-export const MAGIC_TEMPLATE: Template = {
+
+// 📄 Les Dieux (panthéon)
+export const DEITY_TEMPLATE: Template = {
   sections: [
     {
-      group: "Nature",
-      icon: "✨",
+      group: "Identité",
+      icon: "🔱",
       fields: [
-        { key: "type", label: "Type", placeholder: "Sort / divinité / école / ordre...", type: "input" },
-        { key: "domaine", label: "Domaine", placeholder: "Élément, sphère d'influence", type: "input" },
+        { key: "nom_humain", label: "Nom humain", placeholder: "Nom usité par les mortels", type: "input" },
+        { key: "nom_estenien", label: "Nom sacré (estenien)", placeholder: "Nom révélé / estenien", type: "input" },
+        { key: "symbole", label: "Symbole", placeholder: "Sceau, glyphe, animal sacré…", type: "input" },
+        { key: "alignement", label: "Alignement", placeholder: "Lumineux / sombre / neutre / ambigu…", type: "input" },
       ],
     },
     {
-      group: "Source & Règles",
-      icon: "📜",
+      group: "Domaine & Rôle",
+      icon: "🌌",
       fields: [
-        { key: "source_pouvoir", label: "Source du pouvoir", placeholder: "D'où vient cette magie ?" },
-        { key: "regles", label: "Règles", placeholder: "Comment ça fonctionne ?" },
-        { key: "limites", label: "Limites", placeholder: "Ce qui est impossible" },
-        { key: "cout", label: "Coût", placeholder: "Prix à payer pour l'utiliser" },
+        { key: "domaine", label: "Domaine", placeholder: "Éléments, vertus, sphères d'influence" },
+        { key: "role_cosmique", label: "Rôle cosmique", placeholder: "Place du dieu dans l'ordre du monde" },
       ],
     },
     {
-      group: "Adeptes",
+      group: "Statut actuel",
+      icon: "⏳",
+      fields: [
+        { key: "statut", label: "Statut", placeholder: "Vivant / disparu / divisé / dormant / déchu…", type: "input" },
+        { key: "histoire_statut", label: "Histoire du statut", placeholder: "Comment en est-il arrivé là ?" },
+      ],
+    },
+    {
+      group: "Culte & Fidèles",
       icon: "🙏",
       fields: [
-        { key: "adeptes", label: "Adeptes / Pratiquants", placeholder: "Qui pratique cette magie / vénère cette divinité ?" },
+        { key: "fideles", label: "Fidèles / adeptes", placeholder: "Qui le vénère ? Rites, prêtrise" },
+        { key: "artefacts_lies", label: "Artefacts associés", placeholder: "Noms d'artefacts divins liés à ce dieu" },
+      ],
+    },
+  ],
+};
+
+// 📄 Les Artefacts Divins
+export const DIVINE_ARTIFACT_TEMPLATE: Template = {
+  sections: [
+    {
+      group: "Identification",
+      icon: "🏺",
+      fields: [
+        { key: "numero", label: "Numéro (1–24)", placeholder: "Ex. 07", type: "input" },
+        { key: "dieu_source", label: "Dieu d'origine", placeholder: "Nom du dieu qui l'a forgé / incarné", type: "input" },
+        { key: "vertu", label: "Vertu associée", placeholder: "Courage, mémoire, vérité…", type: "input" },
+        { key: "type_effet", label: "Type d'effet", placeholder: "Protection / révélation / destruction / lien…", type: "input" },
+      ],
+    },
+    {
+      group: "Description",
+      icon: "⚔️",
+      fields: [
+        { key: "apparence", label: "Apparence", placeholder: "Matière, forme, aura visible" },
+        { key: "pouvoirs", label: "Pouvoirs", placeholder: "Ce qu'il permet de faire" },
+        { key: "limites", label: "Limites / conditions d'usage", placeholder: "Ne s'active qu'à X, coût, contrepartie…" },
+      ],
+    },
+    {
+      group: "État actuel",
+      icon: "🗝️",
+      fields: [
+        { key: "etat", label: "État", placeholder: "Actif / perdu / scellé / utilisé / détruit…", type: "input" },
+        { key: "porteur", label: "Porteur actuel", placeholder: "Nom, lieu de garde" },
+        { key: "histoire", label: "Histoire connue", placeholder: "Parcours, légendes, derniers porteurs" },
+      ],
+    },
+  ],
+};
+
+// 📄 Les Mages
+export const MAGE_TEMPLATE: Template = {
+  sections: [
+    {
+      group: "Origine des dons",
+      icon: "🧬",
+      fields: [
+        { key: "origine_dons", label: "Origine du don", placeholder: "Don divin, sang d'Estar, éveil, mutation…" },
+        { key: "transmission", label: "Transmission", placeholder: "Héréditaire / apprise / offerte ? Étude, initiation, sang…" },
+      ],
+    },
+    {
+      group: "Organisation",
+      icon: "🏛️",
+      fields: [
+        { key: "organisation", label: "Caste, clan, ordre, isolé ?", placeholder: "Structure sociale des mages" },
+        { key: "perception", label: "Perception par les peuples", placeholder: "Craints ? Vénérés ? Chassés ? Tolérés ?" },
+      ],
+    },
+    {
+      group: "Types de pouvoirs",
+      icon: "✨",
+      note: "Coche / décris les familles maîtrisées par ce mage. Chaque ligne du tableau est une famille, la seconde colonne précise le niveau ou la nuance.",
+      fields: [
+        {
+          key: "pouvoirs",
+          label: "",
+          type: "table",
+          tableColumns: ["Famille de pouvoir", "Nuance / niveau"],
+          minRows: 9,
+          placeholder: "Ex. Lecture des Auras",
+        },
+      ],
+    },
+    {
+      group: "Profil individuel",
+      icon: "👤",
+      fields: [
+        { key: "nom", label: "Nom du mage", placeholder: "Si la fiche décrit un individu précis", type: "input" },
+        { key: "particularites", label: "Particularités", placeholder: "Traits propres à ce mage (rituels, faiblesses, limites personnelles)" },
+      ],
+    },
+  ],
+};
+
+// 📄 Système magique
+export const MAGIC_SYSTEM_TEMPLATE: Template = {
+  sections: [
+    {
+      group: "Source",
+      icon: "🌠",
+      fields: [
+        { key: "source", label: "Source de la magie", placeholder: "Linguistique / divine / artefactuelle / autre" },
+        { key: "mecanique", label: "Mécanique générale", placeholder: "Comment la magie se manifeste-t-elle ?" },
+      ],
+    },
+    {
+      group: "Règles & Coûts",
+      icon: "📜",
+      fields: [
+        { key: "regles", label: "Règles", placeholder: "Lois qui encadrent la magie" },
+        { key: "limites", label: "Limites", placeholder: "Ce qui reste impossible" },
+        { key: "couts", label: "Coûts", placeholder: "Prix à payer : énergie, vie, mémoire, serment…" },
+        { key: "derives", label: "Dérives possibles", placeholder: "Effets secondaires, corruptions, cas limites" },
+      ],
+    },
+    {
+      group: "Croyances",
+      icon: "🕯️",
+      fields: [
+        { key: "croyances", label: "Croyances liées à la magie", placeholder: "Ce que les peuples pensent de la magie et de son usage" },
       ],
     },
   ],
 };
 
 // ---------- SYSTÈME MONÉTAIRE ----------
+
+// 📄 Monnaie
 export const MONEY_TEMPLATE: Template = {
   sections: [
     {
@@ -318,6 +452,38 @@ export const MONEY_TEMPLATE: Template = {
         { key: "valeur", label: "Valeur & dénominations", placeholder: "1 or = 10 argent = 100 cuivre" },
         { key: "origine", label: "Origine & histoire", placeholder: "Qui a créé cette monnaie ?" },
         { key: "usage", label: "Usage & circulation", placeholder: "Où est-elle acceptée ?" },
+      ],
+    },
+  ],
+};
+
+// 📄 Terme / vocabulaire économique
+// Sert à noter un mot de jargon marchand, une unité de mesure, une
+// institution financière… à la manière d'un lexique.
+export const MONEY_TERM_TEMPLATE: Template = {
+  sections: [
+    {
+      group: "Terme",
+      icon: "📘",
+      fields: [
+        { key: "terme", label: "Terme", placeholder: "Ex. dîme, écu, taxe d'ombre…", type: "input" },
+        { key: "categorie", label: "Catégorie", placeholder: "Unité / impôt / institution / jargon / contrat…", type: "input" },
+        { key: "synonymes", label: "Synonymes & variantes", placeholder: "Autres noms, formes régionales", type: "input" },
+      ],
+    },
+    {
+      group: "Définition",
+      icon: "✍️",
+      fields: [
+        { key: "definition", label: "Définition", placeholder: "Sens précis du terme dans ton monde", rows: 4 },
+        { key: "usage", label: "Usage & contexte", placeholder: "Qui l'emploie ? Dans quelles circonstances ?" },
+      ],
+    },
+    {
+      group: "Exemples",
+      icon: "💬",
+      fields: [
+        { key: "exemples", label: "Exemples d'emploi", placeholder: "Une phrase par ligne — contexte réaliste.", rows: 4 },
       ],
     },
   ],
@@ -340,16 +506,98 @@ export const ARTIFACT_TEMPLATE: Template = {
 };
 
 // ---------- LEXIQUE & LANGAGE ----------
+// Fiche-langue complète : nature, phonétique, grammaire, vocabulaire,
+// noms propres, utilisations. Structurée pour accueillir une langue
+// inventée entière (type Estenien) aussi bien qu'un simple mot isolé
+// (remplir alors seulement la section Vocabulaire).
 export const LEXICON_TEMPLATE: Template = {
   sections: [
     {
-      group: "Mot",
-      icon: "💬",
+      group: "Nature de la langue",
+      icon: "🌌",
       fields: [
-        { key: "prononciation", label: "Prononciation", placeholder: "[pro-non-sya-syon]", type: "input" },
-        { key: "langue_origine", label: "Langue d'origine", placeholder: "Ex: Vieux dryalique", type: "input" },
-        { key: "signification", label: "Signification", placeholder: "Sens littéral et figuré" },
-        { key: "exemple", label: "Exemple d'usage", placeholder: "Phrase ou contexte d'utilisation" },
+        { key: "nature", label: "Nature & usage", placeholder: "Langue divine, parlée, morte, rituelle… À quoi sert-elle ? Qui la parle ?", rows: 4 },
+      ],
+    },
+    {
+      group: "Phonétique & style",
+      icon: "🔤",
+      fields: [
+        {
+          key: "phonetique",
+          label: "",
+          type: "table",
+          tableColumns: ["Élément", "Valeur"],
+          minRows: 5,
+          placeholder: "Ex. Voyelles / a, e, i, o, u…",
+        },
+      ],
+    },
+    {
+      group: "Grammaire",
+      icon: "🧩",
+      fields: [
+        { key: "grammaire_regles", label: "Règles générales", placeholder: "Ex. Ordre SOV, pas d'article, particules suffixées…", rows: 3 },
+        {
+          key: "grammaire_particules",
+          label: "Particules & fonctions",
+          type: "table",
+          tableColumns: ["Fonction", "Particule", "Exemple", "Traduction"],
+          minRows: 4,
+        },
+      ],
+    },
+    {
+      group: "Vocabulaire sacré",
+      icon: "📚",
+      fields: [
+        {
+          key: "vocabulaire",
+          label: "",
+          type: "table",
+          tableColumns: ["Mot", "Sens", "Notes symboliques"],
+          minRows: 6,
+        },
+      ],
+    },
+    {
+      group: "Noms propres & divinités",
+      icon: "🔱",
+      fields: [
+        {
+          key: "noms_propres",
+          label: "",
+          type: "table",
+          tableColumns: ["Nom original", "Nom traduit", "Prononciation", "Sens symbolique"],
+          minRows: 4,
+        },
+      ],
+    },
+    {
+      group: "Utilisations & exemples",
+      icon: "✨",
+      fields: [
+        { key: "utilisations", label: "Formules, invocations, exemples", placeholder: "Une entrée par ligne — citation + traduction entre parenthèses.", rows: 5 },
+      ],
+    },
+    {
+      group: "Textes & traductions",
+      icon: "📜",
+      note: "Colle un texte dans la langue originale à gauche et sa traduction à droite. La colonne phonétique est optionnelle.",
+      fields: [
+        {
+          key: "texte_titre",
+          label: "Titre du texte",
+          placeholder: "Ex. Astraï Ren — Le Retour des Étoiles",
+          type: "input",
+        },
+        {
+          key: "texte_traductions",
+          label: "",
+          type: "table",
+          tableColumns: ["Texte original", "Phonétique", "Traduction"],
+          minRows: 4,
+        },
       ],
     },
   ],
@@ -449,13 +697,22 @@ export function getTemplate(
     if (subcategory === "pays") return COUNTRY_TEMPLATE;
     return null; // autres sous-types → description libre
   }
+  if (category === "magie_divinites") {
+    switch (subcategory) {
+      case "dieu": return DEITY_TEMPLATE;
+      case "artefact_divin": return DIVINE_ARTIFACT_TEMPLATE;
+      case "mage": return MAGE_TEMPLATE;
+      case "systeme_magique": return MAGIC_SYSTEM_TEMPLATE;
+      default: return MAGIC_SYSTEM_TEMPLATE;
+    }
+  }
   switch (category) {
     case "personnages": return CHARACTER_TEMPLATE;
     case "bestiaire": return BESTIARY_TEMPLATE;
     case "histoire_mythes": return HISTORY_TEMPLATE;
     case "societe_culture": return SOCIETY_TEMPLATE;
-    case "magie_divinites": return MAGIC_TEMPLATE;
-    case "systeme_monetaire": return MONEY_TEMPLATE;
+    case "systeme_monetaire":
+      return subcategory === "terme" ? MONEY_TERM_TEMPLATE : MONEY_TEMPLATE;
     case "objets_legendaires": return ARTIFACT_TEMPLATE;
     case "lexique_langage": return LEXICON_TEMPLATE;
     case "crimes_enquetes": return CRIME_TEMPLATE;

@@ -37,6 +37,45 @@ export function DynamicTemplate({
   }
 
   function renderReadOnlyField(f: TemplateField): React.ReactElement | null {
+    if (f.type === "table") {
+      const cols = f.tableColumns ?? [];
+      const rows = readTableRows(local[f.key], cols.length);
+      const nonEmpty = rows.filter((r) => r.some((c) => (c ?? "").trim()));
+      if (nonEmpty.length === 0) return null;
+      return (
+        <div key={f.key} className={fieldSpan(f, true)}>
+          {f.label && <FieldLabel>{f.label}</FieldLabel>}
+          <div className="overflow-x-auto rounded-[var(--radius-md)] border border-white/[0.06]">
+            <table className="w-full text-[12.5px] border-collapse">
+              <thead>
+                <tr className="bg-white/[0.03]">
+                  {cols.map((c) => (
+                    <th
+                      key={c}
+                      className="text-left px-3 py-2 text-[10px] font-medium text-text-quaternary uppercase border-b border-white/[0.06]"
+                      style={{ letterSpacing: "0.14em" }}
+                    >
+                      {c}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {nonEmpty.map((row, ri) => (
+                  <tr key={ri} className="border-b border-white/[0.04] last:border-b-0">
+                    {cols.map((_, ci) => (
+                      <td key={ci} className="px-3 py-2 text-text-secondary align-top whitespace-pre-wrap">
+                        {(row[ci] ?? "").trim()}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
     if (f.type === "quad") {
       const quadData = (local[f.key] as Record<string, string>) ?? {};
       const cols = f.columns ?? ["A", "B", "C", "D"];
@@ -77,12 +116,101 @@ export function DynamicTemplate({
         const q = (v as Record<string, string>) ?? {};
         return Object.values(q).some((s) => (s ?? "").trim());
       }
+      if (f.type === "table") {
+        const rows = readTableRows(v, (f.tableColumns ?? []).length);
+        return rows.some((r) => r.some((c) => (c ?? "").trim()));
+      }
       return !!((v as string) ?? "").trim();
     });
   }
 
   function renderField(f: TemplateField) {
     if (readOnly) return renderReadOnlyField(f);
+    if (f.type === "table") {
+      const cols = f.tableColumns ?? [];
+      const minRows = f.minRows ?? 1;
+      const stored = readTableRows(local[f.key], cols.length);
+      const rows =
+        stored.length < minRows
+          ? [...stored, ...Array.from({ length: minRows - stored.length }, () => cols.map(() => ""))]
+          : stored;
+
+      const setRows = (next: string[][]) => update(f.key, next);
+      const setCell = (ri: number, ci: number, val: string) => {
+        const next = rows.map((r) => [...r]);
+        next[ri][ci] = val;
+        setRows(next);
+      };
+      const addRow = () => setRows([...rows, cols.map(() => "")]);
+      const removeRow = (ri: number) => {
+        if (rows.length <= minRows) {
+          // Ne pas descendre sous le minimum — on vide juste la ligne.
+          const next = rows.map((r) => [...r]);
+          next[ri] = cols.map(() => "");
+          setRows(next);
+          return;
+        }
+        setRows(rows.filter((_, i) => i !== ri));
+      };
+
+      return (
+        <div key={f.key} className={fieldSpan(f, true)}>
+          {f.label && <FieldLabel>{f.label}</FieldLabel>}
+          <div className="overflow-x-auto rounded-[var(--radius-md)] border border-white/[0.06]">
+            <table className="w-full text-[12.5px] border-collapse">
+              <thead>
+                <tr className="bg-white/[0.03]">
+                  {cols.map((c) => (
+                    <th
+                      key={c}
+                      className="text-left px-2.5 py-2 text-[10px] font-medium text-text-quaternary uppercase border-b border-white/[0.06]"
+                      style={{ letterSpacing: "0.14em" }}
+                    >
+                      {c}
+                    </th>
+                  ))}
+                  <th className="w-8 border-b border-white/[0.06]" aria-hidden />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, ri) => (
+                  <tr key={ri} className="border-b border-white/[0.04] last:border-b-0">
+                    {cols.map((_, ci) => (
+                      <td key={ci} className="p-0 align-top">
+                        <input
+                          value={row[ci] ?? ""}
+                          onChange={(e) => setCell(ri, ci, e.target.value)}
+                          placeholder={ci === 0 ? f.placeholder : undefined}
+                          className="w-full text-[12.5px] px-2.5 py-1.5 bg-transparent border-0 focus:outline-none focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary"
+                        />
+                      </td>
+                    ))}
+                    <td className="p-0 align-middle text-center">
+                      <button
+                        type="button"
+                        onClick={() => removeRow(ri)}
+                        className="w-7 h-7 text-text-quaternary hover:text-[var(--color-accent)] transition-colors cursor-pointer"
+                        aria-label="Supprimer la ligne"
+                        title="Supprimer la ligne"
+                      >
+                        ×
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button
+            type="button"
+            onClick={addRow}
+            className="mt-2 text-[11px] text-text-tertiary hover:text-[var(--color-accent)] transition-colors cursor-pointer"
+          >
+            + Ajouter une ligne
+          </button>
+        </div>
+      );
+    }
     if (f.type === "quad") {
       const quadData = (local[f.key] as Record<string, string>) ?? {};
       const cols = f.columns ?? ["A", "B", "C", "D"];
@@ -171,6 +299,11 @@ export function DynamicTemplate({
                 {section.group}
               </h4>
             </header>
+            {section.note && !readOnly && (
+              <p className="mb-3 text-[11.5px] text-text-tertiary font-serif italic leading-relaxed">
+                {section.note}
+              </p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {section.fields.map((f) => renderField(f))}
             </div>
@@ -199,6 +332,11 @@ export function DynamicTemplate({
               {section.group}
             </h4>
           </header>
+          {section.note && !readOnly && (
+            <p className="mb-3 text-[11.5px] text-text-tertiary font-serif italic leading-relaxed">
+              {section.note}
+            </p>
+          )}
           <div className="flex flex-col gap-3">
             {section.fields.map((f) => renderField(f))}
           </div>
@@ -219,9 +357,24 @@ export function DynamicTemplate({
  */
 function fieldSpan(f: TemplateField, grid: boolean): string {
   if (!grid) return "";
-  if (f.type === "quad") return "md:col-span-2";
+  if (f.type === "quad" || f.type === "table") return "md:col-span-2";
   if (f.type !== "input" && (f.rows ?? 2) >= 4) return "md:col-span-2";
   return "";
+}
+
+/**
+ * Normalise une valeur stockée en tableau de lignes (chaque ligne = tableau
+ * de cellules string). Tolère les formats anciens ou invalides.
+ */
+function readTableRows(raw: unknown, nCols: number): string[][] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((r): r is unknown[] => Array.isArray(r))
+    .map((r) => {
+      const cells = r.map((c) => (typeof c === "string" ? c : ""));
+      if (cells.length >= nCols) return cells.slice(0, nCols);
+      return [...cells, ...Array.from({ length: nCols - cells.length }, () => "")];
+    });
 }
 
 const FIELD_INPUT =

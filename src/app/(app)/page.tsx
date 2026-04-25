@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { DashboardClient } from "./dashboard-client";
-import { AutarieWBNudge } from "@/components/home/AutarieWBNudge";
+import { WBNudge } from "@/components/home/WBNudge";
+import { MilestoneAlerts, type MilestoneAlertItem } from "@/components/home/MilestoneAlerts";
+
+// Fenêtre d'alerte « jalon approche » : J-7 par défaut. Au-delà, on considère
+// que le jalon est encore lointain et on n'embête pas l'utilisatrice.
+const MILESTONE_SOON_DAYS = 7;
 
 const DEFAULT_DAILY_GOAL = 500;
 
@@ -44,6 +49,86 @@ export default async function DashboardPage() {
     .order("date", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // Milestones du mois (tous romans confondus) — pour la grille calendrier.
+  const { data: milestoneRows } = await supabase
+    .from("planning_milestones")
+    .select("id, title, type, status, color, target_date")
+    .eq("user_id", user.id)
+    .not("target_date", "is", null)
+    .gte("target_date", monthStartIso)
+    .lte("target_date", monthEndIso);
+
+  // Milestones à notifier : dépassés (status ≠ done) ou approchant dans les
+  // MILESTONE_SOON_DAYS jours. Indépendant du mois courant : un jalon en
+  // retard de 2 mois doit toujours être affiché.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const soonIso = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + MILESTONE_SOON_DAYS);
+    return d.toISOString().slice(0, 10);
+  })();
+  const { data: alertMilestoneRows } = await supabase
+    .from("planning_milestones")
+    .select("id, title, type, status, color, target_date, novel_id, novels(title)")
+    .eq("user_id", user.id)
+    .not("target_date", "is", null)
+    .neq("status", "done")
+    .lte("target_date", soonIso)
+    .order("target_date", { ascending: true });
+
+  type AlertRow = {
+    id: string;
+    title: string;
+    type: string | null;
+    status: string | null;
+    color: string | null;
+    target_date: string | null;
+    novel_id: string | null;
+    novels: { title: string } | { title: string }[] | null;
+  };
+  const milestoneAlerts: MilestoneAlertItem[] = (alertMilestoneRows as AlertRow[] | null ?? [])
+    .filter((m) => !!m.target_date)
+    .map((m) => {
+      const novelTitle = Array.isArray(m.novels)
+        ? m.novels[0]?.title ?? null
+        : m.novels?.title ?? null;
+      const target = m.target_date as string;
+      const diffMs = new Date(target + "T00:00:00").getTime() - new Date(todayIso + "T00:00:00").getTime();
+      const daysDelta = Math.round(diffMs / 86_400_000);
+      return {
+        id: m.id,
+        title: m.title,
+        type: m.type ?? "custom",
+        status: m.status ?? "planned",
+        color: m.color,
+        targetDate: target,
+        daysDelta, // < 0 = en retard, 0 = aujourd'hui, > 0 = à venir
+        novelId: m.novel_id,
+        novelTitle,
+      };
+    });
+
+  type MilestoneLite = {
+    id: string;
+    title: string;
+    type: string;
+    status: string;
+    color: string | null;
+  };
+  const milestonesByDate = new Map<string, MilestoneLite[]>();
+  for (const m of milestoneRows ?? []) {
+    if (!m.target_date) continue;
+    const list = milestonesByDate.get(m.target_date) ?? [];
+    list.push({
+      id: m.id,
+      title: m.title,
+      type: m.type ?? "custom",
+      status: m.status ?? "planned",
+      color: m.color ?? null,
+    });
+    milestonesByDate.set(m.target_date, list);
+  }
 
   const activityByDate = new Map<string, {
     words_written: number;
@@ -94,7 +179,8 @@ export default async function DashboardPage() {
 
   const monthActivity = Array.from({ length: daysInMonth }, (_, i) => {
     const dayNum = i + 1;
-    const row = activityByDate.get(isoDate(year, month, dayNum));
+    const iso = isoDate(year, month, dayNum);
+    const row = activityByDate.get(iso);
     const words = row?.words_written ?? 0;
     // Pour l'affichage (intensité, tooltip, streak) on clampe à 0 :
     // un jour à delta négatif (grosse suppression) ne doit pas s'afficher en « rouge »
@@ -116,12 +202,14 @@ export default async function DashboardPage() {
       planIntensity,
       isFuture: dayNum > todayNum,
       isToday: dayNum === todayNum,
+      milestones: milestonesByDate.get(iso) ?? [],
     };
   });
 
   const lastWbDate = lastWbRow?.date ? new Date(lastWbRow.date).getTime() : 0;
+  const nowMs = now.getTime();
   const daysSinceWB =
-    lastWbDate > 0 ? Math.floor((Date.now() - lastWbDate) / 86_400_000) : Infinity;
+    lastWbDate > 0 ? Math.floor((nowMs - lastWbDate) / 86_400_000) : Infinity;
   const recentRedaction = monthActivity
     .slice(Math.max(0, todayNum - 7), todayNum)
     .some((d) => d.wordsDisplay > 0);
@@ -145,7 +233,7 @@ export default async function DashboardPage() {
   const remainingWords = Math.max(0, activeGoal - activeWords);
   const realDailyPace = todayNum > 0 ? monthWordsTotal / todayNum : 0;
   const etaDays = realDailyPace > 0 ? Math.ceil(remainingWords / realDailyPace) : 0;
-  const etaDate = etaDays > 0 ? new Date(Date.now() + etaDays * 86_400_000) : null;
+  const etaDate = etaDays > 0 ? new Date(nowMs + etaDays * 86_400_000) : null;
   const paceDelta = realDailyPace - DAILY_GOAL;
   const paceVerdict =
     activeGoal === 0
@@ -191,7 +279,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-6 py-5 max-w-[1280px] mx-auto">
-      {showWBNudge && <AutarieWBNudge daysSinceWB={daysSinceWB} />}
+      {showWBNudge && <WBNudge daysSinceWB={daysSinceWB} />}
+      {milestoneAlerts.length > 0 && <MilestoneAlerts items={milestoneAlerts} />}
 
       {/* === Hero banner === */}
       <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-white/[0.06] hero-glow p-5 mb-5 flex items-center gap-4">
@@ -208,7 +297,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[17px] text-text-primary leading-tight">
-            <span>Autarie vous attend,</span>{" "}
+            <span>Reprenez votre histoire</span>{" "}
             <span className="font-serif italic text-[var(--color-accent)]">
               là où votre plume s&apos;est posée.
             </span>
@@ -345,6 +434,10 @@ export default async function DashboardPage() {
                 <LegendDot color="#7F77DD" label="Rédaction" />
                 <LegendDot color="#5DCAA5" label="Worldbuilding" />
                 <LegendDot color="#EF9F27" label="Planif." />
+                <span className="flex items-center gap-1">
+                  <span className="text-[var(--color-accent)]">◆</span>
+                  Jalons
+                </span>
               </div>
             </div>
 
@@ -365,14 +458,24 @@ export default async function DashboardPage() {
                   d.planIntensity > 0 && { color: "#EF9F27", op: 0.25 + d.planIntensity * 0.65 },
                 ].filter(Boolean) as { color: string; op: number }[];
 
-                const tooltip = d.isFuture
-                  ? ""
+                const milestoneLines = d.milestones.map((m) => {
+                  const typeLabel = m.type === "custom" ? "◆" : `◆ ${m.type}`;
+                  const statusMark =
+                    m.status === "done" ? "✓ " : m.status === "in_progress" ? "◐ " : "";
+                  return `${typeLabel} ${statusMark}${m.title}`;
+                });
+                const baseTooltip = d.isFuture
+                  ? [`${d.day}`]
                   : [
                       `${d.day}`,
                       d.wordsDisplay > 0 ? `✎ ${d.wordsDisplay.toLocaleString("fr-FR")} mots` : null,
                       d.wbCount > 0 ? `◐ ${d.wbCount} fiche${d.wbCount > 1 ? "s" : ""} WB` : null,
                       d.planCount > 0 ? `▦ ${d.planCount} élément${d.planCount > 1 ? "s" : ""} planif` : null,
-                    ].filter(Boolean).join(" · ");
+                    ].filter(Boolean) as string[];
+                const tooltip = [
+                  baseTooltip.join(" · "),
+                  ...milestoneLines,
+                ].join("\n");
 
                 return (
                   <div
@@ -384,7 +487,7 @@ export default async function DashboardPage() {
                         : d.isToday
                           ? "bg-[var(--color-accent-bg)]/40 ring-1 ring-[var(--color-accent-border)]"
                           : "bg-white/[0.025]"
-                    }`}
+                    } ${d.milestones.length > 0 ? "ring-1 ring-[var(--color-accent-border)]/60" : ""}`}
                   >
                     {/* Bars en haut de la cellule */}
                     {!d.isFuture && bands.length > 0 && (
@@ -398,8 +501,10 @@ export default async function DashboardPage() {
                         ))}
                       </div>
                     )}
+
+                    {/* Numéro du jour — haut à droite */}
                     <span
-                      className={`absolute bottom-1 right-1.5 text-[10px] ${
+                      className={`absolute top-1 right-1.5 text-[10px] ${
                         d.isToday
                           ? "font-medium text-[var(--color-accent)]"
                           : d.isFuture
@@ -409,6 +514,49 @@ export default async function DashboardPage() {
                     >
                       {d.day}
                     </span>
+
+                    {/* Milestones — libellés empilés en bas de la cellule */}
+                    {d.milestones.length > 0 && (
+                      <div className="absolute bottom-1 left-1 right-1 flex flex-col gap-[1px] pointer-events-none">
+                        {d.milestones.length > 2 && (
+                          <div className="text-[7.5px] leading-none text-text-quaternary pl-[7px]">
+                            +{d.milestones.length - 2} autre{d.milestones.length - 2 > 1 ? "s" : ""}
+                          </div>
+                        )}
+                        {d.milestones.slice(0, 2).map((m) => {
+                          const color = milestoneColor(m.type, m.color);
+                          const op =
+                            m.status === "done"
+                              ? 1
+                              : m.status === "in_progress"
+                                ? 0.85
+                                : 0.6;
+                          return (
+                            <div
+                              key={m.id}
+                              className="flex items-center gap-1 truncate"
+                              style={{ opacity: op }}
+                            >
+                              <span
+                                className="shrink-0 w-[5px] h-[5px] rounded-[1px]"
+                                style={{ background: color }}
+                              />
+                              <span
+                                className="text-[8.5px] leading-[1.1] truncate"
+                                style={{
+                                  color,
+                                  textDecoration:
+                                    m.status === "done" ? "line-through" : "none",
+                                }}
+                                title={m.title}
+                              >
+                                {m.title}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -503,6 +651,17 @@ function PaceChip({ verdict, onTrack }: { verdict: string | null; onTrack: numbe
       {pct > 0 ? `${pct} %` : "—"}
     </span>
   );
+}
+
+function milestoneColor(type: string, color: string | null): string {
+  if (color && /^#[0-9a-fA-F]{3,8}$/.test(color)) return color;
+  switch (type) {
+    case "plan":       return "#7B6FDE";
+    case "beta":       return "#5DCAA5";
+    case "salon":      return "#e4b48c";
+    case "soumission": return "#EF9F27";
+    default:           return "#a89e8d";
+  }
 }
 
 function LegendDot({ color, label }: { color: string; label: string }) {

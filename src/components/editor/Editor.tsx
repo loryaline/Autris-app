@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -50,10 +51,6 @@ function countWords(text: string): number {
   return trimmed.split(/\s+/).length;
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
-}
-
 export function NovelEditor({
   novelId,
   projectId,
@@ -74,7 +71,7 @@ export function NovelEditor({
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [leftWidth, setLeftWidth] = useState(155);
-  const [rightWidth, setRightWidth] = useState(240);
+  const [rightWidth, setRightWidth] = useState(320);
   const [localChapters, setLocalChapters] = useState(chapters);
   const [, setTick] = useState(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -386,21 +383,13 @@ export function NovelEditor({
     e.preventDefault();
     const startX = e.clientX;
     const startW = rightWidth;
-    const onMove = (ev: MouseEvent) => setRightWidth(Math.max(140, Math.min(640, startW - (ev.clientX - startX))));
+    const onMove = (ev: MouseEvent) => setRightWidth(Math.max(290, Math.min(640, startW - (ev.clientX - startX))));
     const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
   }, [rightWidth]);
 
   const totalWords = localChapters.reduce((sum, c) => sum + c.word_count, 0);
-  const totalChars = localChapters.reduce((sum, c) => {
-    const text = stripHtml(c.content);
-    return sum + text.length;
-  }, 0);
-  const totalCharsNoSpaces = localChapters.reduce((sum, c) => {
-    const text = stripHtml(c.content);
-    return sum + text.replace(/\s/g, "").length;
-  }, 0);
 
   const editorText = editor ? editor.getText() : "";
   const paragraphCount = editorText
@@ -413,39 +402,56 @@ export function NovelEditor({
 
   const canNavigateHome = syncStatus === "saved";
 
+  // Status → couleur pastille affichée dans le fil d'Ariane
+  const STATUS_BADGE: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
+    a_ecrire:    { label: "À écrire",    dot: "#7a7163", text: "#a89e8d", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.10)" },
+    premier_jet: { label: "Premier jet", dot: "#7B6FDE", text: "#b5acef", bg: "rgba(123,111,222,0.10)", border: "rgba(123,111,222,0.28)" },
+    revision:    { label: "Révision",    dot: "#EF9F27", text: "#f0b254", bg: "rgba(239,159,39,0.10)",   border: "rgba(239,159,39,0.28)" },
+    reecriture:  { label: "Réécriture",  dot: "#e4b48c", text: "#eec19b", bg: "rgba(228,180,140,0.10)",  border: "rgba(228,180,140,0.28)" },
+    correction:  { label: "Correction",  dot: "#5DCAA5", text: "#7ed8b7", bg: "rgba(93,202,165,0.10)",   border: "rgba(93,202,165,0.28)" },
+    termine:     { label: "Terminé",     dot: "#1D9E75", text: "#5cc2a0", bg: "rgba(29,158,117,0.10)",   border: "rgba(29,158,117,0.28)" },
+  };
+  const statusBadge = STATUS_BADGE[activeChapter?.status ?? "a_ecrire"] ?? STATUS_BADGE.a_ecrire;
+
   return (
     <div className="flex flex-col h-full">
       {/* Breadcrumb top bar */}
       {!focusMode ? (
-        <div className="h-9 bg-bg-primary border-b border-border flex items-center px-3 gap-2 shrink-0">
-          <a
-            href={canNavigateHome ? "/" : undefined}
+        <div className="h-10 bg-bg-primary border-b border-white/[0.04] flex items-center px-4 gap-2 shrink-0">
+          <Link
+            href="/"
             onClick={(e) => { if (!canNavigateHome) e.preventDefault(); }}
             title={canNavigateHome ? "Retour à l'accueil" : "Sauvegarde en cours…"}
             className={`flex items-center justify-center w-5 h-5 rounded transition-colors ${
               canNavigateHome
-                ? "text-text-tertiary hover:text-primary hover:bg-primary-bg cursor-pointer"
-                : "text-text-quaternary cursor-not-allowed opacity-50"
+                ? "text-text-tertiary hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-bg)] cursor-pointer"
+                : "text-text-quaternary cursor-not-allowed opacity-50 pointer-events-none"
             }`}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 6l4-4 4 4M3 5.5V10h2.5V7.5h1V10H9V5.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          </a>
-          <span className="text-[12px] text-border">/</span>
-          <a href="/" className={`text-[13px] no-underline ${canNavigateHome ? "text-text-tertiary hover:text-primary" : "text-text-quaternary pointer-events-none"}`}>
+          </Link>
+          <Link href="/" className={`text-[12.5px] no-underline ${canNavigateHome ? "text-text-tertiary hover:text-[var(--color-accent)]" : "text-text-quaternary pointer-events-none"}`}>
             {projectTitle}
-          </a>
-          <span className="text-[12px] text-border">/</span>
-          <span className="text-[13px] text-text-tertiary">{novelTitle}</span>
-          <span className="text-[12px] text-border">/</span>
-          <span className="text-[13px] text-text-tertiary">Rédaction</span>
+          </Link>
+          <span className="mx-1 text-text-quaternary/60 text-[11px]">/</span>
+          <span className="text-[12.5px] text-text-tertiary">{novelTitle}</span>
           {activeChapter && (
             <>
-              <span className="text-[12px] text-border">/</span>
-              <span className="text-[13px] font-medium text-text-primary">
+              <span className="mx-1 text-text-quaternary/60 text-[11px]">/</span>
+              <span className="text-[12.5px] text-text-primary font-medium">
                 {activeChapter.title}
               </span>
+              <button
+                onClick={() => activeChapterId && handleStatusChange(activeChapterId)}
+                title="Cliquer pour changer le statut"
+                className="ml-2 inline-flex items-center gap-1.5 h-6 pl-1.5 pr-2.5 rounded-full cursor-pointer transition-colors"
+                style={{ background: statusBadge.bg, border: `1px solid ${statusBadge.border}`, color: statusBadge.text }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusBadge.dot }} />
+                <span className="text-[11px] font-medium">{statusBadge.label}</span>
+              </button>
             </>
           )}
           <div className="ml-auto flex items-center gap-1.5">
@@ -494,9 +500,10 @@ export function NovelEditor({
       {/* Toolbar — always visible */}
       <Toolbar
         editor={editor}
-        wordCount={totalWords}
-        totalChars={totalChars}
-        totalCharsNoSpaces={totalCharsNoSpaces}
+        wordCount={activeChapter?.word_count ?? 0}
+        totalChars={charCount}
+        totalCharsNoSpaces={charCountNoSpaces}
+        paragraphCount={paragraphCount}
         onToggleLeft={() => setShowLeftPanel(!showLeftPanel)}
         onToggleRight={() => setShowRightPanel(!showRightPanel)}
         hidePanelToggles={focusMode}
@@ -526,38 +533,29 @@ export function NovelEditor({
           </>
         )}
 
-        {/* Editor area — Google Docs style */}
+        {/* Editor area — parchment / cream card */}
         <div
           className="flex-1 overflow-y-auto flex justify-center items-start"
-          style={{ background: "var(--color-bg-tertiary)" }}
+          style={{ background: "var(--color-bg-primary)" }}
         >
           <div
-            className="w-full"
+            className="w-full chapter-card"
             style={{
-              maxWidth: "780px",
-              background: "#ffffff",
-              color: "#1a1918",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-              padding: "32px 48px 50vh",
-              minHeight: "100%",
+              maxWidth: "760px",
+              margin: "40px 0 50vh",
+              padding: "48px 64px 72px",
             }}
           >
             {activeChapter ? (
-              <>
-                {!focusMode && (
-                  <div className="text-[12px] mb-4 opacity-60" style={{ fontFamily: "var(--font-sans)", color: "#9b9a96" }}>
-                    {activeChapter.title}
-                  </div>
-                )}
+              <div className="chapter-prose">
                 <EditorContent editor={editor} />
-              </>
+              </div>
             ) : (
               <div className="text-center mt-20" style={{ fontFamily: "var(--font-sans)" }}>
-                <div className="text-[24px] mb-3">🦭</div>
-                <div className="text-text-tertiary text-[14px] mb-3">
+                <div className="text-text-tertiary text-[14px] mb-3 italic" style={{ fontFamily: "var(--font-serif)" }}>
                   {localChapters.length === 0
-                    ? "Aucun chapitre pour l'instant."
-                    : "Sélectionnez un chapitre pour commencer à écrire."}
+                    ? "La page est blanche. À votre plume."
+                    : "Choisissez un chapitre pour reprendre l'écriture."}
                 </div>
                 {localChapters.length === 0 && (
                   <button
@@ -585,7 +583,6 @@ export function NovelEditor({
                 paragraphCount={paragraphCount}
                 charCount={charCount}
                 charCountNoSpaces={charCountNoSpaces}
-                chapterTitle={activeChapter?.title ?? "—"}
                 chapterStatus={activeChapter?.status ?? "a_ecrire"}
                 chapterId={activeChapterId}
                 novelId={novelId}
@@ -609,3 +606,4 @@ export function NovelEditor({
     </div>
   );
 }
+

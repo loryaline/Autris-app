@@ -70,6 +70,7 @@ export function Toolbar({
   wordCount,
   totalChars,
   totalCharsNoSpaces,
+  paragraphCount,
   onToggleLeft,
   onToggleRight,
   hidePanelToggles,
@@ -78,14 +79,18 @@ export function Toolbar({
   wordCount: number;
   totalChars: number;
   totalCharsNoSpaces: number;
+  paragraphCount: number;
   onToggleLeft: () => void;
   onToggleRight: () => void;
   hidePanelToggles?: boolean;
 }) {
   if (!editor) return null;
 
+  const readingTime = Math.max(1, Math.round(wordCount / 250));
+
   return (
-    <div className="h-6 bg-bg-primary border-b border-border flex items-center px-2.5 gap-0.5 shrink-0">
+    <div className="h-9 bg-bg-primary border-b border-white/[0.04] flex items-center px-4 gap-1.5 shrink-0">
+      {/* Formatage — outils existants uniquement */}
       <ToolbarButton
         active={editor.isActive("bold")}
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -110,21 +115,43 @@ export function Toolbar({
         <span className="underline">S</span>
       </ToolbarButton>
 
-      <div className="ml-auto flex items-center gap-1.5">
-        <span className="text-[12px] text-text-tertiary mr-1 flex items-center gap-2">
-          <span title="Mots">{wordCount.toLocaleString("fr-FR")} mots</span>
-          <span className="text-border">·</span>
-          <span title="Signes sans espaces (tous chapitres)">
-            {totalCharsNoSpaces.toLocaleString("fr-FR")} S
+      {/* Stats — à droite */}
+      <div className="ml-auto flex items-center gap-3 text-[12px] text-text-tertiary">
+        <span className="flex items-center gap-1">
+          <span className="font-mono tabular-nums text-text-secondary">
+            {wordCount.toLocaleString("fr-FR")}
           </span>
-          <span className="text-border">·</span>
-          <span title="Signes espaces compris (tous chapitres)">
-            {totalChars.toLocaleString("fr-FR")} SEC
-          </span>
+          <span className="text-text-quaternary">mots</span>
         </span>
+        <span className="text-text-quaternary/50">·</span>
+        <span className="flex items-center gap-1" title="Signes sans espaces">
+          <span className="font-mono tabular-nums text-text-secondary">
+            {totalCharsNoSpaces.toLocaleString("fr-FR")}
+          </span>
+          <span className="text-text-quaternary">s</span>
+        </span>
+        <span className="text-text-quaternary/50">·</span>
+        <span className="flex items-center gap-1" title="Signes espaces compris">
+          <span className="font-mono tabular-nums text-text-secondary">
+            {totalChars.toLocaleString("fr-FR")}
+          </span>
+          <span className="text-text-quaternary">c</span>
+        </span>
+        <span className="text-text-quaternary/50">·</span>
+        <span className="flex items-center gap-1" title="Paragraphes">
+          <span className="font-mono tabular-nums text-text-secondary">{paragraphCount}</span>
+          <span className="text-text-quaternary">§</span>
+        </span>
+        <span className="text-text-quaternary/50">·</span>
+        <span className="flex items-center gap-1" title="Temps de lecture estimé">
+          <span className="text-text-quaternary">≈</span>
+          <span className="font-mono tabular-nums text-text-secondary">{readingTime} min</span>
+          <span className="text-text-quaternary">lecture</span>
+        </span>
+
         {!hidePanelToggles && (
           <>
-            <div className="w-px h-3.5 bg-border" />
+            <span className="w-px h-4 bg-white/[0.08] mx-1" />
             <PanelToggleButton title="Masquer la structure" onClick={onToggleLeft} side="left" />
             <PanelToggleButton title="Masquer le contexte" onClick={onToggleRight} side="right" />
           </>

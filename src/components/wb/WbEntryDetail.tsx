@@ -15,6 +15,7 @@ import { DynamicTemplate } from "./DynamicTemplate";
 import { WbMainImage } from "./WbMainImage";
 import { WbGallery } from "./WbGallery";
 import { WbTagsEditor } from "./WbTagsEditor";
+import { WbGroupsEditor } from "./WbGroupsEditor";
 import { WbLinksEditor } from "./WbLinksEditor";
 import Image from "next/image";
 
@@ -23,6 +24,8 @@ export function WbEntryDetail({
   projectId,
   allEntries,
   projectTags,
+  projectGroups,
+  novels,
   entryLinks,
   onSelectEntry,
   onLinkAdded,
@@ -35,6 +38,8 @@ export function WbEntryDetail({
   projectId: string;
   allEntries: WbEntry[];
   projectTags: string[];
+  projectGroups: string[];
+  novels: { id: string; title: string }[];
   entryLinks: WbLink[];
   onSelectEntry: (id: string) => void;
   onLinkAdded: (link: WbLink) => void;
@@ -54,6 +59,10 @@ export function WbEntryDetail({
   const scrollRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
+  // On ne réinitialise l'état local QUE lorsqu'on change de fiche (entry.id),
+  // sinon chaque frappe (qui remonte via onUpdate au parent puis redescend
+  // via la prop `entry`) re-déclencherait setMode("view") et sortirait
+  // l'utilisateur du mode édition.
   useEffect(() => {
     setLocal(entry);
     setMode(entry.title?.trim() ? "view" : "edit");
@@ -61,7 +70,8 @@ export function WbEntryDetail({
     if (!entry.title?.trim()) {
       requestAnimationFrame(() => titleInputRef.current?.focus());
     }
-  }, [entry]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry.id]);
 
   function scheduleSave(next: WbEntry) {
     setLocal(next);
@@ -323,6 +333,7 @@ export function WbEntryDetail({
             template={template}
             entryLinks={entryLinks}
             allEntries={allEntries}
+            novels={novels}
             onSelectEntry={onSelectEntry}
           />
         ) : (
@@ -528,6 +539,28 @@ export function WbEntryDetail({
                       </span>
                     ),
                   },
+                  ...(novels.length > 0
+                    ? [{
+                        label: "Livre",
+                        value: (
+                          <select
+                            value={local.novel_id ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value || null;
+                              scheduleSave({ ...local, novel_id: v });
+                            }}
+                            className="w-full bg-transparent border border-white/[0.08] rounded px-1.5 py-0.5 text-[12px] text-text-primary cursor-pointer focus:outline-none focus:border-[var(--color-accent)]/40"
+                          >
+                            <option value="">— Tout le projet —</option>
+                            {novels.map((n) => (
+                              <option key={n.id} value={n.id}>
+                                {n.title}
+                              </option>
+                            ))}
+                          </select>
+                        ),
+                      }]
+                    : []),
                   {
                     label: "Créée le",
                     value: formatDate(local.created_at),
@@ -571,6 +604,26 @@ export function WbEntryDetail({
               />
             </Card>
 
+            {local.category === "personnages" && (
+              <Card
+                icon="👥"
+                title="Groupes"
+                titleAccent={(local.groups?.length ?? 0) > 0 ? `${local.groups.length}` : undefined}
+              >
+                <WbGroupsEditor
+                  entryId={local.id}
+                  value={local.groups ?? []}
+                  onChange={(groups) => {
+                    const n = { ...local, groups };
+                    setLocal(n);
+                    onUpdate(n);
+                  }}
+                  projectGroups={projectGroups}
+                  embedded
+                />
+              </Card>
+            )}
+
             <Card
               icon="🔗"
               title="Liens"
@@ -586,6 +639,24 @@ export function WbEntryDetail({
                 embedded
               />
             </Card>
+
+            {local.category === "personnages" && (
+              <Card icon="💭" title="Qu'est-ce que tu ne m'as dit sur toi ?">
+                <SecretsBubbles
+                  value={
+                    Array.isArray(
+                      (local.template_data as Record<string, unknown> | null)?.secrets
+                    )
+                      ? (((local.template_data as Record<string, unknown>).secrets) as string[])
+                      : []
+                  }
+                  onChange={(next) => {
+                    const td = { ...(local.template_data ?? {}), secrets: next };
+                    scheduleSave({ ...local, template_data: td });
+                  }}
+                />
+              </Card>
+            )}
           </div>
         </div>
           </>
@@ -604,6 +675,7 @@ function ViewBody({
   template,
   entryLinks,
   allEntries,
+  novels,
   onSelectEntry,
 }: {
   local: WbEntry;
@@ -612,6 +684,7 @@ function ViewBody({
   template: ReturnType<typeof getTemplate>;
   entryLinks: WbLink[];
   allEntries: WbEntry[];
+  novels: { id: string; title: string }[];
   onSelectEntry: (id: string) => void;
 }) {
   const tone = toneFor(local.category, local.subcategory);
@@ -769,6 +842,18 @@ function ViewBody({
                     </span>
                   ),
                 },
+                ...(novels.length > 0
+                  ? [{
+                      label: "Livre",
+                      value: (
+                        <span className={local.novel_id ? "text-text-primary" : "italic text-text-quaternary"}>
+                          {local.novel_id
+                            ? (novels.find((n) => n.id === local.novel_id)?.title ?? "—")
+                            : "Tout le projet"}
+                        </span>
+                      ),
+                    }]
+                  : []),
                 { label: "Créée le", value: formatDate(local.created_at) },
                 { label: "Modifiée", value: relativeTime(local.updated_at) },
                 {
@@ -813,6 +898,30 @@ function ViewBody({
               </p>
             )}
           </Card>
+
+          {local.category === "personnages" && (local.groups?.length ?? 0) > 0 && (
+            <Card
+              icon="👥"
+              title="Groupes"
+              titleAccent={`${local.groups.length}`}
+            >
+              <div className="flex flex-wrap gap-1.5">
+                {local.groups.map((g) => (
+                  <span
+                    key={g}
+                    className="inline-flex items-center h-6 px-2.5 rounded-full text-[11px]"
+                    style={{
+                      background: "rgba(239,159,39,0.10)",
+                      color: "#f0b254",
+                      border: "1px solid rgba(239,159,39,0.24)",
+                    }}
+                  >
+                    {g}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          )}
 
           <Card
             icon="🔗"
@@ -868,6 +977,28 @@ function ViewBody({
               </ul>
             )}
           </Card>
+
+          {local.category === "personnages" && (() => {
+            const td = local.template_data as Record<string, unknown> | null;
+            const secrets = Array.isArray(td?.secrets) ? (td?.secrets as string[]) : [];
+            const filled = secrets.filter((s) => (s ?? "").trim().length > 0);
+            if (filled.length === 0) return null;
+            return (
+              <Card icon="💭" title="Qu'est-ce que tu ne m'as dit sur toi ?">
+                <ul className="flex flex-col gap-2">
+                  {filled.map((s, i) => (
+                    <li
+                      key={i}
+                      className="text-[12px] text-text-secondary italic font-serif leading-snug px-3 py-2 rounded-[var(--radius-md)] bg-white/[0.03] border border-white/[0.05] relative"
+                      style={{ borderBottomLeftRadius: i % 2 === 0 ? 4 : undefined, borderBottomRightRadius: i % 2 === 1 ? 4 : undefined }}
+                    >
+                      « {s} »
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            );
+          })()}
         </div>
       </div>
     </>
@@ -888,6 +1019,76 @@ function splitLastWord(title: string): React.ReactNode {
 }
 
 /* ========== Sub-components ========== */
+
+/** Trois bulles éditables : réponses du personnage à la question « qu'est-ce que tu ne m'as dit sur toi ? ». */
+function SecretsBubbles({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  // Toujours 3 positions (remplies ou vides)
+  const bubbles: string[] = [0, 1, 2].map((i) => value[i] ?? "");
+  const filledCount = bubbles.filter((b) => b.trim().length > 0).length;
+
+  const update = (i: number, v: string) => {
+    const next = [...bubbles];
+    next[i] = v;
+    // Trim trailing empties pour garder l'array propre en BDD
+    while (next.length > 0 && (next[next.length - 1] ?? "").trim() === "") next.pop();
+    onChange(next);
+  };
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <p className="text-[11.5px] text-text-quaternary italic font-serif leading-snug">
+        Ton personnage a peut-être encore des secrets. Note ici ce qu'il hésite à t'avouer
+        — trois voix, trois non-dits.
+      </p>
+      <ul className="flex flex-col gap-1.5">
+        {bubbles.map((b, i) => {
+          const isLeft = i % 2 === 0;
+          return (
+            <li key={i} className={`flex ${isLeft ? "justify-start" : "justify-end"}`}>
+              <div
+                className={`relative w-[92%] rounded-[var(--radius-md)] px-2.5 py-1.5 border ${
+                  b.trim().length > 0
+                    ? "bg-white/[0.04] border-white/[0.08]"
+                    : "bg-transparent border-dashed border-white/[0.07]"
+                }`}
+                style={{
+                  borderBottomLeftRadius: isLeft ? 4 : undefined,
+                  borderBottomRightRadius: !isLeft ? 4 : undefined,
+                }}
+              >
+                <textarea
+                  value={b}
+                  onChange={(e) => update(i, e.target.value)}
+                  placeholder={
+                    i === 0
+                      ? "Un non-dit que je garde pour moi…"
+                      : i === 1
+                        ? "Un autre, que même toi ne sais pas…"
+                        : "Et celui-là, je ne l'avouerai jamais."
+                  }
+                  rows={2}
+                  className="w-full bg-transparent border-none outline-none resize-none text-[12px] italic font-serif text-text-secondary placeholder:text-text-quaternary/60 leading-snug"
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {filledCount === 0 && (
+        <p className="text-[10.5px] text-text-quaternary/80 italic">
+          Astuce : ces trois bulles sont un rappel que ton personnage te cache peut-être
+          encore quelque chose.
+        </p>
+      )}
+    </div>
+  );
+}
 
 function Card({
   icon,

@@ -35,6 +35,14 @@ export default async function WorldBuildingPage({
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
+  // Liste des romans (livres) du projet — utilisée pour attribuer une fiche à un livre.
+  const { data: novels } = await supabase
+    .from("novels")
+    .select("id, title")
+    .eq("project_id", projectId)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: true });
+
   // Charge tous les liens dont les deux extrémités appartiennent à ce projet
   const entryIds = (entries ?? []).map((e) => e.id);
   let links: unknown[] = [];
@@ -53,6 +61,7 @@ export default async function WorldBuildingPage({
       genre={project.genre as Genre}
       initialEntries={entries ?? []}
       initialLinks={links as never}
+      novels={(novels ?? []) as { id: string; title: string }[]}
     />
   );
 }

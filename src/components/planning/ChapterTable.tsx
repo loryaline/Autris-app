@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ChapterStatus } from "@/types/database";
 import type { ChapterData as ChapterRow, CustomColumn, CellValue } from "@/app/(app)/planning/[novelId]/planning-client";
 import { RichEditableCell } from "./RichEditableCell";
+import { ThemePills } from "./ThemePills";
 
 /* ---- Column definitions ---- */
 interface ColumnDef {
@@ -17,7 +18,7 @@ interface ColumnDef {
 
 const DEFAULT_COLUMNS: ColumnDef[] = [
   { key: "chapitre", label: "Chapitre", width: "160px", type: "title", field: "title" },
-  { key: "theme", label: "Thème", width: "120px", type: "text", field: "theme" },
+  { key: "theme", label: "Thème", width: "180px", type: "text", field: "themes" },
   { key: "resume", label: "Résumé du Chapitre", width: "200px", type: "text", field: "synopsis" },
   { key: "plot_elements", label: "Éléments intrigue globale", width: "200px", type: "text", field: "plot_elements" },
   { key: "minor_elements", label: "Éléments mineurs/ambiances", width: "200px", type: "text", field: "minor_elements" },
@@ -47,6 +48,60 @@ const STATUS_LABELS: Record<ChapterStatus, { label: string; color: string }> = {
 const STATUS_ORDER: ChapterStatus[] = [
   "a_ecrire", "premier_jet", "revision", "reecriture", "correction", "termine",
 ];
+
+function dotClassFor(status: ChapterStatus): string {
+  switch (status) {
+    case "termine":
+      return "bg-[#1D9E75]";
+    case "correction":
+      return "bg-teal";
+    case "reecriture":
+      return "bg-[var(--color-accent)]";
+    case "revision":
+      return "bg-amber";
+    case "premier_jet":
+      return "bg-white/40";
+    case "a_ecrire":
+    default:
+      return "bg-white/20";
+  }
+}
+
+function ToolbarButton({
+  onClick,
+  active = false,
+  disabled = false,
+  icon,
+  children,
+  title,
+}: {
+  onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+  title?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] text-[12px] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+        active
+          ? "bg-[var(--color-accent-bg)] border border-[var(--color-accent-border)] text-[var(--color-accent)]"
+          : "bg-bg-secondary border border-white/[0.06] text-text-secondary hover:text-text-primary hover:border-white/[0.12]"
+      }`}
+    >
+      {typeof icon === "string" ? (
+        <span className="text-[13px] leading-none">{icon}</span>
+      ) : (
+        icon
+      )}
+      {children}
+    </button>
+  );
+}
 
 /* ---- Types (imported from planning-client) ---- */
 
@@ -201,7 +256,7 @@ export function ChapterTable({
 
   /* ---- Chapter field save ---- */
   const saveChapterField = useCallback(
-    async (chapterId: string, field: string, value: string | null) => {
+    async (chapterId: string, field: string, value: string | string[] | null) => {
       setChapters((prev) =>
         prev.map((c) => (c.id === chapterId ? { ...c, [field]: value } : c))
       );
@@ -210,7 +265,7 @@ export function ChapterTable({
         .update({ [field]: value })
         .eq("id", chapterId);
     },
-    []
+    [setChapters]
   );
 
   /* ---- Status cycle ---- */
@@ -221,7 +276,7 @@ export function ChapterTable({
   }
 
   /* ---- Add chapter ---- */
-  async function handleAddChapter() {
+  const handleAddChapter = useCallback(async () => {
     const supabase = supabaseRef.current;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -236,13 +291,20 @@ export function ChapterTable({
         title: "À nommer",
         position: maxPos + 1,
       })
-      .select("id, title, position, status, synopsis, word_count, theme, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
+      .select("id, title, position, status, synopsis, word_count, themes, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
       .single();
 
     if (data) {
       setChapters((prev) => [...prev, data as ChapterRow]);
     }
-  }
+  }, [chapters, novelId, setChapters]);
+
+  // Le bouton "+ Nouveau chapitre" du hero (planning-client) déclenche cet event.
+  useEffect(() => {
+    const handler = () => handleAddChapter();
+    window.addEventListener("autris:add-chapter", handler);
+    return () => window.removeEventListener("autris:add-chapter", handler);
+  }, [handleAddChapter]);
 
   /* ---- Custom column cell save ---- */
   async function saveCellValue(columnId: string, chapterId: string, value: string) {
@@ -297,6 +359,39 @@ export function ChapterTable({
     setShowAddColumn(false);
   }
 
+  /* ---- Delete custom column ---- */
+  async function deleteCustomColumn(columnId: string, columnName: string) {
+    const ok = window.confirm(
+      `Supprimer la colonne « ${columnName} » ?\n\nToutes les valeurs saisies pour cette colonne seront définitivement perdues.`
+    );
+    if (!ok) return;
+
+    const key = `custom:${columnId}`;
+    // Optimiste : on retire tout localement
+    setCustomColumns((prev) => prev.filter((c) => c.id !== columnId));
+    setCellValues((prev) => prev.filter((v) => v.column_id !== columnId));
+    const newOrder = columnOrder.filter((k) => k !== key);
+    setColumnOrder(newOrder);
+    setColumnWidths((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    setHiddenColumns((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+
+    const supabase = supabaseRef.current;
+    // Les `planning_cell_values` sont supprimées en cascade (FK) côté DB.
+    await Promise.all([
+      supabase.from("planning_columns").delete().eq("id", columnId),
+      supabase.from("novels").update({ column_order: newOrder }).eq("id", novelId),
+    ]);
+  }
+
   /* ---- Row drag & drop ---- */
   async function handleRowDrop() {
     if (dragRowIdx === null || dragOverRowIdx === null || dragRowIdx === dragOverRowIdx) {
@@ -344,13 +439,34 @@ export function ChapterTable({
 
   /* ---- Render cell by type ---- */
   function renderCell(col: ColumnDef & { customId?: string }, chapter: ChapterRow) {
-    if (col.type === "title") {
+    // Colonne "Thème" → pastilles multiples (themes: text[])
+    if (col.key === "theme") {
+      const themes = Array.isArray(chapter.themes) ? chapter.themes : [];
       return (
-        <EditableCell
-          value={chapter.title}
-          onSave={(val) => saveChapterField(chapter.id, "title", val)}
-          className="text-text-primary font-medium"
+        <ThemePills
+          themes={themes}
+          onChange={(next) => saveChapterField(chapter.id, "themes", next)}
         />
+      );
+    }
+
+    if (col.type === "title") {
+      const statusInfo = STATUS_LABELS[chapter.status] ?? STATUS_LABELS.a_ecrire;
+      return (
+        <div className="flex items-start gap-2 min-w-0">
+          <button
+            onClick={() => cycleStatus(chapter.id, chapter.status)}
+            title={`Statut : ${statusInfo.label}`}
+            className={`mt-[9px] ml-2 shrink-0 w-1.5 h-1.5 rounded-full cursor-pointer ${dotClassFor(chapter.status)}`}
+          />
+          <div className="flex-1 min-w-0">
+            <EditableCell
+              value={chapter.title}
+              onSave={(val) => saveChapterField(chapter.id, "title", val)}
+              className="text-text-primary font-medium"
+            />
+          </div>
+        </div>
       );
     }
 
@@ -405,9 +521,9 @@ export function ChapterTable({
   }
 
   return (
-    <div className="flex-1 flex flex-col p-4 min-h-0">
+    <div className="flex-1 flex flex-col px-6 pt-4 pb-6 min-h-0">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 mb-3 shrink-0">
+      <div className="flex items-center gap-1.5 mb-3 shrink-0">
         {showAddColumn ? (
           <form onSubmit={handleAddColumn} className="flex items-center gap-1.5">
             <input
@@ -416,71 +532,127 @@ export function ChapterTable({
               onChange={(e) => setNewColumnName(e.target.value)}
               placeholder="Nom de la colonne"
               autoFocus
-              className="h-7 px-2 text-[12px] border border-primary-border rounded bg-bg-primary text-text-primary outline-none w-[160px]"
+              className="h-8 px-2.5 text-[12px] bg-bg-secondary border border-[var(--color-accent-border)] rounded-[var(--radius-md)] text-text-primary focus:outline-none w-[180px]"
             />
-            <button type="submit" className="h-7 px-2 text-[12px] bg-primary text-white rounded cursor-pointer">
+            <button
+              type="submit"
+              className="h-8 px-3 text-[12px] rounded-[var(--radius-md)] cursor-pointer"
+              style={{ background: "var(--color-accent)", color: "#1a1410" }}
+            >
               OK
             </button>
-            <button type="button" onClick={() => setShowAddColumn(false)} className="h-7 px-2 text-[12px] text-text-tertiary cursor-pointer">
+            <button
+              type="button"
+              onClick={() => setShowAddColumn(false)}
+              className="h-8 px-2 text-[12px] text-text-tertiary hover:text-text-primary cursor-pointer"
+            >
               ✕
             </button>
           </form>
         ) : (
-          <button
-            onClick={() => setShowAddColumn(true)}
-            className="h-7 px-2.5 text-[12px] border border-border rounded text-text-secondary hover:text-text-primary hover:border-text-tertiary cursor-pointer transition-colors bg-transparent"
-          >
-            + Colonne
-          </button>
+          <ToolbarButton onClick={() => setShowAddColumn(true)} icon="+">
+            Colonne
+          </ToolbarButton>
         )}
-        <button
-          onClick={handleAddChapter}
-          className="h-7 px-2.5 text-[12px] border border-border rounded text-text-secondary hover:text-text-primary hover:border-text-tertiary cursor-pointer transition-colors bg-transparent"
-        >
-          + Chapitre
-        </button>
 
         {/* Column visibility toggle */}
         <div className="relative">
-          <button
+          <ToolbarButton
             onClick={() => setShowColumnMenu(!showColumnMenu)}
-            className={`h-7 px-2.5 text-[12px] border rounded cursor-pointer transition-colors bg-transparent ${
-              showColumnMenu
-                ? "border-primary-border text-primary"
-                : "border-border text-text-secondary hover:text-text-primary hover:border-text-tertiary"
-            }`}
-            title="Afficher / masquer des colonnes"
+            active={showColumnMenu}
+            icon={
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+                <rect x="2" y="2" width="4" height="10" stroke="currentColor" strokeWidth="1.2" />
+                <rect x="8" y="2" width="4" height="10" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
+            }
           >
-            ⊞ Colonnes{hiddenColumns.size > 0 && ` (${hiddenColumns.size} masquées)`}
-          </button>
+            Afficher/masquer
+            {hiddenColumns.size > 0 && (
+              <span className="ml-1 text-text-quaternary">({hiddenColumns.size})</span>
+            )}
+          </ToolbarButton>
           {showColumnMenu && (
-            <div className="absolute top-full left-0 mt-1 bg-bg-primary border border-border rounded-[var(--radius-md)] shadow-lg z-50 py-1 w-[220px] max-h-[300px] overflow-y-auto">
-              {allColumnDefs.map((col) => (
-                <button
-                  key={col.key}
-                  onClick={() => {
-                    if (col.key === "chapitre") return; // Can't hide title
-                    toggleColumn(col.key);
-                  }}
-                  className={`flex items-center gap-2 w-full text-left px-3 py-1.5 text-[12px] cursor-pointer transition-colors hover:bg-bg-hover ${
-                    col.key === "chapitre" ? "opacity-50 cursor-default" : ""
-                  }`}
-                >
-                  <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] ${
-                    hiddenColumns.has(col.key)
-                      ? "border-text-quaternary"
-                      : "border-primary bg-primary text-white"
-                  }`}>
-                    {!hiddenColumns.has(col.key) && "✓"}
-                  </span>
-                  <span className="text-text-secondary">{col.label}</span>
-                </button>
-              ))}
+            <div className="absolute top-full left-0 mt-1 bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-md)] shadow-xl z-50 py-1.5 w-[260px] max-h-[320px] overflow-y-auto">
+              {allColumnDefs.map((col) => {
+                const isCustom = !!col.customId;
+                const isLocked = col.key === "chapitre";
+                return (
+                  <div
+                    key={col.key}
+                    className={`group flex items-center gap-2.5 px-3 py-1.5 text-[12px] transition-colors hover:bg-white/[0.04] ${
+                      isLocked ? "opacity-50" : ""
+                    }`}
+                  >
+                    <button
+                      onClick={() => {
+                        if (isLocked) return;
+                        toggleColumn(col.key);
+                      }}
+                      className={`flex items-center gap-2.5 flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer ${
+                        isLocked ? "cursor-default" : ""
+                      }`}
+                    >
+                      <span
+                        className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center text-[9px] shrink-0 ${
+                          hiddenColumns.has(col.key)
+                            ? "border-white/20"
+                            : "border-[var(--color-accent)] text-[var(--color-accent)]"
+                        }`}
+                        style={
+                          !hiddenColumns.has(col.key)
+                            ? { background: "var(--color-accent-bg)" }
+                            : undefined
+                        }
+                      >
+                        {!hiddenColumns.has(col.key) && "✓"}
+                      </span>
+                      <span className="text-text-secondary truncate">{col.label}</span>
+                    </button>
+                    {isCustom && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteCustomColumn(col.customId!, col.label);
+                        }}
+                        title="Supprimer cette colonne personnalisée"
+                        className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-text-quaternary hover:text-[#e89494] hover:bg-white/[0.04] cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+                          <path
+                            d="M3 4H11M5.5 4V3C5.5 2.72 5.72 2.5 6 2.5H8C8.28 2.5 8.5 2.72 8.5 3V4M4.5 4V11.5C4.5 11.78 4.72 12 5 12H9C9.28 12 9.5 11.78 9.5 11.5V4M6 6V10M8 6V10"
+                            stroke="currentColor"
+                            strokeWidth="1.1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
 
-        <span className="ml-auto text-[11px] text-text-quaternary italic">
+        <ToolbarButton
+          icon={
+            <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+              <path d="M2 3H12M4 7H10M6 11H8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+          }
+          onClick={() => {}}
+          disabled
+          title="Bientôt"
+        >
+          Filtres
+        </ToolbarButton>
+
+        <span className="ml-auto text-[11px] text-text-quaternary italic font-serif inline-flex items-center gap-1.5">
+          <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className="opacity-60">
+            <path d="M3 8V3H11M11 3L8 6M11 3L8 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" transform="translate(0 1)" />
+          </svg>
           Tout est modifiable en cours de création
         </span>
       </div>
@@ -498,12 +670,12 @@ export function ChapterTable({
 
         <div
           ref={tableWrapperRef}
-          className="overflow-auto h-full border border-border rounded-[var(--radius-md)]"
+          className="overflow-auto h-full border border-white/[0.06] rounded-[var(--radius-lg)] bg-bg-secondary/30"
         >
           <div style={{ minWidth: "max-content" }}>
             {/* Header */}
             <div
-              className="grid bg-bg-tertiary border-b border-border sticky top-0 z-10"
+              className="grid bg-bg-tertiary/60 border-b border-white/[0.06] sticky top-0 z-10"
               style={{ gridTemplateColumns: gridTemplate }}
             >
               {visibleColumns.map((col) => (
@@ -511,7 +683,7 @@ export function ChapterTable({
                   key={col.key}
                   className={`relative flex items-center transition-colors ${
                     dragOverColKey === col.key && dragColKey !== col.key
-                      ? "bg-primary-bg border-l-2 border-l-primary"
+                      ? "bg-[var(--color-accent-bg)]"
                       : ""
                   }`}
                 >
@@ -528,8 +700,12 @@ export function ChapterTable({
                       e.stopPropagation();
                       handleColDrop();
                     }}
-                    onDragEnd={() => { setDragColKey(null); setDragOverColKey(null); }}
-                    className="flex-1 px-2 py-2 text-[11px] font-medium text-text-tertiary uppercase tracking-wider cursor-grab select-none whitespace-nowrap overflow-hidden text-ellipsis"
+                    onDragEnd={() => {
+                      setDragColKey(null);
+                      setDragOverColKey(null);
+                    }}
+                    className="flex-1 px-3 py-2.5 text-[10px] font-medium text-text-quaternary uppercase cursor-grab select-none whitespace-nowrap overflow-hidden text-ellipsis"
+                    style={{ letterSpacing: "0.16em" }}
                     title={col.label}
                   >
                     {col.label}
@@ -537,7 +713,7 @@ export function ChapterTable({
                   {/* Resize handle */}
                   <div
                     onMouseDown={(e) => handleColumnResize(col.key, e)}
-                    className="absolute right-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-primary-border/50 z-10"
+                    className="absolute right-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-[var(--color-accent-border)] z-10"
                   />
                 </div>
               ))}
@@ -547,16 +723,14 @@ export function ChapterTable({
             {sorted.map((chapter, idx) => (
               <div
                 key={chapter.id}
-                className={`grid border-b border-border last:border-b-0 hover:bg-bg-hover/50 transition-colors items-start ${
+                className={`grid border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.015] transition-colors items-start ${
                   dragOverRowIdx === idx && dragRowIdx !== idx
-                    ? "border-t-2 border-t-primary"
+                    ? "border-t-2 border-t-[var(--color-accent)]"
                     : ""
                 }`}
                 style={{ gridTemplateColumns: gridTemplate }}
                 draggable
                 onMouseDownCapture={(e) => {
-                  // Disable row drag when the press starts inside an editable cell,
-                  // so the user can drag-select text without starting a row reorder.
                   const t = e.target as HTMLElement;
                   const inEditor = !!t.closest(
                     '.ProseMirror, [contenteditable="true"], input, textarea'
@@ -576,19 +750,22 @@ export function ChapterTable({
                 }}
               >
                 {visibleColumns.map((col) => (
-                  <div key={col.key} className="border-r border-border/50 last:border-r-0">
+                  <div key={col.key} className="last:border-r-0">
                     {renderCell(col, chapter)}
                   </div>
                 ))}
               </div>
             ))}
 
-            {/* Add row */}
+            {/* Add row — "+" discret après la dernière ligne */}
             <button
               onClick={handleAddChapter}
-              className="w-full py-2 text-[12px] text-text-quaternary hover:text-primary hover:bg-primary-bg/30 cursor-pointer transition-colors border-none bg-transparent"
+              title="Ajouter un chapitre"
+              className="w-full py-2.5 flex items-center justify-center text-text-quaternary hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-bg)]/40 cursor-pointer transition-colors border-none bg-transparent group"
             >
-              + Ajouter un chapitre
+              <span className="w-6 h-6 rounded-full border border-dashed border-white/[0.12] group-hover:border-[var(--color-accent-border)] flex items-center justify-center text-[13px] leading-none transition-colors">
+                +
+              </span>
             </button>
           </div>
         </div>

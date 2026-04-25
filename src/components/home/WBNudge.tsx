@@ -19,12 +19,19 @@ function currentWeekKey(): string {
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
-export function AutarieWBNudge({ daysSinceWB }: { daysSinceWB: number }) {
+export function WBNudge({ daysSinceWB }: { daysSinceWB: number }) {
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    setDismissed(stored === currentWeekKey());
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      const stored = localStorage.getItem(STORAGE_KEY);
+      setDismissed(stored === currentWeekKey());
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function handleDismiss() {
@@ -36,14 +43,15 @@ export function AutarieWBNudge({ daysSinceWB }: { daysSinceWB: number }) {
 
   return (
     <div className="mb-3 p-3 rounded-[var(--radius-md)] bg-teal/10 border border-teal/30 flex items-start gap-2.5">
-      <span className="text-[16px] leading-none pt-0.5">🦭</span>
+      <span className="text-[var(--color-accent)] text-[13px] leading-none pt-1">◆</span>
       <div className="flex-1">
         <div className="text-[12px] text-text-primary leading-snug">
-          Je remarque que vous n&apos;avez pas visité votre world building depuis{" "}
+          Vous n&apos;êtes pas repassé par votre{" "}
+          <span className="font-serif italic text-[var(--color-accent)]">univers</span> depuis{" "}
           <span className="font-medium">
             {daysSinceWB === Infinity ? "longtemps" : `${daysSinceWB} jours`}
           </span>
-          … Vos personnages ont peut-être des secrets à vous confier ?
+          . Une fiche à compléter, un détail à fixer avant qu&apos;il ne s&apos;échappe&nbsp;?
         </div>
       </div>
       <button

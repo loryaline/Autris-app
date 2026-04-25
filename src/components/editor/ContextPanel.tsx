@@ -2,42 +2,68 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Badge } from "@/components/ui/Badge";
-import { getCategoryDef, UNIVERS_SUBTYPES, WB_CATEGORIES } from "@/lib/wb-constants";
+import {
+  getCategoryDef,
+  MAGIC_SUBTYPES,
+  MONEY_SUBTYPES,
+  UNIVERS_SUBTYPES,
+  WB_CATEGORIES,
+} from "@/lib/wb-constants";
 import { getTemplate } from "@/lib/wb-templates";
+import { DynamicTemplate } from "@/components/wb/DynamicTemplate";
 import { RichEditableCell } from "@/components/planning/RichEditableCell";
+import { ThemePills } from "@/components/planning/ThemePills";
 
-const STATUS_CONFIG: Record<string, { variant: "teal" | "amber" | "muted" | "primary"; label: string }> = {
-  a_ecrire: { variant: "muted", label: "À écrire" },
-  premier_jet: { variant: "muted", label: "Premier jet" },
-  revision: { variant: "amber", label: "Révision" },
-  reecriture: { variant: "primary", label: "Réécriture" },
-  correction: { variant: "teal", label: "Correction" },
-  termine: { variant: "teal", label: "Terminé" },
-};
+function stripHtml(s: string): string {
+  return (s ?? "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+}
 
-const SCENE_STATUS: Record<string, { label: string; color: string }> = {
-  todo: { label: "À faire", color: "bg-bg-hover text-text-tertiary" },
-  in_progress: { label: "En cours", color: "bg-amber/15 text-amber" },
-  done: { label: "Fait", color: "bg-[#1D9E75]/15 text-[#1D9E75]" },
+// Date relative type "il y a 3h", "hier", "10 mars" — pour l'onglet Versions.
+function formatRelativeDate(d: Date): string {
+  const now = Date.now();
+  const diff = Math.round((now - d.getTime()) / 1000);
+  if (diff < 45) return "à l'instant";
+  if (diff < 90) return "il y a 1 min";
+  const mins = Math.round(diff / 60);
+  if (mins < 45) return `il y a ${mins} min`;
+  const hrs = Math.round(diff / 3600);
+  if (hrs < 24) return `il y a ${hrs} h`;
+  const days = Math.round(diff / 86400);
+  if (days === 1) return "hier";
+  if (days < 7) return `il y a ${days} j`;
+  // Au-delà : date courte
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString("fr-FR", sameYear
+    ? { day: "numeric", month: "short" }
+    : { day: "numeric", month: "short", year: "numeric" }
+  );
+}
+
+// Badge de scène aligné sur le style du fil d'Ariane (dot + pilule)
+const SCENE_STATUS_BADGE: Record<string, {
+  label: string; dot: string; text: string; bg: string; border: string;
+}> = {
+  todo:        { label: "À faire",   dot: "#7a7163", text: "#a89e8d", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.10)" },
+  in_progress: { label: "En cours",  dot: "#EF9F27", text: "#f0b254", bg: "rgba(239,159,39,0.10)",  border: "rgba(239,159,39,0.28)" },
+  done:        { label: "Fait",      dot: "#1D9E75", text: "#5cc2a0", bg: "rgba(29,158,117,0.10)",  border: "rgba(29,158,117,0.28)" },
 };
 
 const SCENE_STATUS_ORDER: string[] = ["todo", "in_progress", "done"];
 
-// Colonnes du chapitrage exposées dans l'onglet Scènes (hors synopsis rendu à part)
+// Colonnes du chapitrage exposées dans l'onglet Scènes (hors synopsis et themes rendus à part).
+// Libellés strictement alignés sur ceux du tableau de chapitrage (ChapterTable.DEFAULT_COLUMNS).
 const CHAPTER_TEXT_FIELDS: { key: keyof ChapterFields; label: string }[] = [
-  { key: "theme", label: "Thème" },
-  { key: "plot_elements", label: "Intrigue globale" },
-  { key: "minor_elements", label: "Éléments mineurs / ambiances" },
-  { key: "observations", label: "Observations" },
-  { key: "tension_indices", label: "Tension" },
+  { key: "plot_elements", label: "Éléments intrigue globale" },
+  { key: "minor_elements", label: "Éléments mineurs/ambiances" },
+  { key: "observations", label: "Observations / remarques" },
+  { key: "tension_indices", label: "Indices/tension relative" },
   { key: "pivot", label: "Bascule" },
   { key: "narrative_knot", label: "Nœud narratif" },
 ];
 
 interface ChapterFields {
   synopsis: string | null;
-  theme: string | null;
+  themes: string[];
   plot_elements: string | null;
   minor_elements: string | null;
   observations: string | null;
@@ -102,7 +128,6 @@ export function ContextPanel({
   paragraphCount,
   charCount,
   charCountNoSpaces,
-  chapterTitle,
   chapterStatus,
   chapterId,
   novelId,
@@ -116,7 +141,6 @@ export function ContextPanel({
   paragraphCount: number;
   charCount: number;
   charCountNoSpaces: number;
-  chapterTitle: string;
   chapterStatus: string;
   chapterId: string | null;
   novelId: string;
@@ -129,7 +153,7 @@ export function ContextPanel({
   const [activeTab, setActiveTab] = useState<TabKey>("info");
   const [scenes, setScenes] = useState<SceneItem[]>([]);
   const [chapterFields, setChapterFields] = useState<ChapterFields>({
-    synopsis: null, theme: null, plot_elements: null,
+    synopsis: null, themes: [], plot_elements: null,
     minor_elements: null, observations: null, tension_indices: null,
     pivot: null, narrative_knot: null,
   });
@@ -142,9 +166,24 @@ export function ContextPanel({
   const [wbCategoryFilter, setWbCategoryFilter] = useState<string>("all");
   const [wbSelected, setWbSelected] = useState<WbEntryFull | null>(null);
   const [wbLoading, setWbLoading] = useState(false);
+  // Fiches créées depuis le panel éditeur (non encore rafraîchies côté serveur).
+  const [extraWbEntries, setExtraWbEntries] = useState<WbEntryLite[]>([]);
+  // ID de la dernière fiche créée — sert à ouvrir directement en mode édition.
+  const [justCreatedId, setJustCreatedId] = useState<string | null>(null);
+  // Menu déroulant « + Nouvelle fiche » ouvert ?
+  const [creatingMenu, setCreatingMenu] = useState(false);
+  // Scope de la vue World : fiches liées au chapitre vs bibliothèque complète.
+  const [wbScope, setWbScope] = useState<"linked" | "all">("linked");
+  // IDs des fiches liées au chapitre courant (via chapter_entries)
+  const [linkedEntryIds, setLinkedEntryIds] = useState<Set<string>>(new Set());
+  // Picker overlay : catégorie active (null = fermé)
+  const [pickerCategory, setPickerCategory] = useState<string | null>(null);
+  const [pickerQuery, setPickerQuery] = useState("");
   const [versions, setVersions] = useState<ChapterVersion[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [previewVersionId, setPreviewVersionId] = useState<string | null>(null);
+  const [renamingVersionId, setRenamingVersionId] = useState<string | null>(null);
+  const [renameVersionDraft, setRenameVersionDraft] = useState("");
   const [dragSceneId, setDragSceneId] = useState<string | null>(null);
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -152,13 +191,14 @@ export function ContextPanel({
 
   const readingTime = Math.max(1, Math.round(wordCount / 250));
   const speakingTime = Math.max(1, Math.round(wordCount / 150));
-  const s = STATUS_CONFIG[chapterStatus] ?? STATUS_CONFIG.a_ecrire;
 
-  // Fetch scenes + synopsis when Scenes tab opens
+  // Fetch scenes + synopsis when Scenes tab opens (also Info, pour thème + nœud narratif)
   useEffect(() => {
-    if (activeTab !== "scenes" || !chapterId) return;
+    if ((activeTab !== "scenes" && activeTab !== "info") || !chapterId) return;
     let cancelled = false;
-    setLoadingScenes(true);
+    // Flash de loading avant fetch : défér dans une microtask pour éviter
+    // le re-render cascadé signalé par react-hooks/set-state-in-effect.
+    Promise.resolve().then(() => { if (!cancelled) setLoadingScenes(true); });
 
     Promise.all([
       supabaseRef.current
@@ -168,7 +208,7 @@ export function ContextPanel({
         .order("position", { ascending: true }),
       supabaseRef.current
         .from("chapters")
-        .select("synopsis, theme, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
+        .select("synopsis, themes, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot")
         .eq("id", chapterId)
         .single(),
       supabaseRef.current
@@ -186,7 +226,7 @@ export function ContextPanel({
         const c = (chapterRes.data ?? {}) as Partial<ChapterFields>;
         setChapterFields({
           synopsis: c.synopsis ?? null,
-          theme: c.theme ?? null,
+          themes: Array.isArray(c.themes) ? c.themes : [],
           plot_elements: c.plot_elements ?? null,
           minor_elements: c.minor_elements ?? null,
           observations: c.observations ?? null,
@@ -205,13 +245,13 @@ export function ContextPanel({
     });
 
     return () => { cancelled = true; };
-  }, [activeTab, chapterId]);
+  }, [activeTab, chapterId, novelId]);
 
   // Fetch versions when Versions tab opens (or chapter changes)
   useEffect(() => {
     if (activeTab !== "versions" || !chapterId) return;
     let cancelled = false;
-    setLoadingVersions(true);
+    Promise.resolve().then(() => { if (!cancelled) setLoadingVersions(true); });
     supabaseRef.current
       .from("chapter_versions")
       .select("id, content, word_count, label, version, name, created_at")
@@ -235,12 +275,78 @@ export function ContextPanel({
     }
   }, [editingId]);
 
+  /* ---- Fetch chapter_entries (fiches liées à ce chapitre) ---- */
+  useEffect(() => {
+    let cancelled = false;
+    if (!chapterId) {
+      // Reset en cas de désélection
+      supabaseRef.current
+        .from("chapter_entries")
+        .select("entry_id")
+        .eq("chapter_id", "00000000-0000-0000-0000-000000000000")
+        .then(() => {
+          if (!cancelled) setLinkedEntryIds(new Set());
+        });
+      return () => { cancelled = true; };
+    }
+    supabaseRef.current
+      .from("chapter_entries")
+      .select("entry_id")
+      .eq("chapter_id", chapterId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const ids = new Set((data ?? []).map((r: { entry_id: string }) => r.entry_id));
+        setLinkedEntryIds(ids);
+        // Si aucune fiche liée, bascule automatiquement sur "Toutes"
+        if (ids.size === 0) setWbScope("all");
+      });
+    return () => { cancelled = true; };
+  }, [chapterId]);
+
+  async function linkWbEntry(entryId: string) {
+    if (!chapterId) return;
+    const supabase = supabaseRef.current;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // Optimiste
+    setLinkedEntryIds((prev) => {
+      if (prev.has(entryId)) return prev;
+      const next = new Set(prev);
+      next.add(entryId);
+      return next;
+    });
+    await supabase
+      .from("chapter_entries")
+      .insert({ chapter_id: chapterId, entry_id: entryId, user_id: user.id });
+  }
+
+  async function unlinkWbEntry(entryId: string) {
+    if (!chapterId) return;
+    setLinkedEntryIds((prev) => {
+      if (!prev.has(entryId)) return prev;
+      const next = new Set(prev);
+      next.delete(entryId);
+      return next;
+    });
+    await supabaseRef.current
+      .from("chapter_entries")
+      .delete()
+      .eq("chapter_id", chapterId)
+      .eq("entry_id", entryId);
+  }
+
   /* ---- Chapter fields (chapitrage exposé) ---- */
   async function saveChapterField(field: keyof ChapterFields, value: string | null) {
     if (!chapterId) return;
     const dbVal = value === "" ? null : value;
     setChapterFields((prev) => ({ ...prev, [field]: dbVal }));
     await supabaseRef.current.from("chapters").update({ [field]: dbVal }).eq("id", chapterId);
+  }
+
+  async function saveChapterThemes(next: string[]) {
+    if (!chapterId) return;
+    setChapterFields((prev) => ({ ...prev, themes: next }));
+    await supabaseRef.current.from("chapters").update({ themes: next }).eq("id", chapterId);
   }
 
   async function saveCustomValue(columnId: string, value: string) {
@@ -327,6 +433,16 @@ export function ContextPanel({
     await supabaseRef.current.from("chapter_versions").delete().eq("id", id);
   }
 
+  async function renameVersion(id: string, name: string) {
+    const trimmed = name.trim();
+    setVersions((prev) => prev.map((v) => (v.id === id ? { ...v, name: trimmed || null } : v)));
+    setRenamingVersionId(null);
+    await supabaseRef.current
+      .from("chapter_versions")
+      .update({ name: trimmed || null })
+      .eq("id", id);
+  }
+
   function triggerManualSnapshot() {
     const name = window.prompt("Nom de la version (optionnel) :", "");
     if (name === null) return; // annulé
@@ -344,24 +460,75 @@ export function ContextPanel({
     }, 400);
   }
 
+  // Union prop + fiches créées localement depuis le panel (optimistes).
+  const allWb: WbEntryLite[] = [...extraWbEntries, ...wbEntries];
   // On exclut le moodboard de l'onglet World (pas une fiche de contenu)
-  const wbEntriesForTab = wbEntries.filter((e) => e.category !== "moodboard");
-
-  const wbFiltered = wbEntriesForTab.filter((e) => {
-    if (wbCategoryFilter !== "all" && e.category !== wbCategoryFilter) return false;
-    if (!wbQuery.trim()) return true;
-    const q = wbQuery.toLowerCase();
-    return (
-      (e.title ?? "").toLowerCase().includes(q) ||
-      (e.subtitle ?? "").toLowerCase().includes(q)
-    );
-  });
+  const wbEntriesForTab = allWb.filter((e) => e.category !== "moodboard");
 
   // Catégories présentes (hors moodboard)
   const wbCategoriesInUse = Array.from(new Set(wbEntriesForTab.map((e) => e.category)));
   const wbCategoryOptions = WB_CATEGORIES.filter(
     (c) => c.key !== "moodboard" && wbCategoriesInUse.includes(c.key)
   );
+
+  // Catégories disponibles à la création (toutes sauf moodboard).
+  // On ne filtre pas par genre ici : dans le doute, on laisse tout ouvrir
+  // depuis l'éditeur — le panel sert à capturer une idée sans friction.
+  const wbCreatableCategories = WB_CATEGORIES.filter((c) => c.key !== "moodboard");
+
+  function defaultSubtypeFor(category: string): string | null {
+    if (category === "univers_monde") return "pays";
+    if (category === "magie_divinites") return "dieu";
+    if (category === "systeme_monetaire") return "monnaie";
+    return null;
+  }
+
+  async function createWbEntry(category: string, subcategory: string | null) {
+    const supabase = supabaseRef.current;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("wb_entries")
+      .insert({
+        project_id: projectId,
+        user_id: user.id,
+        category,
+        subcategory,
+        title: "",
+        status: "brouillon",
+      })
+      .select("id, title, subtitle, description, category, subcategory, main_image_url, template_data, tags, personal_notes, status")
+      .single();
+    if (error || !data) return;
+    const full = data as WbEntryFull;
+    const lite: WbEntryLite = {
+      id: full.id,
+      title: full.title,
+      subtitle: full.subtitle,
+      category: full.category,
+      subcategory: full.subcategory,
+      main_image_url: full.main_image_url,
+      status: full.status,
+    };
+    // Optimiste : ajoute à la liste locale pour que la fiche apparaisse
+    // immédiatement dans le panel (et persiste même si on revient à la liste).
+    setExtraWbEntries((prev) => [lite, ...prev]);
+    // Auto-link au chapitre courant si présent — confort d'usage.
+    if (chapterId) {
+      setLinkedEntryIds((prev) => {
+        const next = new Set(prev);
+        next.add(full.id);
+        return next;
+      });
+      await supabase
+        .from("chapter_entries")
+        .insert({ chapter_id: chapterId, entry_id: full.id, user_id: user.id });
+    }
+    // Ouvre la fiche directement en mode édition.
+    setJustCreatedId(full.id);
+    setWbSelected(full);
+    setCreatingMenu(false);
+  }
 
   async function loadWbEntry(entryId: string) {
     setWbLoading(true);
@@ -389,54 +556,93 @@ export function ContextPanel({
     { key: "versions", label: "Versions" },
   ];
 
+  // Couleurs pill État (alignées sur le fil d'Ariane éditeur)
+  const STATUS_BADGE: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
+    a_ecrire:    { label: "À écrire",    dot: "#7a7163", text: "#a89e8d", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.10)" },
+    premier_jet: { label: "Premier jet", dot: "#7B6FDE", text: "#b5acef", bg: "rgba(123,111,222,0.10)", border: "rgba(123,111,222,0.28)" },
+    revision:    { label: "Révision",    dot: "#EF9F27", text: "#f0b254", bg: "rgba(239,159,39,0.10)",   border: "rgba(239,159,39,0.28)" },
+    reecriture:  { label: "Réécriture",  dot: "#e4b48c", text: "#eec19b", bg: "rgba(228,180,140,0.10)",  border: "rgba(228,180,140,0.28)" },
+    correction:  { label: "Correction",  dot: "#5DCAA5", text: "#7ed8b7", bg: "rgba(93,202,165,0.10)",   border: "rgba(93,202,165,0.28)" },
+    termine:     { label: "Terminé",     dot: "#1D9E75", text: "#5cc2a0", bg: "rgba(29,158,117,0.10)",   border: "rgba(29,158,117,0.28)" },
+  };
+  const statusBadge = STATUS_BADGE[chapterStatus] ?? STATUS_BADGE.a_ecrire;
+  const knotText = stripHtml(chapterFields.narrative_knot ?? "");
+
   return (
-    <div className="h-full border-l border-border bg-bg-secondary flex flex-col">
-      {/* Tabs */}
-      <div className="flex gap-0.5 px-2.5 pt-2.5 pb-1.5 border-b border-border shrink-0 flex-wrap">
+    <div className="h-full border-l border-white/[0.05] bg-bg-secondary flex flex-col">
+      {/* Tabs — onglets à soulignement */}
+      <div className="flex items-center gap-5 px-5 pt-4 border-b border-white/[0.05] shrink-0">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`text-[11px] px-1.5 py-0.5 rounded font-medium border cursor-pointer transition-colors ${
+            className={`relative pb-2.5 text-[12.5px] cursor-pointer bg-transparent border-none transition-colors ${
               activeTab === t.key
-                ? "bg-primary-bg text-primary-dark border-primary-border"
-                : "bg-transparent text-text-tertiary border-transparent hover:text-text-secondary"
+                ? "text-[var(--color-accent)] font-medium"
+                : "text-text-tertiary hover:text-text-secondary"
             }`}
           >
             {t.label}
+            {activeTab === t.key && (
+              <span
+                className="absolute left-0 right-0 bottom-[-1px] h-[2px] rounded-full"
+                style={{ background: "var(--color-accent)" }}
+              />
+            )}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2.5">
+      <div className="flex-1 overflow-y-auto px-5 py-5">
         {activeTab === "info" && (
           <>
-            <div className="mb-2">
-              <div className="text-[11px] font-medium text-text-tertiary mb-1">CHAPITRE</div>
-              <div className="text-[12px] text-text-secondary font-medium">{chapterTitle}</div>
+            {/* ---- STATUT DU CHAPITRE ---- */}
+            <SectionHeader>Statut du chapitre</SectionHeader>
+            <div className="flex flex-col gap-px mb-6 rounded-[var(--radius-md)] border border-white/[0.06] bg-bg-tertiary/40 overflow-hidden">
+              <InfoRow label="État">
+                <button
+                  onClick={onStatusChange}
+                  title="Cliquer pour changer le statut"
+                  className="inline-flex items-center gap-1.5 h-6 pl-1.5 pr-2.5 rounded-full cursor-pointer transition-colors"
+                  style={{ background: statusBadge.bg, border: `1px solid ${statusBadge.border}`, color: statusBadge.text }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusBadge.dot }} />
+                  <span className="text-[11px] font-medium">{statusBadge.label}</span>
+                </button>
+              </InfoRow>
+              <InfoRow label="Thèmes">
+                <div className="flex-1 -my-1 -mr-2">
+                  <ThemePills
+                    themes={chapterFields.themes}
+                    onChange={saveChapterThemes}
+                    compact
+                  />
+                </div>
+              </InfoRow>
+              <InfoRow label="Nœud narratif">
+                {knotText ? (
+                  <span className="text-[12.5px] text-text-primary">{knotText}</span>
+                ) : (
+                  <span className="text-[12px] italic text-text-quaternary">—</span>
+                )}
+              </InfoRow>
             </div>
 
-            <div className="mb-2">
-              <div className="text-[11px] font-medium text-text-tertiary mb-1">STATUT</div>
-              <button
-                onClick={onStatusChange}
-                title="Cliquez pour changer le statut"
-                className="cursor-pointer border-none bg-transparent p-0"
-              >
-                <Badge variant={s.variant}>{s.label}</Badge>
-              </button>
-            </div>
-
-            <div>
-              <div className="text-[11px] font-medium text-text-tertiary mb-1">STATS</div>
-              <div className="text-[12px] text-text-secondary leading-relaxed">
-                <div>{wordCount.toLocaleString("fr-FR")} mots</div>
-                <div>{charCountNoSpaces.toLocaleString("fr-FR")} S</div>
-                <div>{charCount.toLocaleString("fr-FR")} SEC</div>
-                <div>{paragraphCount} §</div>
-                <div>{readingTime} min lecture</div>
-                <div>{speakingTime} min voix haute</div>
-              </div>
+            {/* ---- COMPTEUR ---- */}
+            <SectionHeader>Compteur</SectionHeader>
+            <div className="grid grid-cols-2 gap-2 mb-6">
+              <StatCard label="Mots" value={wordCount.toLocaleString("fr-FR")} />
+              <StatCard
+                label="Signes"
+                value={charCountNoSpaces.toLocaleString("fr-FR")}
+                hint={`esp. ${charCount.toLocaleString("fr-FR")}`}
+              />
+              <StatCard label="Paragraphes" value={paragraphCount.toString()} />
+              <StatCard
+                label="Lecture"
+                value={`${readingTime} min`}
+                hint={`voix : ${speakingTime} min`}
+              />
             </div>
           </>
         )}
@@ -451,145 +657,177 @@ export function ContextPanel({
               <div className="text-[12px] text-text-quaternary italic">Chargement…</div>
             ) : (
               <>
-                {/* ---- Chapitrage : colonnes exposées depuis la planification ---- */}
-                <div className="mb-2">
-                  <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-0.5">Résumé</div>
-                  <RichEditableCell
-                    value={chapterFields.synopsis ?? ""}
-                    onSave={(val) => saveChapterField("synopsis", val)}
-                  />
+                {/* ---- CHAPITRAGE ---- */}
+                <SectionHeader>Chapitrage</SectionHeader>
+                <div className="rounded-[var(--radius-md)] border border-white/[0.06] bg-bg-tertiary/40 overflow-hidden mb-6">
+                  <FieldBlock label="Résumé du Chapitre">
+                    <RichEditableCell
+                      value={chapterFields.synopsis ?? ""}
+                      onSave={(val) => saveChapterField("synopsis", val)}
+                    />
+                  </FieldBlock>
+                  <FieldBlock label="Thème" padY="tight">
+                    <ThemePills
+                      themes={chapterFields.themes}
+                      onChange={saveChapterThemes}
+                      compact
+                    />
+                  </FieldBlock>
+                  {CHAPTER_TEXT_FIELDS.map(({ key, label }) => (
+                    <FieldBlock key={key} label={label}>
+                      <RichEditableCell
+                        value={(chapterFields[key] as string | null) ?? ""}
+                        onSave={(val) => saveChapterField(key, val)}
+                      />
+                    </FieldBlock>
+                  ))}
+                  {customColumns.map((col) => (
+                    <FieldBlock key={col.id} label={col.name}>
+                      <RichEditableCell
+                        value={customValues[col.id] ?? ""}
+                        onSave={(val) => saveCustomValue(col.id, val)}
+                      />
+                    </FieldBlock>
+                  ))}
                 </div>
 
-                {CHAPTER_TEXT_FIELDS.map(({ key, label }) => (
-                  <div key={key} className="mb-1.5">
-                    <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-0.5">{label}</div>
-                    <RichEditableCell
-                      value={(chapterFields[key] as string | null) ?? ""}
-                      onSave={(val) => saveChapterField(key, val)}
-                    />
+                {/* ---- SCÈNES ---- */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className="text-[10px] font-medium text-text-quaternary uppercase"
+                    style={{ letterSpacing: "0.18em" }}
+                  >
+                    Scènes{scenes.length > 0 && <span className="text-text-quaternary/60"> · {scenes.length}</span>}
                   </div>
-                ))}
-
-                {customColumns.map((col) => (
-                  <div key={col.id} className="mb-1.5">
-                    <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-0.5">{col.name}</div>
-                    <RichEditableCell
-                      value={customValues[col.id] ?? ""}
-                      onSave={(val) => saveCustomValue(col.id, val)}
-                    />
-                  </div>
-                ))}
-
-                <div className="border-t border-border pt-2 mb-1">
-                  <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-1">Scènes</div>
+                  <button
+                    onClick={addScene}
+                    className="ml-auto inline-flex items-center gap-1 h-6 px-2 rounded-full border border-white/[0.08] bg-bg-tertiary/60 text-text-tertiary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors text-[11px]"
+                    title="Ajouter une scène"
+                  >
+                    <span className="text-[12px] leading-none">+</span>
+                    Scène
+                  </button>
                 </div>
 
                 {scenes.length === 0 ? (
-                  <div className="text-[12px] text-text-quaternary italic mb-2">
-                    Aucune scène pour ce chapitre
+                  <div className="text-[11.5px] italic text-text-quaternary/80 py-3 px-3 rounded-[var(--radius-md)] border border-dashed border-white/[0.05] text-center">
+                    Aucune scène. Cliquez sur <span className="not-italic text-text-tertiary">+ Scène</span> pour en créer.
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-0.5 mb-2">
+                  <div className="flex flex-col rounded-[var(--radius-md)] border border-white/[0.06] bg-bg-tertiary/40 overflow-hidden">
                     {scenes
                       .slice()
                       .sort((a, b) => a.position - b.position)
-                      .map((scene) => {
-                      const statusInfo = SCENE_STATUS[scene.status] ?? SCENE_STATUS.todo;
-                      const isDragging = dragSceneId === scene.id;
-                      const isOver = dragOverSceneId === scene.id && dragSceneId !== scene.id;
-                      return (
-                        <div
-                          key={scene.id}
-                          draggable={editingId !== scene.id}
-                          onDragStart={(ev) => {
-                            setDragSceneId(scene.id);
-                            ev.dataTransfer.effectAllowed = "move";
-                          }}
-                          onDragOver={(ev) => {
-                            ev.preventDefault();
-                            ev.dataTransfer.dropEffect = "move";
-                            if (dragOverSceneId !== scene.id) setDragOverSceneId(scene.id);
-                          }}
-                          onDragLeave={() => {
-                            if (dragOverSceneId === scene.id) setDragOverSceneId(null);
-                          }}
-                          onDrop={(ev) => {
-                            ev.preventDefault();
-                            if (dragSceneId) reorderScenes(dragSceneId, scene.id);
-                            setDragSceneId(null);
-                            setDragOverSceneId(null);
-                          }}
-                          onDragEnd={() => {
-                            setDragSceneId(null);
-                            setDragOverSceneId(null);
-                          }}
-                          className={`group flex items-center gap-1 px-1.5 py-1 rounded-[var(--radius-sm)] transition-colors ${
-                            isDragging
-                              ? "opacity-40"
-                              : isOver
-                                ? "bg-primary-bg/60 border border-primary-border"
-                                : "hover:bg-bg-hover/50 border border-transparent"
-                          } ${editingId === scene.id ? "cursor-text" : "cursor-grab active:cursor-grabbing"}`}
-                        >
-                          <span
-                            className="shrink-0 text-[10px] text-text-quaternary select-none opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Glisser pour réordonner"
+                      .map((scene, idx) => {
+                        const badge = SCENE_STATUS_BADGE[scene.status] ?? SCENE_STATUS_BADGE.todo;
+                        const isDragging = dragSceneId === scene.id;
+                        const isOver = dragOverSceneId === scene.id && dragSceneId !== scene.id;
+                        const isEditing = editingId === scene.id;
+                        return (
+                          <div
+                            key={scene.id}
+                            draggable={!isEditing}
+                            onDragStart={(ev) => {
+                              setDragSceneId(scene.id);
+                              ev.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragOver={(ev) => {
+                              ev.preventDefault();
+                              ev.dataTransfer.dropEffect = "move";
+                              if (dragOverSceneId !== scene.id) setDragOverSceneId(scene.id);
+                            }}
+                            onDragLeave={() => {
+                              if (dragOverSceneId === scene.id) setDragOverSceneId(null);
+                            }}
+                            onDrop={(ev) => {
+                              ev.preventDefault();
+                              if (dragSceneId) reorderScenes(dragSceneId, scene.id);
+                              setDragSceneId(null);
+                              setDragOverSceneId(null);
+                            }}
+                            onDragEnd={() => {
+                              setDragSceneId(null);
+                              setDragOverSceneId(null);
+                            }}
+                            className={`group flex items-center gap-2 pl-2 pr-2 py-2 border-b border-white/[0.04] last:border-b-0 transition-colors ${
+                              isDragging
+                                ? "opacity-40"
+                                : isOver
+                                  ? "bg-[var(--color-accent-bg)]/50"
+                                  : "hover:bg-white/[0.02]"
+                            } ${isEditing ? "cursor-text" : "cursor-grab active:cursor-grabbing"}`}
                           >
-                            ⋮⋮
-                          </span>
-                          {editingId === scene.id ? (
-                            <input
-                              ref={inputRef}
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() => {
-                                if (editValue.trim() && editValue.trim() !== scene.title) renameScene(scene.id, editValue.trim());
-                                else setEditingId(null);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  if (editValue.trim() && editValue.trim() !== scene.title) renameScene(scene.id, editValue.trim());
-                                  else setEditingId(null);
-                                }
-                                if (e.key === "Escape") setEditingId(null);
-                              }}
-                              className="flex-1 px-1 py-0.5 text-[11px] border border-primary-border rounded bg-bg-primary text-text-primary outline-none"
-                            />
-                          ) : (
+                            {/* Drag grip */}
                             <span
-                              onDoubleClick={() => { setEditingId(scene.id); setEditValue(scene.title); }}
-                              className="flex-1 text-[11px] text-text-secondary truncate cursor-default"
-                              title={scene.title}
+                              className="shrink-0 w-3 text-[10px] text-text-quaternary/40 select-none group-hover:text-text-quaternary transition-colors"
+                              title="Glisser pour réordonner"
                             >
-                              {scene.title}
+                              ⋮⋮
                             </span>
-                          )}
-
-                          <button
-                            onClick={() => cycleSceneStatus(scene.id)}
-                            className={`text-[9px] px-1 py-0.5 rounded cursor-pointer transition-colors shrink-0 ${statusInfo.color}`}
-                          >
-                            {statusInfo.label}
-                          </button>
-
-                          <button
-                            onClick={() => deleteScene(scene.id)}
-                            className="hidden group-hover:flex w-3.5 h-3.5 items-center justify-center text-[9px] text-text-quaternary hover:text-red cursor-pointer border-none bg-transparent shrink-0"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      );
-                    })}
+                            {/* Position number, font-serif */}
+                            <span className="shrink-0 font-serif italic text-[12px] text-text-quaternary w-6 text-right tabular-nums">
+                              {idx + 1}
+                            </span>
+                            {/* Title */}
+                            {isEditing ? (
+                              <input
+                                ref={inputRef}
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={() => {
+                                  if (editValue.trim() && editValue.trim() !== scene.title)
+                                    renameScene(scene.id, editValue.trim());
+                                  else setEditingId(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    if (editValue.trim() && editValue.trim() !== scene.title)
+                                      renameScene(scene.id, editValue.trim());
+                                    else setEditingId(null);
+                                  }
+                                  if (e.key === "Escape") setEditingId(null);
+                                }}
+                                className="flex-1 px-1.5 py-0.5 text-[12px] border border-[var(--color-accent-border)] rounded-[var(--radius-sm)] bg-bg-primary text-text-primary outline-none"
+                              />
+                            ) : (
+                              <span
+                                onDoubleClick={() => {
+                                  setEditingId(scene.id);
+                                  setEditValue(scene.title);
+                                }}
+                                className="flex-1 text-[12.5px] text-text-primary truncate"
+                                title="Double-clic pour renommer"
+                              >
+                                {scene.title}
+                              </span>
+                            )}
+                            {/* Status pill — même idiome que breadcrumb */}
+                            <button
+                              onClick={() => cycleSceneStatus(scene.id)}
+                              title={`Statut : ${badge.label} (cliquer pour changer)`}
+                              className="shrink-0 inline-flex items-center gap-1.5 h-5 pl-1.5 pr-2 rounded-full cursor-pointer transition-colors"
+                              style={{
+                                background: badge.bg,
+                                border: `1px solid ${badge.border}`,
+                                color: badge.text,
+                              }}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: badge.dot }} />
+                              <span className="text-[10.5px] font-medium">{badge.label}</span>
+                            </button>
+                            {/* Delete */}
+                            <button
+                              onClick={() => deleteScene(scene.id)}
+                              title="Supprimer"
+                              className="shrink-0 w-5 h-5 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[11px] text-text-quaternary hover:text-[#e89494] cursor-pointer border-none bg-transparent transition-opacity"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        );
+                      })}
                   </div>
                 )}
-
-                <button
-                  onClick={addScene}
-                  className="text-[11px] text-primary hover:text-primary-dark cursor-pointer border-none bg-transparent transition-colors"
-                >
-                  + Scène
-                </button>
               </>
             )}
           </>
@@ -601,100 +839,59 @@ export function ContextPanel({
               <WbEntryPreview
                 entry={wbSelected}
                 loading={wbLoading}
-                onBack={() => setWbSelected(null)}
+                initialEditing={wbSelected.id === justCreatedId}
+                onBack={() => {
+                  if (wbSelected && wbSelected.id === justCreatedId) {
+                    setJustCreatedId(null);
+                  }
+                  setWbSelected(null);
+                }}
                 onOpenFull={() => openWbEntryFull(wbSelected.id)}
+                onLocalUpdate={(patch) => {
+                  setWbSelected((prev) => (prev ? { ...prev, ...patch } : prev));
+                  // Répercute les champs "liste" dans extraWbEntries pour que
+                  // la carte reflète le nouveau titre/sous-titre au retour.
+                  setExtraWbEntries((prev) =>
+                    prev.map((e) =>
+                      e.id === wbSelected.id
+                        ? {
+                            ...e,
+                            ...(patch.title !== undefined ? { title: patch.title as string } : {}),
+                            ...(patch.subtitle !== undefined ? { subtitle: patch.subtitle as string | null } : {}),
+                            ...(patch.subcategory !== undefined ? { subcategory: patch.subcategory as string | null } : {}),
+                            ...(patch.main_image_url !== undefined ? { main_image_url: patch.main_image_url as string | null } : {}),
+                            ...(patch.status !== undefined ? { status: patch.status as string } : {}),
+                          }
+                        : e
+                    )
+                  );
+                }}
               />
             ) : (
-              <>
-                <div className="flex flex-col gap-1.5 mb-2">
-                  <select
-                    value={wbCategoryFilter}
-                    onChange={(e) => setWbCategoryFilter(e.target.value)}
-                    className="w-full text-[11px] px-2 py-1 bg-bg-primary border border-border rounded cursor-pointer focus:outline-none focus:border-primary"
-                  >
-                    <option value="all">📂 Toutes les catégories ({wbEntriesForTab.length})</option>
-                    {wbCategoryOptions.map((c) => {
-                      const n = wbEntriesForTab.filter((e) => e.category === c.key).length;
-                      return (
-                        <option key={c.key} value={c.key}>
-                          {c.icon} {c.label} ({n})
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <input
-                    value={wbQuery}
-                    onChange={(e) => setWbQuery(e.target.value)}
-                    placeholder="Rechercher…"
-                    className="w-full text-[11px] px-2 py-1 bg-bg-primary border border-border rounded focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                {wbFiltered.length === 0 ? (
-                  <div className="text-[11px] italic text-text-quaternary">
-                    {wbEntriesForTab.length === 0
-                      ? "Aucune fiche dans le World Building."
-                      : "Aucun résultat."}
-                  </div>
-                ) : (
-                  <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(0, 150px))" }}>
-                    {wbFiltered.slice(0, 40).map((e) => {
-                      const cat = getCategoryDef(e.category);
-                      const sub =
-                        e.category === "univers_monde" && e.subcategory
-                          ? UNIVERS_SUBTYPES.find((st) => st.key === e.subcategory)
-                          : null;
-                      const hasTitle = (e.title ?? "").trim().length > 0;
-                      return (
-                        <button
-                          key={e.id}
-                          onClick={() => loadWbEntry(e.id)}
-                          title={e.title || "Sans titre"}
-                          className="group relative text-left rounded-md overflow-hidden border border-border hover:border-primary transition-all cursor-pointer flex flex-col aspect-square bg-bg-primary shadow-sm"
-                        >
-                          {e.main_image_url ? (
-                            <>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={e.main_image_url}
-                                alt=""
-                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
-                            </>
-                          ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-bg-secondary to-bg-primary" />
-                          )}
-
-                          <div className="relative z-10 flex flex-col h-full p-1.5">
-                            <div className="text-[8px] uppercase tracking-wider text-white/80 flex items-center gap-0.5 drop-shadow">
-                              <span>{sub?.icon ?? cat?.icon}</span>
-                              <span className="truncate">{sub?.label ?? cat?.label}</span>
-                            </div>
-                            <div className="flex-1" />
-                            <div
-                              className={`text-[11px] font-semibold leading-tight drop-shadow-lg line-clamp-2 ${
-                                hasTitle
-                                  ? e.main_image_url
-                                    ? "text-white"
-                                    : "text-text-primary"
-                                  : "italic text-white/60"
-                              }`}
-                            >
-                              {hasTitle ? e.title : "Sans titre"}
-                            </div>
-                            {e.subtitle && (
-                              <div className="text-[9px] text-white/70 drop-shadow truncate">
-                                {e.subtitle}
-                              </div>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
+              <WorldTabBody
+                wbEntries={wbEntriesForTab}
+                wbCategoryOptions={wbCategoryOptions}
+                wbScope={wbScope}
+                setWbScope={setWbScope}
+                wbCategoryFilter={wbCategoryFilter}
+                setWbCategoryFilter={setWbCategoryFilter}
+                wbQuery={wbQuery}
+                setWbQuery={setWbQuery}
+                linkedEntryIds={linkedEntryIds}
+                onLink={linkWbEntry}
+                onUnlink={unlinkWbEntry}
+                onOpen={loadWbEntry}
+                onOpenAll={() => window.open(`/wb/${projectId}`, "_blank", "noopener,noreferrer")}
+                pickerCategory={pickerCategory}
+                setPickerCategory={setPickerCategory}
+                pickerQuery={pickerQuery}
+                setPickerQuery={setPickerQuery}
+                hasChapter={!!chapterId}
+                creatableCategories={wbCreatableCategories}
+                creatingMenu={creatingMenu}
+                setCreatingMenu={setCreatingMenu}
+                onCreate={(cat) => createWbEntry(cat, defaultSubtypeFor(cat))}
+              />
             )}
           </>
         )}
@@ -702,99 +899,346 @@ export function ContextPanel({
         {activeTab === "versions" && (
           <>
             {!chapterId ? (
-              <div className="text-[11px] italic text-text-quaternary">
+              <div className="text-[11px] italic text-text-quaternary py-1.5 px-2 rounded border border-dashed border-white/[0.05]">
                 Sélectionnez un chapitre
               </div>
             ) : (
-              <>
-                <button
-                  onClick={triggerManualSnapshot}
-                  className="w-full text-[11px] text-primary border border-primary-border rounded px-2 py-1 bg-transparent cursor-pointer hover:bg-primary-bg transition-colors mb-2"
-                >
-                  📸 Créer une version maintenant
-                </button>
-
+              <div className="flex flex-col gap-3">
                 {loadingVersions ? (
                   <div className="text-[11px] italic text-text-quaternary">Chargement…</div>
                 ) : versions.length === 0 ? (
-                  <div className="text-[11px] italic text-text-quaternary">
-                    Aucune version enregistrée. Une version est créée automatiquement à chaque changement de chapitre.
+                  <div className="text-[11px] italic text-text-quaternary/80 py-1.5 px-2 rounded border border-dashed border-white/[0.05]">
+                    Aucune version pour l&apos;instant. Un instantané est créé automatiquement à chaque changement de chapitre.
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-1">
-                    {versions.map((v) => {
-                      const isPreview = previewVersionId === v.id;
+                  <>
+                    {/* ====== VERSION COURANTE ====== */}
+                    {(() => {
+                      const v = versions[0];
+                      const prev = versions[1];
+                      const delta = prev ? v.word_count - prev.word_count : null;
                       const d = new Date(v.created_at);
+                      const versionLabel = v.version ?? String(versions.length);
+                      const isRenaming = renamingVersionId === v.id;
+                      const description = v.name?.trim();
                       return (
-                        <div
-                          key={v.id}
-                          className={`border rounded p-1.5 ${
-                            isPreview ? "border-primary bg-primary-bg/30" : "border-border"
-                          }`}
-                        >
-                          <button
-                            onClick={() => setPreviewVersionId(isPreview ? null : v.id)}
-                            className="w-full text-left cursor-pointer bg-transparent border-none p-0"
+                        <section className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-[9.5px] font-medium uppercase text-text-quaternary"
+                              style={{ letterSpacing: "0.18em" }}
+                            >
+                              Version courante
+                            </span>
+                            <button
+                              onClick={triggerManualSnapshot}
+                              className="ml-auto text-[10.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors inline-flex items-center gap-1"
+                              title="Créer un instantané nommé"
+                            >
+                              <span className="text-[12px] leading-none">+</span>
+                              instantané
+                            </button>
+                          </div>
+                          <div
+                            className="rounded-md p-2 border"
+                            style={{
+                              borderColor: "rgba(239,159,39,0.28)",
+                              background:
+                                "linear-gradient(180deg, rgba(239,159,39,0.06) 0%, rgba(239,159,39,0.02) 100%)",
+                            }}
                           >
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              {v.version && (
-                                <span className="text-[10px] font-mono text-primary bg-primary-bg px-1 py-0.5 rounded">
-                                  v{v.version}
-                                </span>
-                              )}
-                              <span className="text-[11px] text-text-primary font-medium truncate">
-                                {v.name || d.toLocaleDateString("fr-FR")}
+                            <div className="flex items-baseline gap-1.5 mb-1">
+                              <span
+                                className="text-[12px] text-text-primary"
+                                style={{ fontFamily: "var(--font-serif)" }}
+                              >
+                                v.&nbsp;{versionLabel}
+                              </span>
+                              <span className="text-[10.5px] text-text-tertiary">
+                                — courante
+                              </span>
+                              <span className="ml-auto text-[10px] text-text-tertiary tabular-nums">
+                                {d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}{" "}
+                                {d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                               </span>
                             </div>
-                            <div className="text-[9px] text-text-tertiary">
-                              {d.toLocaleDateString("fr-FR")}{" "}
-                              {d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                              {" · "}
-                              {v.word_count.toLocaleString("fr-FR")} mots
-                              {v.label ? ` · ${v.label}` : ""}
-                            </div>
-                          </button>
-
-                          {isPreview && (
-                            <div className="mt-1.5 border-t border-border pt-1.5">
-                              <div
-                                className="text-[10px] text-text-secondary max-h-24 overflow-y-auto bg-bg-primary rounded p-1 border border-border leading-snug"
-                                dangerouslySetInnerHTML={{
-                                  __html:
-                                    v.content.length > 600
-                                      ? v.content.slice(0, 600) + "…"
-                                      : v.content,
+                            {isRenaming ? (
+                              <input
+                                autoFocus
+                                value={renameVersionDraft}
+                                onChange={(e) => setRenameVersionDraft(e.target.value)}
+                                onBlur={() => renameVersion(v.id, renameVersionDraft)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    renameVersion(v.id, renameVersionDraft);
+                                  } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    setRenamingVersionId(null);
+                                  }
                                 }}
+                                placeholder="Décris ce qui change…"
+                                className="w-full text-[11px] bg-bg-primary border border-[var(--color-accent)]/40 rounded px-1.5 py-1 text-text-primary outline-none mb-1.5"
                               />
-                              <div className="flex gap-1 mt-1.5">
-                                <button
-                                  onClick={() => {
-                                    if (confirm("Restaurer cette version ? Le contenu actuel sera automatiquement sauvegardé avant.")) {
-                                      onRestoreVersion(v.content, v.word_count);
-                                      setPreviewVersionId(null);
-                                    }
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setRenameVersionDraft(v.name ?? "");
+                                  setRenamingVersionId(v.id);
+                                }}
+                                className="block w-full text-left text-[11px] text-text-secondary italic leading-snug mb-1.5 cursor-text hover:text-text-primary transition-colors bg-transparent border-none p-0"
+                                title="Cliquer pour renommer"
+                              >
+                                {description ? `« ${description} »` : "Ajouter une description…"}
+                              </button>
+                            )}
+                            <div className="flex items-center gap-1.5">
+                              {delta !== null && delta > 0 && (
+                                <span
+                                  className="px-1.5 py-px rounded text-[10px] font-mono tabular-nums"
+                                  style={{
+                                    background: "rgba(93,202,165,0.14)",
+                                    color: "#7ed8b7",
                                   }}
-                                  className="text-[10px] flex-1 text-primary border border-primary-border rounded px-1.5 py-0.5 bg-transparent cursor-pointer hover:bg-primary-bg transition-colors"
                                 >
-                                  Restaurer
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (confirm("Supprimer cette version ?")) deleteVersion(v.id);
+                                  + {delta.toLocaleString("fr-FR")} mots
+                                </span>
+                              )}
+                              {delta !== null && delta < 0 && (
+                                <span
+                                  className="px-1.5 py-px rounded text-[10px] font-mono tabular-nums"
+                                  style={{
+                                    background: "rgba(224,85,85,0.14)",
+                                    color: "#e89494",
                                   }}
-                                  className="text-[10px] text-text-tertiary hover:text-red cursor-pointer border border-border rounded px-1.5 py-0.5 bg-transparent transition-colors"
                                 >
-                                  🗑
-                                </button>
-                              </div>
+                                  − {Math.abs(delta).toLocaleString("fr-FR")}
+                                </span>
+                              )}
+                              {v.label && (
+                                <span className="text-[10px] text-text-tertiary italic">
+                                  {v.label}
+                                </span>
+                              )}
+                              <span className="ml-auto text-[10px] text-text-tertiary tabular-nums">
+                                {v.word_count.toLocaleString("fr-FR")} mots
+                              </span>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        </section>
                       );
-                    })}
-                  </div>
+                    })()}
+
+                    {/* ====== HISTORIQUE ====== */}
+                    {versions.length > 1 && (
+                      <section className="flex flex-col gap-1.5">
+                        <span
+                          className="text-[9.5px] font-medium uppercase text-text-quaternary"
+                          style={{ letterSpacing: "0.18em" }}
+                        >
+                          Historique
+                        </span>
+                        <div className="flex flex-col gap-1">
+                          {versions.slice(1).map((v, i) => {
+                            const absoluteIdx = i + 1;
+                            const isPreview = previewVersionId === v.id;
+                            const isRenaming = renamingVersionId === v.id;
+                            const d = new Date(v.created_at);
+                            const prev = versions[absoluteIdx + 1];
+                            const delta = prev ? v.word_count - prev.word_count : null;
+                            const isInitial = !prev; // première version
+                            const versionLabel = v.version ?? String(versions.length - absoluteIdx);
+                            const description = v.name?.trim();
+                            const isLabelOnly = !description && !!v.label;
+                            return (
+                              <div
+                                key={v.id}
+                                className={`rounded-md border transition-colors ${
+                                  isPreview
+                                    ? "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/[0.04]"
+                                    : "border-border hover:border-white/[0.12]"
+                                }`}
+                              >
+                                <div className="flex items-start gap-2 p-2">
+                                  {/* Dot cercle vide */}
+                                  <span
+                                    className="shrink-0 mt-[4px] w-2.5 h-2.5 rounded-full"
+                                    style={{
+                                      border: "1.5px solid rgba(255,255,255,0.22)",
+                                      background: "transparent",
+                                    }}
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      if (isRenaming) return;
+                                      setPreviewVersionId(isPreview ? null : v.id);
+                                    }}
+                                    className="flex-1 min-w-0 text-left cursor-pointer bg-transparent border-none p-0"
+                                  >
+                                    {/* Ligne 1 : v.N + date */}
+                                    <div className="flex items-baseline gap-1.5 mb-0.5">
+                                      <span
+                                        className={`text-[11.5px] ${
+                                          isLabelOnly ? "text-text-tertiary" : "text-text-primary"
+                                        }`}
+                                        style={{ fontFamily: "var(--font-serif)" }}
+                                      >
+                                        v.&nbsp;{versionLabel}
+                                      </span>
+                                      <span className="ml-auto text-[10px] text-text-tertiary tabular-nums">
+                                        {d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}{" "}
+                                        {d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                                      </span>
+                                    </div>
+                                    {/* Description */}
+                                    {isRenaming ? (
+                                      <input
+                                        autoFocus
+                                        value={renameVersionDraft}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onChange={(e) => setRenameVersionDraft(e.target.value)}
+                                        onBlur={() => renameVersion(v.id, renameVersionDraft)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            renameVersion(v.id, renameVersionDraft);
+                                          } else if (e.key === "Escape") {
+                                            e.preventDefault();
+                                            setRenamingVersionId(null);
+                                          }
+                                        }}
+                                        placeholder="Décris ce qui change…"
+                                        className="w-full text-[11px] bg-bg-primary border border-[var(--color-accent)]/40 rounded px-1 py-0.5 text-text-primary outline-none mb-1"
+                                      />
+                                    ) : description ? (
+                                      <div className="text-[10.5px] italic text-text-secondary leading-snug mb-1">
+                                        {description}
+                                      </div>
+                                    ) : isLabelOnly ? (
+                                      <div className="text-[10.5px] italic text-text-quaternary/80 leading-snug mb-1">
+                                        {v.label}
+                                      </div>
+                                    ) : null}
+                                    {/* Delta + meta */}
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {delta !== null && delta > 0 && (
+                                        <span
+                                          className="px-1.5 py-px rounded text-[10px] font-mono tabular-nums"
+                                          style={{
+                                            background: "rgba(93,202,165,0.14)",
+                                            color: "#7ed8b7",
+                                          }}
+                                        >
+                                          + {delta.toLocaleString("fr-FR")} mots
+                                        </span>
+                                      )}
+                                      {delta !== null && delta < 0 && (
+                                        <span
+                                          className="px-1.5 py-px rounded text-[10px] font-mono tabular-nums"
+                                          style={{
+                                            background: "rgba(224,85,85,0.14)",
+                                            color: "#e89494",
+                                          }}
+                                        >
+                                          − {Math.abs(delta).toLocaleString("fr-FR")} mots
+                                        </span>
+                                      )}
+                                      {isInitial && (
+                                        <span
+                                          className="px-1.5 py-px rounded text-[10px] font-mono tabular-nums"
+                                          style={{
+                                            background: "rgba(93,202,165,0.14)",
+                                            color: "#7ed8b7",
+                                          }}
+                                        >
+                                          + {v.word_count.toLocaleString("fr-FR")} mots · initial
+                                        </span>
+                                      )}
+                                      {v.label && description && (
+                                        <span className="text-[10px] text-text-tertiary italic">
+                                          · {v.label}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </button>
+                                </div>
+                                {isPreview && !isRenaming && (
+                                  <div className="border-t border-border/70 p-1.5">
+                                    <div
+                                      className="text-[10px] text-text-secondary max-h-28 overflow-y-auto bg-bg-primary rounded p-1.5 border border-border leading-snug"
+                                      dangerouslySetInnerHTML={{
+                                        __html:
+                                          v.content.length > 800
+                                            ? v.content.slice(0, 800) + "…"
+                                            : v.content,
+                                      }}
+                                    />
+                                    <div className="flex gap-1 mt-1.5">
+                                      <button
+                                        onClick={() => {
+                                          if (
+                                            confirm(
+                                              "Restaurer cette version ? Le contenu actuel sera automatiquement sauvegardé avant."
+                                            )
+                                          ) {
+                                            onRestoreVersion(v.content, v.word_count);
+                                            setPreviewVersionId(null);
+                                          }
+                                        }}
+                                        className="text-[10px] flex-1 text-primary border border-primary-border rounded px-1.5 py-0.5 bg-transparent cursor-pointer hover:bg-primary-bg transition-colors"
+                                      >
+                                        Restaurer
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setRenameVersionDraft(v.name ?? "");
+                                          setRenamingVersionId(v.id);
+                                        }}
+                                        className="text-[10px] text-text-tertiary hover:text-text-primary cursor-pointer border border-border rounded px-1.5 py-0.5 bg-transparent transition-colors"
+                                        title="Renommer"
+                                      >
+                                        ✎
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm("Supprimer cette version ?")) deleteVersion(v.id);
+                                        }}
+                                        className="text-[10px] text-text-tertiary hover:text-red cursor-pointer border border-border rounded px-1.5 py-0.5 bg-transparent transition-colors"
+                                        title="Supprimer"
+                                      >
+                                        🗑
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* ====== Bouton Comparer ====== */}
+                    {versions.length >= 2 && (() => {
+                      const cur = versions[0];
+                      const prev = versions[1];
+                      const curLabel = cur.version ?? String(versions.length);
+                      const prevLabel = prev.version ?? String(versions.length - 1);
+                      return (
+                        <button
+                          onClick={() => setPreviewVersionId(previewVersionId === prev.id ? null : prev.id)}
+                          className="w-full text-[11px] text-text-secondary border border-border rounded-md px-2 py-1.5 bg-transparent cursor-pointer hover:border-[var(--color-accent)]/40 hover:text-text-primary transition-colors inline-flex items-center justify-center gap-1.5"
+                        >
+                          <span className="text-[12px]">⇅</span>
+                          <span>
+                            Comparer v.&nbsp;{curLabel} ↔ v.&nbsp;{prevLabel}
+                          </span>
+                        </button>
+                      );
+                    })()}
+                  </>
                 )}
-              </>
+              </div>
             )}
           </>
         )}
@@ -803,131 +1247,1024 @@ export function ContextPanel({
   );
 }
 
+/* ---------- Helpers Info tab ---------- */
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="text-[10px] font-medium text-text-quaternary uppercase mb-2"
+      style={{ letterSpacing: "0.18em" }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function FieldBlock({
+  label,
+  children,
+  padY = "normal",
+}: {
+  label: string;
+  children: React.ReactNode;
+  padY?: "tight" | "normal";
+}) {
+  const pad = padY === "tight" ? "py-1.5" : "py-2";
+  return (
+    <div className={`px-3 ${pad} border-b border-white/[0.04] last:border-b-0`}>
+      <div
+        className="text-[9.5px] font-medium text-text-quaternary uppercase mb-1"
+        style={{ letterSpacing: "0.18em" }}
+      >
+        {label}
+      </div>
+      <div className="text-[12px] text-text-secondary">{children}</div>
+    </div>
+  );
+}
+
+function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-2 bg-bg-tertiary/40 border-b border-white/[0.04] last:border-b-0">
+      <span className="text-[11.5px] text-text-tertiary">{label}</span>
+      <div className="flex items-center min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="p-3 rounded-[var(--radius-md)] border border-white/[0.06] bg-bg-tertiary/40">
+      <div
+        className="text-[9.5px] font-medium text-text-quaternary uppercase mb-1.5"
+        style={{ letterSpacing: "0.18em" }}
+      >
+        {label}
+      </div>
+      <div className="font-serif text-[22px] leading-none text-text-primary tabular-nums">
+        {value}
+      </div>
+      {hint && <div className="mt-1.5 text-[10.5px] text-text-quaternary">{hint}</div>}
+    </div>
+  );
+}
+
 /* ---------- Preview inline d'une fiche WB dans le panneau ---------- */
+/**
+ * Affichage d'une fiche World Building dans le ContextPanel de l'éditeur.
+ * Par défaut : mode consultation (lecture soignée, serif italique, eyebrow
+ * labels) — c'est l'usage principal pendant l'écriture.
+ * Un bouton « ✎ Modifier » bascule en mode édition avec sauvegarde
+ * automatique (debounce 800 ms).
+ */
 function WbEntryPreview({
   entry,
   loading,
+  initialEditing = false,
   onBack,
   onOpenFull,
+  onLocalUpdate,
 }: {
   entry: WbEntryFull;
   loading: boolean;
+  initialEditing?: boolean;
   onBack: () => void;
   onOpenFull: () => void;
+  onLocalUpdate: (patch: Partial<WbEntryFull>) => void;
 }) {
   const cat = getCategoryDef(entry.category);
   const sub =
     entry.category === "univers_monde" && entry.subcategory
       ? UNIVERS_SUBTYPES.find((st) => st.key === entry.subcategory)
-      : null;
+      : entry.category === "magie_divinites" && entry.subcategory
+        ? MAGIC_SUBTYPES.find((st) => st.key === entry.subcategory)
+        : entry.category === "systeme_monetaire" && entry.subcategory
+          ? MONEY_SUBTYPES.find((st) => st.key === entry.subcategory)
+          : null;
   const template = getTemplate(entry.category, entry.subcategory);
 
-  // Map key -> label via template (si présent)
-  const labelByKey: Record<string, string> = {};
-  if (template) {
-    for (const section of template.sections) {
-      for (const f of section.fields) labelByKey[f.key] = f.label;
-    }
+  const supabase = createClient();
+  const entryId = entry.id;
+
+  const [editing, setEditing] = useState(initialEditing);
+
+  // État local miroir (uniquement pertinent en édition), resynchronisé
+  // à chaque changement de fiche ou à la sortie de l'édition.
+  const [title, setTitle] = useState(entry.title ?? "");
+  const [subtitle, setSubtitle] = useState(entry.subtitle ?? "");
+  const [description, setDescription] = useState(entry.description ?? "");
+  const [notes, setNotes] = useState(entry.personal_notes ?? "");
+  const [tdata, setTdata] = useState<Record<string, unknown>>(entry.template_data ?? {});
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setTitle(entry.title ?? "");
+    setSubtitle(entry.subtitle ?? "");
+    setDescription(entry.description ?? "");
+    setNotes(entry.personal_notes ?? "");
+    setTdata(entry.template_data ?? {});
+    setSavedAt(null);
+    setEditing(initialEditing);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry.id]);
+
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function scheduleSave(patch: Partial<WbEntryFull>) {
+    onLocalUpdate(patch);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      await supabase.from("wb_entries").update(patch).eq("id", entryId);
+      setSavedAt(new Date());
+    }, 800);
   }
 
-  const tdata = entry.template_data ?? {};
-  const tdataEntries = Object.entries(tdata).filter(
-    ([, v]) => typeof v === "string" && (v as string).trim().length > 0
-  ) as [string, string][];
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <button
-          onClick={onBack}
-          className="text-[11px] text-text-tertiary hover:text-primary cursor-pointer bg-transparent border-none flex items-center gap-1"
-        >
-          ← Retour
-        </button>
+  // ========= En-tête commune aux deux modes =========
+  const header = (
+    <div className="flex items-center justify-between gap-2">
+      <button
+        onClick={onBack}
+        className="text-[11px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer bg-transparent border-none flex items-center gap-1"
+      >
+        ← Retour
+      </button>
+      <div className="flex items-center gap-2">
+        {editing && savedAt && (
+          <span className="text-[9.5px] text-text-quaternary font-serif italic">
+            enregistré · {formatRelativeDate(savedAt)}
+          </span>
+        )}
+        {editing ? (
+          <button
+            onClick={() => setEditing(false)}
+            title="Revenir à la lecture"
+            className="text-[10px] text-[var(--color-accent)] border border-[var(--color-accent-border)] rounded px-1.5 py-0.5 bg-[var(--color-accent-bg)] cursor-pointer hover:bg-[var(--color-accent-bg)]/80 transition-colors"
+          >
+            ✓ Terminé
+          </button>
+        ) : (
+          <button
+            onClick={() => setEditing(true)}
+            title="Modifier cette fiche sans quitter l'éditeur"
+            className="text-[10px] text-text-tertiary border border-white/[0.08] rounded px-1.5 py-0.5 bg-transparent cursor-pointer hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] transition-colors"
+          >
+            ✎ Modifier
+          </button>
+        )}
         <button
           onClick={onOpenFull}
           title="Ouvrir la fiche complète dans un nouvel onglet"
-          className="text-[10px] text-primary border border-primary-border rounded px-1.5 py-0.5 bg-transparent cursor-pointer hover:bg-primary-bg transition-colors"
+          className="text-[10px] text-text-tertiary border border-white/[0.08] rounded px-1.5 py-0.5 bg-transparent cursor-pointer hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] transition-colors"
         >
           ↗ Ouvrir
         </button>
       </div>
+    </div>
+  );
+
+  // ========= Image (identique dans les deux modes) =========
+  const image = entry.main_image_url ? (
+    entry.category === "univers_monde" ? (
+      <div className="w-full rounded-[var(--radius-md)] border border-white/[0.06] bg-bg-primary overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={entry.main_image_url}
+          alt=""
+          className="w-full h-auto max-h-[45vh] object-contain mx-auto block"
+        />
+      </div>
+    ) : (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={entry.main_image_url}
+        alt=""
+        className="w-full aspect-video object-cover rounded-[var(--radius-md)] border border-white/[0.06]"
+      />
+    )
+  ) : null;
+
+  // ================== MODE CONSULTATION ==================
+  if (!editing) {
+    const descText = (entry.description ?? "").trim();
+    const notesText = (entry.personal_notes ?? "").trim();
+    const hasAnyTemplateData =
+      template != null &&
+      template.sections.some((s) =>
+        s.fields.some((f) => {
+          const v = (entry.template_data ?? {})[f.key];
+          if (f.type === "quad") {
+            const q = (v as Record<string, string>) ?? {};
+            return Object.values(q).some((x) => (x ?? "").trim());
+          }
+          if (f.type === "table") {
+            return Array.isArray(v) && (v as unknown[]).some(
+              (row) => Array.isArray(row) && (row as unknown[]).some((c) => typeof c === "string" && c.trim())
+            );
+          }
+          return !!((v as string) ?? "").trim();
+        })
+      );
+
+    return (
+      <div className="flex flex-col gap-4">
+        {header}
+        {loading && (
+          <div className="text-[11px] italic text-text-quaternary">Chargement…</div>
+        )}
+        {image}
+
+        {/* Titre façon éditorial : eyebrow + titre + sous-titre italique */}
+        <div>
+          <div
+            className="text-[9.5px] font-medium text-text-quaternary uppercase flex items-center gap-1.5"
+            style={{ letterSpacing: "0.18em" }}
+          >
+            <span>{sub?.icon ?? cat?.icon}</span>
+            <span>{sub?.label ?? cat?.label}</span>
+          </div>
+          <h3 className="mt-1.5 text-[17px] leading-tight text-text-primary font-light">
+            {entry.title?.trim() ? (
+              entry.title
+            ) : (
+              <span className="italic text-text-quaternary font-serif">Sans titre</span>
+            )}
+          </h3>
+          {entry.subtitle?.trim() && (
+            <p className="mt-1 text-[11.5px] text-text-tertiary font-serif italic leading-snug">
+              {entry.subtitle}
+            </p>
+          )}
+        </div>
+
+        {/* Description en bloc serif */}
+        {descText && (
+          <div className="rounded-[var(--radius-md)] bg-white/[0.02] border border-white/[0.04] px-3 py-2.5">
+            <p className="text-[12px] leading-relaxed text-text-secondary whitespace-pre-wrap font-serif">
+              {descText}
+            </p>
+          </div>
+        )}
+
+        {/* Template en lecture soignée */}
+        {template ? (
+          hasAnyTemplateData ? (
+            <DynamicTemplate
+              template={template}
+              data={entry.template_data ?? {}}
+              onChange={() => {}}
+              readOnly
+            />
+          ) : (
+            <p className="text-[11.5px] text-text-quaternary font-serif italic">
+              Aucun détail renseigné pour cette fiche.
+            </p>
+          )
+        ) : null}
+
+        {/* Notes personnelles — bloc italique avec filet gauche */}
+        {notesText && (
+          <div className="pl-3 border-l-2 border-[var(--color-accent-border)]">
+            <div
+              className="text-[9px] font-medium text-text-quaternary uppercase mb-1"
+              style={{ letterSpacing: "0.18em" }}
+            >
+              Notes personnelles
+            </div>
+            <p className="text-[11.5px] leading-relaxed text-text-secondary whitespace-pre-wrap font-serif italic">
+              {notesText}
+            </p>
+          </div>
+        )}
+
+        {/* Tags */}
+        {entry.tags && entry.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {entry.tags.map((t) => (
+              <span
+                key={t}
+                className="text-[9px] px-1.5 py-0.5 bg-[var(--color-accent-bg)] text-[var(--color-accent)] rounded border border-[var(--color-accent-border)]"
+              >
+                #{t}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ================== MODE ÉDITION ==================
+  return (
+    <div className="flex flex-col gap-3">
+      {header}
 
       {loading && (
         <div className="text-[11px] italic text-text-quaternary">Chargement…</div>
       )}
+      {image}
 
-      {entry.main_image_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={entry.main_image_url}
-          alt=""
-          className="w-full aspect-video object-cover rounded border border-border"
-        />
-      )}
-
+      {/* En-tête éditable */}
       <div>
-        <div className="text-[9px] uppercase tracking-wider text-text-quaternary flex items-center gap-1">
+        <div className="text-[9px] uppercase tracking-wider text-text-quaternary flex items-center gap-1 mb-1">
           <span>{sub?.icon ?? cat?.icon}</span>
           <span>{sub?.label ?? cat?.label}</span>
         </div>
-        <div className="text-[14px] font-semibold text-text-primary leading-tight mt-0.5">
-          {entry.title || <span className="italic text-text-quaternary">Sans titre</span>}
-        </div>
-        {entry.subtitle && (
-          <div className="text-[11px] text-text-tertiary mt-0.5">{entry.subtitle}</div>
-        )}
+        <input
+          value={title}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            scheduleSave({ title: e.target.value });
+          }}
+          placeholder="Titre de la fiche"
+          className="w-full bg-transparent border-none outline-none text-[15px] font-semibold text-text-primary leading-tight placeholder:text-text-quaternary focus:bg-white/[0.02] rounded px-1 -mx-1 py-0.5"
+        />
+        <input
+          value={subtitle}
+          onChange={(e) => {
+            setSubtitle(e.target.value);
+            scheduleSave({ subtitle: e.target.value });
+          }}
+          placeholder="Sous-titre (optionnel)"
+          className="w-full bg-transparent border-none outline-none text-[11px] text-text-tertiary italic placeholder:text-text-quaternary focus:bg-white/[0.02] rounded px-1 -mx-1 py-0.5 mt-0.5"
+        />
       </div>
 
-      {entry.description && entry.description.trim() && (
-        <div>
-          <div className="text-[9px] uppercase tracking-wider text-text-quaternary mb-0.5">
-            Description
-          </div>
-          <div className="text-[11px] text-text-secondary leading-snug whitespace-pre-wrap">
-            {entry.description}
-          </div>
+      <div>
+        <div className="text-[9px] uppercase tracking-wider text-text-quaternary mb-1">
+          Description
+        </div>
+        <textarea
+          value={description}
+          onChange={(e) => {
+            setDescription(e.target.value);
+            scheduleSave({ description: e.target.value });
+          }}
+          placeholder="Synopsis court, en une ou deux phrases…"
+          rows={3}
+          className="w-full text-[11.5px] leading-relaxed px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-secondary placeholder:text-text-quaternary transition-colors"
+        />
+      </div>
+
+      {template ? (
+        <DynamicTemplate
+          template={template}
+          data={tdata}
+          onChange={(next) => {
+            setTdata(next);
+            scheduleSave({ template_data: next });
+          }}
+        />
+      ) : (
+        <div className="text-[11px] italic text-text-quaternary">
+          Pas de template pour cette catégorie — édite la description et les notes.
         </div>
       )}
 
-      {tdataEntries.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {tdataEntries.map(([k, v]) => (
-            <div key={k}>
-              <div className="text-[9px] uppercase tracking-wider text-text-quaternary mb-0.5">
-                {labelByKey[k] ?? k}
-              </div>
-              <div className="text-[11px] text-text-secondary leading-snug whitespace-pre-wrap">
-                {v}
-              </div>
-            </div>
-          ))}
+      <div className="border-t border-white/[0.05] pt-3">
+        <div className="text-[9px] uppercase tracking-wider text-text-quaternary mb-1">
+          💬 Notes personnelles
         </div>
-      )}
+        <textarea
+          value={notes}
+          onChange={(e) => {
+            setNotes(e.target.value);
+            scheduleSave({ personal_notes: e.target.value });
+          }}
+          placeholder="Pense-bête, pistes, remarques d'auteur…"
+          rows={3}
+          className="w-full text-[11.5px] leading-relaxed px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-secondary placeholder:text-text-quaternary italic transition-colors"
+        />
+      </div>
 
       {entry.tags && entry.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {entry.tags.map((t) => (
             <span
               key={t}
-              className="text-[9px] px-1.5 py-0.5 bg-primary-bg text-primary-dark rounded"
+              className="text-[9px] px-1.5 py-0.5 bg-[var(--color-accent-bg)] text-[var(--color-accent)] rounded border border-[var(--color-accent-border)]"
             >
-              {t}
+              #{t}
             </span>
           ))}
         </div>
       )}
+    </div>
+  );
+}
 
-      {entry.personal_notes && entry.personal_notes.trim() && (
-        <div className="border-t border-border pt-2">
-          <div className="text-[9px] uppercase tracking-wider text-text-quaternary mb-0.5">
-            💬 Notes personnelles
-          </div>
-          <div className="text-[11px] text-text-secondary leading-snug whitespace-pre-wrap italic">
-            {entry.personal_notes}
-          </div>
+/* ---- World tab body : fiches liées au chapitre + bibliothèque ---- */
+function WorldTabBody({
+  wbEntries,
+  wbCategoryOptions,
+  wbScope,
+  setWbScope,
+  wbCategoryFilter,
+  setWbCategoryFilter,
+  wbQuery,
+  setWbQuery,
+  linkedEntryIds,
+  onLink,
+  onUnlink,
+  onOpen,
+  onOpenAll,
+  pickerCategory,
+  setPickerCategory,
+  pickerQuery,
+  setPickerQuery,
+  hasChapter,
+  creatableCategories,
+  creatingMenu,
+  setCreatingMenu,
+  onCreate,
+}: {
+  wbEntries: WbEntryLite[];
+  wbCategoryOptions: { key: string; label: string; icon: string }[];
+  wbScope: "linked" | "all";
+  setWbScope: (v: "linked" | "all") => void;
+  wbCategoryFilter: string;
+  setWbCategoryFilter: (v: string) => void;
+  wbQuery: string;
+  setWbQuery: (v: string) => void;
+  linkedEntryIds: Set<string>;
+  onLink: (id: string) => void;
+  onUnlink: (id: string) => void;
+  onOpen: (id: string) => void;
+  onOpenAll: () => void;
+  pickerCategory: string | null;
+  setPickerCategory: (v: string | null) => void;
+  pickerQuery: string;
+  setPickerQuery: (v: string) => void;
+  hasChapter: boolean;
+  creatableCategories: { key: string; label: string; icon: string; group: string }[];
+  creatingMenu: boolean;
+  setCreatingMenu: (v: boolean) => void;
+  onCreate: (category: string) => void;
+}) {
+  // Fiches liées au chapitre courant
+  const linkedEntries = wbEntries.filter((e) => linkedEntryIds.has(e.id));
+
+  // Grouper par catégorie (et ordonner selon WB_CATEGORIES)
+  const linkedByCategory = new Map<string, WbEntryLite[]>();
+  for (const e of linkedEntries) {
+    const list = linkedByCategory.get(e.category) ?? [];
+    list.push(e);
+    linkedByCategory.set(e.category, list);
+  }
+
+  // Catégories "candidates" = toutes les catégories WB visibles pour ce projet
+  // (wbCategoryOptions = celles qui ont au moins une fiche dans la bibliothèque)
+  const orderedCategoryKeys = wbCategoryOptions.map((c) => c.key);
+  // Ajoute aussi les catégories liées qui ne sont plus dans wbCategoryOptions (edge case)
+  for (const k of linkedByCategory.keys()) {
+    if (!orderedCategoryKeys.includes(k)) orderedCategoryKeys.push(k);
+  }
+
+  return (
+    <>
+      {/* Toggle scope + accès bibliothèque complète */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <div className="inline-flex rounded-full border border-white/[0.08] bg-bg-tertiary/50 p-0.5 text-[11px]">
+          <button
+            onClick={() => setWbScope("linked")}
+            className={`px-2.5 py-[3px] rounded-full cursor-pointer transition-colors ${
+              wbScope === "linked"
+                ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)]"
+                : "text-text-tertiary hover:text-text-primary"
+            }`}
+          >
+            Liées ({linkedEntries.length})
+          </button>
+          <button
+            onClick={() => setWbScope("all")}
+            className={`px-2.5 py-[3px] rounded-full cursor-pointer transition-colors ${
+              wbScope === "all"
+                ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)]"
+                : "text-text-tertiary hover:text-text-primary"
+            }`}
+          >
+            Toutes ({wbEntries.length})
+          </button>
+        </div>
+        <div className="ml-auto relative flex items-center gap-2">
+          <button
+            onClick={() => setCreatingMenu(!creatingMenu)}
+            className="text-[10.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors inline-flex items-center gap-1"
+            title="Créer une nouvelle fiche"
+          >
+            <span className="text-[12px] leading-none">+</span>
+            Nouvelle fiche
+          </button>
+          <button
+            onClick={onOpenAll}
+            className="text-[10.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors"
+            title="Ouvrir la bibliothèque complète"
+          >
+            Voir toutes les fiches ↗
+          </button>
+          {creatingMenu && (
+            <>
+              {/* Capteur de clic hors menu */}
+              <button
+                type="button"
+                aria-label="Fermer le menu"
+                onClick={() => setCreatingMenu(false)}
+                className="fixed inset-0 z-40 bg-transparent border-none cursor-default"
+              />
+              <div
+                className="absolute right-0 top-full mt-1.5 z-50 min-w-[220px] max-h-[60vh] overflow-y-auto rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary shadow-xl py-1"
+              >
+                {(() => {
+                  // Regroupe par famille (L'Univers / Le Vivant / …)
+                  const groups = new Map<string, typeof creatableCategories>();
+                  for (const c of creatableCategories) {
+                    const list = groups.get(c.group) ?? [];
+                    list.push(c);
+                    groups.set(c.group, list);
+                  }
+                  return Array.from(groups.entries()).map(([group, cats]) => (
+                    <div key={group} className="py-1">
+                      <div
+                        className="px-3 pb-1 text-[9.5px] font-medium uppercase text-text-quaternary"
+                        style={{ letterSpacing: "0.18em" }}
+                      >
+                        {group}
+                      </div>
+                      {cats.map((c) => (
+                        <button
+                          key={c.key}
+                          onClick={() => onCreate(c.key)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-white/[0.04] hover:text-[var(--color-accent)] cursor-pointer bg-transparent border-none text-left transition-colors"
+                        >
+                          <span>{c.icon}</span>
+                          <span>{c.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ));
+                })()}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {wbScope === "all" && (
+        <div className="mb-2">
+          <input
+            value={wbQuery}
+            onChange={(e) => setWbQuery(e.target.value)}
+            placeholder="Rechercher dans toutes les fiches…"
+            className="w-full text-[11px] px-2 py-1.5 bg-bg-primary border border-border rounded focus:outline-none focus:border-primary"
+          />
+          {/* Filtre catégorie conservé mais discret (raccourci) */}
+          {wbCategoryOptions.length > 1 && (
+            <select
+              value={wbCategoryFilter}
+              onChange={(e) => setWbCategoryFilter(e.target.value)}
+              className="mt-1.5 w-full text-[11px] px-2 py-1 bg-bg-primary border border-border rounded cursor-pointer focus:outline-none focus:border-primary"
+            >
+              <option value="all">📂 Toutes les catégories ({wbEntries.length})</option>
+              {wbCategoryOptions.map((c) => {
+                const n = wbEntries.filter((e) => e.category === c.key).length;
+                return (
+                  <option key={c.key} value={c.key}>
+                    {c.icon} {c.label} ({n})
+                  </option>
+                );
+              })}
+            </select>
+          )}
         </div>
       )}
+
+      {/* ---- Vue groupée par catégorie (partagée "Liées" / "Toutes") ---- */}
+      {(() => {
+        if (wbScope === "linked" && !hasChapter) {
+          return (
+            <div className="text-[11px] italic text-text-quaternary">
+              Sélectionnez un chapitre pour y attacher des fiches.
+            </div>
+          );
+        }
+
+        // Construit les catégories à afficher en fonction du scope.
+        const catKeysForAll = wbCategoryOptions.map((c) => c.key);
+        const catKeysBase = wbScope === "linked" ? orderedCategoryKeys : catKeysForAll;
+        const catKeys = wbScope === "all" && wbCategoryFilter !== "all"
+          ? catKeysBase.filter((k) => k === wbCategoryFilter)
+          : catKeysBase;
+
+        // Requête de recherche (seulement en "Toutes", conservée globalement pour
+        // cohérence UI).
+        const q = wbScope === "all" ? wbQuery.trim().toLowerCase() : "";
+
+        if (catKeys.length === 0) {
+          return (
+            <div className="text-[11px] italic text-text-quaternary">
+              Aucune fiche dans le World Building de ce projet.
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex flex-col gap-4">
+            {catKeys.map((catKey) => {
+              const cat = getCategoryDef(catKey);
+              const allOfCat = wbEntries.filter((e) => e.category === catKey);
+              const matchesQuery = (e: WbEntryLite) => {
+                if (!q) return true;
+                return (
+                  (e.title ?? "").toLowerCase().includes(q) ||
+                  (e.subtitle ?? "").toLowerCase().includes(q)
+                );
+              };
+              const entries =
+                wbScope === "linked"
+                  ? (linkedByCategory.get(catKey) ?? [])
+                  : allOfCat.filter(matchesQuery);
+
+              const label = cat?.label ?? catKey;
+              const icon = cat?.icon ?? "📁";
+
+              // En "Toutes", on cache les catégories vides dues au filtre de recherche
+              if (wbScope === "all" && q && entries.length === 0) return null;
+
+              return (
+                <section key={catKey}>
+                  <header className="flex items-center gap-2 mb-1.5">
+                    <span
+                      className="text-[9.5px] font-medium uppercase text-text-quaternary flex items-center gap-1"
+                      style={{ letterSpacing: "0.18em" }}
+                    >
+                      <span className="not-italic">{icon}</span>
+                      <span>{label}</span>
+                      {entries.length > 0 && (
+                        <span className="text-text-quaternary/60">· {entries.length}</span>
+                      )}
+                    </span>
+                    {wbScope === "linked" && hasChapter && (
+                      <button
+                        onClick={() => {
+                          setPickerCategory(catKey);
+                          setPickerQuery("");
+                        }}
+                        className="ml-auto text-[10.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors inline-flex items-center gap-1"
+                        title={`Lier une fiche ${label}`}
+                      >
+                        <span className="text-[12px] leading-none">+</span>
+                        ajouter
+                      </button>
+                    )}
+                  </header>
+
+                  {entries.length === 0 ? (
+                    <div className="text-[10.5px] italic text-text-quaternary/80 py-1.5 px-2 rounded border border-dashed border-white/[0.05]">
+                      {wbScope === "linked"
+                        ? "Aucune fiche liée."
+                        : "Aucune fiche dans cette catégorie."}
+                    </div>
+                  ) : catKey === "personnages" ? (
+                    <div
+                      className="grid gap-2"
+                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(0, 120px))" }}
+                    >
+                      {entries.map((e) => {
+                        const isLinked = linkedEntryIds.has(e.id);
+                        return (
+                          <WbCard
+                            key={e.id}
+                            entry={e}
+                            linked={isLinked}
+                            onOpen={() => onOpen(e.id)}
+                            onToggleLink={
+                              wbScope === "linked"
+                                ? () => onUnlink(e.id)
+                                : hasChapter
+                                  ? () => (isLinked ? onUnlink(e.id) : onLink(e.id))
+                                  : undefined
+                            }
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div
+                      className="grid gap-1"
+                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}
+                    >
+                      {entries.map((e) => {
+                        const isLinked = linkedEntryIds.has(e.id);
+                        return (
+                          <WbCardCompact
+                            key={e.id}
+                            entry={e}
+                            linked={isLinked}
+                            onOpen={() => onOpen(e.id)}
+                            onToggleLink={
+                              wbScope === "linked"
+                                ? () => onUnlink(e.id)
+                                : hasChapter
+                                  ? () => (isLinked ? onUnlink(e.id) : onLink(e.id))
+                                  : undefined
+                            }
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* ---- Picker overlay ---- */}
+      {pickerCategory !== null && (
+        <PickerOverlay
+          categoryKey={pickerCategory}
+          query={pickerQuery}
+          setQuery={setPickerQuery}
+          wbEntries={wbEntries}
+          linkedEntryIds={linkedEntryIds}
+          onClose={() => setPickerCategory(null)}
+          onPick={(id) => {
+            onLink(id);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+/* ---- WbCard : carte fiche réutilisée (avec bouton ★ lier/délier) ---- */
+function WbCard({
+  entry,
+  linked,
+  onOpen,
+  onToggleLink,
+}: {
+  entry: WbEntryLite;
+  linked: boolean;
+  onOpen: () => void;
+  onToggleLink?: () => void;
+}) {
+  const cat = getCategoryDef(entry.category);
+  const sub =
+    entry.category === "univers_monde" && entry.subcategory
+      ? UNIVERS_SUBTYPES.find((st) => st.key === entry.subcategory)
+      : null;
+  const hasTitle = (entry.title ?? "").trim().length > 0;
+  return (
+    <div className="relative">
+      <button
+        onClick={onOpen}
+        title={entry.title || "Sans titre"}
+        className="group relative text-left rounded-md overflow-hidden border border-border hover:border-primary transition-all cursor-pointer flex flex-col aspect-square bg-bg-primary shadow-sm w-full"
+      >
+        {entry.main_image_url ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={entry.main_image_url}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-bg-secondary to-bg-primary" />
+        )}
+        <div className="relative z-10 flex flex-col h-full p-1.5">
+          <div className="text-[8px] uppercase tracking-wider text-white/80 flex items-center gap-0.5 drop-shadow">
+            <span>{sub?.icon ?? cat?.icon}</span>
+            <span className="truncate">{sub?.label ?? cat?.label}</span>
+          </div>
+          <div className="flex-1" />
+          <div
+            className={`text-[11px] font-semibold leading-tight drop-shadow-lg line-clamp-2 ${
+              hasTitle
+                ? entry.main_image_url
+                  ? "text-white"
+                  : "text-text-primary"
+                : "italic text-white/60"
+            }`}
+          >
+            {hasTitle ? entry.title : "Sans titre"}
+          </div>
+          {entry.subtitle && (
+            <div className="text-[9px] text-white/70 drop-shadow truncate">
+              {entry.subtitle}
+            </div>
+          )}
+        </div>
+      </button>
+      {onToggleLink && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleLink();
+          }}
+          title={linked ? "Retirer du chapitre" : "Ajouter au chapitre"}
+          className={`absolute top-1 right-1 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[11px] leading-none cursor-pointer transition-colors ${
+            linked
+              ? "bg-[var(--color-accent)] text-[#1a1410]"
+              : "bg-black/60 text-white/80 hover:bg-[var(--color-accent)] hover:text-[#1a1410]"
+          }`}
+        >
+          {linked ? "✓" : "+"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ---- WbCardCompact : carte dense (lignes horizontales) pour catégories hors personnages ---- */
+function WbCardCompact({
+  entry,
+  linked,
+  onOpen,
+  onToggleLink,
+}: {
+  entry: WbEntryLite;
+  linked: boolean;
+  onOpen: () => void;
+  onToggleLink?: () => void;
+}) {
+  const cat = getCategoryDef(entry.category);
+  const sub =
+    entry.category === "univers_monde" && entry.subcategory
+      ? UNIVERS_SUBTYPES.find((st) => st.key === entry.subcategory)
+      : null;
+  const hasTitle = (entry.title ?? "").trim().length > 0;
+  return (
+    <div className="relative group">
+      <button
+        onClick={onOpen}
+        title={entry.title || "Sans titre"}
+        className="flex items-center gap-2 w-full text-left rounded-md border border-border hover:border-primary transition-all cursor-pointer bg-bg-primary overflow-hidden pr-7"
+      >
+        {/* Thumbnail carrée */}
+        <div className="relative shrink-0 w-9 h-9 bg-bg-secondary overflow-hidden">
+          {entry.main_image_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={entry.main_image_url}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-[13px] opacity-60">
+              {sub?.icon ?? cat?.icon ?? "📄"}
+            </div>
+          )}
+        </div>
+        {/* Texte */}
+        <div className="flex-1 min-w-0 py-1">
+          <div
+            className={`text-[11.5px] leading-tight truncate ${
+              hasTitle ? "text-text-primary font-medium" : "italic text-text-quaternary"
+            }`}
+          >
+            {hasTitle ? entry.title : "Sans titre"}
+          </div>
+          {entry.subtitle ? (
+            <div className="text-[9.5px] text-text-tertiary truncate leading-tight mt-0.5">
+              {entry.subtitle}
+            </div>
+          ) : sub?.label ? (
+            <div className="text-[9px] uppercase tracking-wider text-text-quaternary/70 truncate leading-tight mt-0.5">
+              {sub.label}
+            </div>
+          ) : null}
+        </div>
+      </button>
+      {onToggleLink && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleLink();
+          }}
+          title={linked ? "Retirer du chapitre" : "Ajouter au chapitre"}
+          className={`absolute top-1/2 -translate-y-1/2 right-1 w-5 h-5 rounded-full flex items-center justify-center text-[11px] leading-none cursor-pointer transition-colors ${
+            linked
+              ? "bg-[var(--color-accent)] text-[#1a1410]"
+              : "bg-white/[0.04] text-text-tertiary hover:bg-[var(--color-accent)] hover:text-[#1a1410]"
+          }`}
+        >
+          {linked ? "✓" : "+"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ---- PickerOverlay : choisir une fiche à lier au chapitre ---- */
+function PickerOverlay({
+  categoryKey,
+  query,
+  setQuery,
+  wbEntries,
+  linkedEntryIds,
+  onClose,
+  onPick,
+}: {
+  categoryKey: string;
+  query: string;
+  setQuery: (v: string) => void;
+  wbEntries: WbEntryLite[];
+  linkedEntryIds: Set<string>;
+  onClose: () => void;
+  onPick: (id: string) => void;
+}) {
+  const cat = getCategoryDef(categoryKey);
+  const q = query.trim().toLowerCase();
+  const pool = wbEntries
+    .filter((e) => e.category === categoryKey)
+    .filter((e) => !linkedEntryIds.has(e.id))
+    .filter((e) => {
+      if (!q) return true;
+      return (
+        (e.title ?? "").toLowerCase().includes(q) ||
+        (e.subtitle ?? "").toLowerCase().includes(q)
+      );
+    });
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center pt-24 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-[var(--radius-lg)] bg-bg-secondary border border-white/[0.08] shadow-2xl flex flex-col max-h-[70vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.05] shrink-0">
+          <span className="text-[13px]">{cat?.icon ?? "📁"}</span>
+          <span className="text-[13px] font-medium text-text-primary">
+            Lier une fiche · {cat?.label ?? categoryKey}
+          </span>
+          <button
+            onClick={onClose}
+            className="ml-auto text-text-tertiary hover:text-text-primary cursor-pointer text-[14px]"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="px-4 py-2 shrink-0">
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher une fiche…"
+            className="w-full text-[12px] px-2.5 py-1.5 bg-bg-primary border border-border rounded focus:outline-none focus:border-primary"
+          />
+        </div>
+        <div className="flex-1 overflow-y-auto px-2 pb-2">
+          {pool.length === 0 ? (
+            <div className="text-[11px] italic text-text-quaternary px-2 py-3">
+              {q
+                ? "Aucune fiche ne correspond."
+                : "Toutes les fiches de cette catégorie sont déjà liées."}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              {pool.map((e) => {
+                const hasTitle = (e.title ?? "").trim().length > 0;
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => {
+                      onPick(e.id);
+                      onClose();
+                    }}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] hover:bg-white/[0.04] cursor-pointer text-left transition-colors"
+                  >
+                    {e.main_image_url ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={e.main_image_url}
+                        alt=""
+                        className="w-8 h-8 rounded object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded bg-bg-tertiary flex items-center justify-center text-[13px] shrink-0">
+                        {cat?.icon ?? "📄"}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[12px] truncate ${hasTitle ? "text-text-primary" : "italic text-text-quaternary"}`}>
+                        {hasTitle ? e.title : "Sans titre"}
+                      </div>
+                      {e.subtitle && (
+                        <div className="text-[10.5px] text-text-tertiary truncate">{e.subtitle}</div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

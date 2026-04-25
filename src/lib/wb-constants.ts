@@ -116,14 +116,11 @@ export function getCategoryDef(key: string): WbCategoryDef | undefined {
 export const MOEURS_TABLE_GENRES: Genre[] = ["fantasy", "sf", "horreur"];
 
 // Sous-types pour Univers & Monde
+// Volontairement limité à Pays/Nation et Carte : les autres thématiques
+// (faune, mœurs, traditions, climat…) ont leur propre catégorie dédiée.
 export const UNIVERS_SUBTYPES = [
   { key: "pays", label: "Pays / Nation", icon: "🏛️", hasTemplate: true },
-  { key: "geographie", label: "Géographie / Carte", icon: "🗺️", hasTemplate: false },
-  { key: "faune_flore", label: "Faune / Flore", icon: "🌿", hasTemplate: false },
-  { key: "moeurs", label: "Mœurs", icon: "🧬", hasTemplate: false },
-  { key: "traditions", label: "Traditions & Rites", icon: "🔮", hasTemplate: false },
-  { key: "saisons", label: "Saisons & Climat", icon: "🌦️", hasTemplate: false },
-  { key: "phenomenes_magiques", label: "Phénomènes magiques", icon: "🕯️", hasTemplate: false },
+  { key: "geographie", label: "Carte", icon: "🗺️", hasTemplate: false },
 ] as const;
 
 export type UniversSubtype = typeof UNIVERS_SUBTYPES[number]["key"];
@@ -135,20 +132,73 @@ export const BESTIAIRE_SUBCATEGORIES = [
   { key: "volantes", label: "Créatures volantes" },
 ] as const;
 
-// Types de liens prédéfinis (Option C : liste + "autre")
-export const LINK_TYPES = [
-  "ami",
-  "ennemi",
-  "famille",
-  "allié",
-  "rival",
-  "connaissance",
-  "habite",
-  "possède",
-  "appartient à",
-  "créé par",
-  "autre",
+// Sous-types Magie & Divinités
+// 4 archétypes : les dieux du panthéon, leurs artefacts, les mages qui
+// manipulent la magie, et le système qui la régit.
+export const MAGIC_SUBTYPES = [
+  { key: "dieu", label: "Dieu (panthéon)", icon: "🔱", hasTemplate: true },
+  { key: "artefact_divin", label: "Artefact divin", icon: "🏺", hasTemplate: true },
+  { key: "mage", label: "Mage", icon: "🧙", hasTemplate: true },
+  { key: "systeme_magique", label: "Système magique", icon: "✨", hasTemplate: true },
 ] as const;
+
+export type MagicSubtype = typeof MAGIC_SUBTYPES[number]["key"];
+
+// Sous-types Système monétaire
+// Deux archétypes : la monnaie elle-même, et le vocabulaire économique /
+// commercial (termes, jargon de marché, unités de mesure…).
+export const MONEY_SUBTYPES = [
+  { key: "monnaie", label: "Monnaie", icon: "💰", hasTemplate: true },
+  { key: "terme", label: "Terme / vocabulaire", icon: "📘", hasTemplate: true },
+] as const;
+
+export type MoneySubtype = typeof MONEY_SUBTYPES[number]["key"];
+
+// Types de liens prédéfinis (Option C : liste + "autre")
+// Regroupés par famille pour faciliter l'UI (optgroups dans le sélecteur).
+export const LINK_TYPE_GROUPS: { label: string; types: readonly string[] }[] = [
+  {
+    label: "Social",
+    types: ["ami", "ennemi", "allié", "rival", "mentor", "élève", "compagnon", "connaissance"],
+  },
+  {
+    label: "Famille",
+    types: [
+      "père",
+      "mère",
+      "fils",
+      "fille",
+      "frère",
+      "sœur",
+      "demi-frère",
+      "demi-sœur",
+      "époux",
+      "épouse",
+      "cousin",
+      "cousine",
+      "oncle",
+      "tante",
+      "neveu",
+      "nièce",
+      "grand-père",
+      "grand-mère",
+      "beau-parent",
+      "beau-fils",
+      "belle-fille",
+      "famille (autre)",
+    ],
+  },
+  {
+    label: "Lieu / Possession",
+    types: ["habite", "originaire de", "possède", "appartient à", "créé par"],
+  },
+  {
+    label: "Autre",
+    types: ["autre"],
+  },
+];
+
+export const LINK_TYPES = LINK_TYPE_GROUPS.flatMap((g) => g.types) as readonly string[];
 
 // Statuts
 export const WB_STATUSES: { key: WbStatus; label: string; color: string }[] = [

@@ -153,3 +153,173 @@ body {
   height: 0;
   font-style: italic;
 }
+
+/* === Cellule "Thème" en pastille (chapitrage) === */
+.theme-pill-cell {
+  padding: 1px 10px !important;
+  min-height: 20px !important;
+  font-size: 11px !important;
+  font-style: italic;
+  font-family: var(--font-serif);
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: inherit !important;
+}
+.theme-pill-cell .tiptap-cell,
+.theme-pill-cell.tiptap-cell {
+  padding: 1px 10px !important;
+  min-height: 20px !important;
+  font-size: 11px !important;
+  font-style: italic;
+  font-family: var(--font-serif);
+  color: inherit !important;
+}
+.theme-pill-cell span,
+.theme-pill-cell p {
+  color: inherit !important;
+}
+
+/* === Carte chapitre — parchemin crème (éditeur de rédaction) === */
+.chapter-card {
+  background: #f5ead6;
+  color: #2a241d;
+  border-radius: 14px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 30px 60px -20px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.chapter-card__header {
+  text-align: center;
+  margin-bottom: 2.25em;
+}
+
+.chapter-card__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #7a553d;
+  margin-bottom: 14px;
+}
+
+.chapter-card__diamond {
+  color: #c99879;
+  font-size: 9px;
+}
+
+.chapter-card__dot {
+  color: #c9aa88;
+  opacity: 0.6;
+}
+
+.chapter-card__title {
+  font-family: var(--font-serif);
+  font-size: 40px;
+  line-height: 1.08;
+  font-weight: 500;
+  color: #2a241d;
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
+.chapter-card__title-accent {
+  font-style: italic;
+  color: #b5693f;
+}
+
+.chapter-card__rule {
+  width: 110px;
+  height: 1px;
+  margin: 24px auto 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(181, 105, 63, 0.45) 50%,
+    transparent 100%
+  );
+}
+
+/* Prose : on override la cascade .tiptap (qui hérite color cream sur bg navy)
+   pour retomber sur un texte sombre sur le crème. */
+.chapter-prose .tiptap,
+.chapter-prose .tiptap * {
+  color: #2a241d;
+}
+
+.chapter-prose .tiptap {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.75;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.chapter-prose .tiptap p {
+  margin: 0 0 1em;
+  text-indent: 1.5em;
+}
+
+.chapter-prose .tiptap > p:first-of-type {
+  text-indent: 0;
+}
+
+/* Reset explicite : pas de lettrine / drop-cap sur le premier paragraphe. */
+.chapter-prose .tiptap > p:first-of-type::first-letter,
+.chapter-prose .tiptap p::first-letter {
+  font-family: inherit;
+  float: none;
+  font-size: inherit;
+  line-height: inherit;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font-weight: inherit;
+}
+
+.chapter-prose .tiptap blockquote {
+  border-left: 3px solid #b5693f;
+  color: #5a4a3a;
+  font-style: italic;
+  padding-left: 1em;
+  margin: 1em 0;
+  text-indent: 0;
+}
+
+.chapter-prose .tiptap h2,
+.chapter-prose .tiptap h3 {
+  font-family: var(--font-sans);
+  color: #3a2f25;
+  text-indent: 0;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.chapter-prose .tiptap p.is-editor-empty:first-child::before {
+  color: #9a8a74;
+}
+
+/* === Synopsis en blockquote serif italique (outline) === */
+.outline-synopsis-cell {
+  padding: 10px 28px !important;
+  min-height: 48px !important;
+  font-size: 13px !important;
+  font-family: var(--font-serif);
+  font-style: italic;
+  line-height: 1.55;
+}
+.outline-synopsis-cell .tiptap-cell,
+.outline-synopsis-cell.tiptap-cell {
+  padding: 10px 28px !important;
+  min-height: 48px !important;
+  font-size: 13px !important;
+  font-family: var(--font-serif);
+  font-style: italic;
+  line-height: 1.55;
+}

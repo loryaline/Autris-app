@@ -71,7 +71,9 @@ export interface Chapter {
   position: number;
   status: ChapterStatus;
   synopsis: string | null;
+  /** @deprecated Utiliser `themes` (text[]). Conservé pour rétro-compat. */
   theme: string | null;
+  themes: string[];
   plot_elements: string | null;
   minor_elements: string | null;
   observations: string | null;
@@ -134,6 +136,8 @@ export type WbStatus = "brouillon" | "valide" | "archive";
 export interface WbEntry {
   id: string;
   project_id: string;
+  /** Roman auquel est rattaché la fiche (null = commune à tout le projet). */
+  novel_id: string | null;
   user_id: string;
   category: string;
   subcategory: string | null;
@@ -145,6 +149,8 @@ export interface WbEntry {
   main_image_url: string | null;
   gallery: string[];
   tags: string[];
+  /** Groupes sociaux (factions, familles, équipages…) — pattern identique aux tags. */
+  groups: string[];
   status: WbStatus;
   created_at: string;
   updated_at: string;

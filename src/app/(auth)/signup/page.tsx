@@ -60,9 +60,8 @@ export default function SignupPage() {
       <div className="min-h-full flex items-center justify-center bg-bg-secondary">
         <div className="w-full max-w-[360px] mx-4">
           <div className="bg-bg-primary border border-border rounded-[var(--radius-lg)] p-5 text-center">
-            <span className="text-[36px]">🦭</span>
-            <h2 className="text-[16px] font-medium text-text-primary mt-2 mb-2">
-              Vérifiez votre email !
+            <h2 className="text-[20px] text-text-primary mb-2" style={{ fontFamily: "var(--font-serif)" }}>
+              Vérifiez votre <span className="italic text-[var(--color-accent)]">email</span>
             </h2>
             <p className="text-[13px] text-text-secondary">
               Un lien de confirmation a été envoyé à <strong>{email}</strong>.
@@ -84,10 +83,11 @@ export default function SignupPage() {
     <div className="min-h-full flex items-center justify-center bg-bg-secondary">
       <div className="w-full max-w-[360px] mx-4">
         <div className="text-center mb-6">
-          <span className="text-[24px]">🦭</span>
-          <h1 className="text-[20px] font-semibold text-primary mt-1">Autris</h1>
+          <h1 className="text-[24px] text-text-primary" style={{ fontFamily: "var(--font-serif)" }}>
+            <span className="italic text-[var(--color-accent)]">Autris</span>
+          </h1>
           <p className="text-[13px] text-text-tertiary mt-1">
-            Rejoignez l&apos;espace d&apos;écriture des romanciers
+            L&apos;espace d&apos;écriture des romanciers francophones
           </p>
         </div>
 

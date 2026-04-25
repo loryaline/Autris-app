@@ -22,11 +22,6 @@ export function StatusBar({
 
   return (
     <div className="h-[26px] bg-bg-secondary border-t border-border flex items-center overflow-hidden text-[12px]">
-      {/* Autarie */}
-      <div className="flex items-center gap-1 px-2.5 border-r border-border">
-        <span className="text-[16px]">🦭</span>
-      </div>
-
       {/* Word count */}
       <div className="flex items-center gap-1 px-2.5 border-r border-border text-text-secondary">
         <span>{wordCount.toLocaleString("fr-FR")}</span>

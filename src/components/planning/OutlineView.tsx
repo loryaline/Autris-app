@@ -1,31 +1,34 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, type Dispatch, type SetStateAction } from "react";
+import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { ChapterData, SceneData } from "@/app/(app)/planning/[novelId]/planning-client";
+import { RichEditableCell } from "./RichEditableCell";
 
 /* ---- Types ---- */
 type SceneItem = SceneData;
 type ChapterItem = ChapterData;
 
-const STATUS_DOT: Record<string, string> = {
-  a_ecrire: "bg-text-quaternary",
-  premier_jet: "bg-[#888780]",
-  revision: "bg-amber",
-  reecriture: "bg-primary",
-  correction: "bg-teal",
-  termine: "bg-[#1D9E75]",
+type SceneStatus = "todo" | "in_progress" | "done";
+
+const SCENE_STATUS: Record<SceneStatus, { label: string; tone: "teal" | "amber" | "peach" }> = {
+  todo: { label: "À faire", tone: "peach" },
+  in_progress: { label: "En cours", tone: "amber" },
+  done: { label: "Fait", tone: "teal" },
 };
 
-const SCENE_STATUS: Record<string, { label: string; color: string }> = {
-  todo: { label: "À faire", color: "bg-bg-hover text-text-tertiary" },
-  in_progress: { label: "En cours", color: "bg-amber/15 text-amber" },
-  done: { label: "Fait", color: "bg-[#1D9E75]/15 text-[#1D9E75]" },
-};
+const SCENE_STATUS_ORDER: SceneStatus[] = ["todo", "in_progress", "done"];
 
-const SCENE_STATUS_ORDER: ("todo" | "in_progress" | "done")[] = ["todo", "in_progress", "done"];
+function summaryForScenes(scenes: SceneItem[]): { label: string; tone: "teal" | "amber" | "peach" | "slate" } {
+  if (scenes.length === 0) return { label: "vide", tone: "slate" };
+  const statuses = scenes.map((s) => s.status);
+  if (statuses.every((s) => s === "done")) return { label: "tous faits", tone: "teal" };
+  if (statuses.some((s) => s === "in_progress")) return { label: "en cours", tone: "amber" };
+  if (statuses.every((s) => s === "todo")) return { label: "à faire", tone: "peach" };
+  return { label: "en cours", tone: "amber" };
+}
 
-/* ---- Editable Synopsis ---- */
+/* ---- Editable Synopsis (rich text, rendu blockquote) ---- */
 function EditableSynopsis({
   value,
   onSave,
@@ -33,56 +36,85 @@ function EditableSynopsis({
   value: string;
   onSave: (val: string) => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => { setEditValue(value); }, [value]);
-
-  function startEdit() {
-    setEditValue(value);
-    setEditing(true);
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.style.height = "auto";
-        textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
-      }
-    }, 0);
-  }
-
-  function commit() {
-    setEditing(false);
-    if (editValue.trim() !== value) onSave(editValue.trim());
-  }
-
-  if (editing) {
-    return (
-      <textarea
-        ref={textareaRef}
-        value={editValue}
-        onChange={(e) => {
-          setEditValue(e.target.value);
-          e.target.style.height = "auto";
-          e.target.style.height = e.target.scrollHeight + "px";
-        }}
-        onBlur={commit}
-        onKeyDown={(e) => { if (e.key === "Escape") setEditing(false); }}
-        placeholder="Résumé du chapitre…"
-        className="w-full px-3 py-2 text-[13px] bg-bg-primary border border-primary-border rounded-[var(--radius-sm)] outline-none text-text-primary resize-none min-h-[60px] leading-relaxed"
-      />
-    );
-  }
-
   return (
-    <div
-      onClick={startEdit}
-      className="px-3 py-2 text-[13px] text-text-secondary cursor-text min-h-[40px] whitespace-pre-wrap leading-relaxed rounded-[var(--radius-sm)] hover:bg-bg-hover/50 transition-colors"
+    <blockquote
+      className="relative block border-l-2 rounded-r-[var(--radius-md)] outline-synopsis"
+      style={{
+        borderColor: "var(--color-accent-border)",
+        background: "rgba(255,255,255,0.015)",
+      }}
     >
-      {value || (
-        <span className="text-text-quaternary italic">Résumé du chapitre… (cliquez pour écrire)</span>
+      <span
+        className="absolute left-3 top-2 text-text-quaternary/60 font-serif text-[14px] not-italic select-none pointer-events-none"
+        aria-hidden
+      >
+        «
+      </span>
+      <RichEditableCell
+        value={value}
+        onSave={onSave}
+        placeholder="Décris l'arc du chapitre en quelques phrases…"
+        className="outline-synopsis-cell text-text-secondary"
+      />
+      <span
+        className="absolute right-3 bottom-2 text-text-quaternary/60 font-serif text-[14px] not-italic select-none pointer-events-none"
+        aria-hidden
+      >
+        »
+      </span>
+    </blockquote>
+  );
+}
+
+/* ---- Status pill (scene) ---- */
+function SceneStatusPill({
+  status,
+  onClick,
+}: {
+  status: SceneStatus;
+  onClick: () => void;
+}) {
+  const info = SCENE_STATUS[status];
+  const toneStyle =
+    info.tone === "teal"
+      ? {
+          background: "rgba(93,202,165,0.12)",
+          border: "1px solid rgba(93,202,165,0.25)",
+          color: "#8fd9c2",
+        }
+      : info.tone === "amber"
+        ? {
+            background: "rgba(228,180,140,0.1)",
+            border: "1px solid rgba(228,180,140,0.25)",
+            color: "#e4b48c",
+          }
+        : {
+            background: "var(--color-accent-bg)",
+            border: "1px solid var(--color-accent-border)",
+            color: "var(--color-accent)",
+          };
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[11px] cursor-pointer shrink-0 transition-opacity hover:opacity-80"
+      style={toneStyle}
+    >
+      {status === "done" && (
+        <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+          <path
+            d="M2 5.5L4 7.5L8 2.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       )}
-    </div>
+      {info.label}
+    </button>
   );
 }
 
@@ -124,32 +156,62 @@ function SceneRow({
     else setEditValue(scene.title);
   }
 
-  const statusInfo = SCENE_STATUS[scene.status] ?? SCENE_STATUS.todo;
-
   if (showConfirm) {
     return (
-      <div className="ml-4 px-3 py-1.5 text-[11px] bg-red-bg rounded mb-1">
-        <div className="text-red font-medium mb-1">Supprimer « {scene.title} » ?</div>
-        <div className="flex gap-1">
-          <button onClick={() => { setShowConfirm(false); onDelete(); }} className="px-1.5 py-0.5 bg-red text-white rounded text-[11px] cursor-pointer border-none">Supprimer</button>
-          <button onClick={() => setShowConfirm(false)} className="px-1.5 py-0.5 bg-bg-primary text-text-secondary rounded text-[11px] cursor-pointer border border-border">Annuler</button>
-        </div>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] bg-red-500/5 border border-red-500/20">
+        <span className="text-[12px] text-red-300 flex-1 truncate">
+          Supprimer « {scene.title} » ?
+        </span>
+        <button
+          onClick={() => {
+            setShowConfirm(false);
+            onDelete();
+          }}
+          className="text-[11px] px-2 py-1 bg-red-500/80 text-white rounded cursor-pointer"
+        >
+          Supprimer
+        </button>
+        <button
+          onClick={() => setShowConfirm(false)}
+          className="text-[11px] px-2 py-1 text-text-tertiary hover:text-text-primary cursor-pointer"
+        >
+          Annuler
+        </button>
       </div>
     );
   }
 
   return (
     <div
-      className={`group flex items-center gap-2 ml-4 px-3 py-1.5 rounded-[var(--radius-sm)] hover:bg-bg-hover/50 transition-colors mb-0.5 ${
-        isDragOver ? "border-t-2 border-t-primary" : ""
+      className={`group flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] bg-bg-primary/40 border border-white/[0.04] hover:border-white/[0.08] hover:bg-bg-primary/60 transition-colors ${
+        isDragOver ? "border-t-2 border-t-[var(--color-accent)]" : ""
       }`}
       draggable={!editing}
-      onDragStart={(e) => { e.stopPropagation(); onDragStart(); }}
-      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onDragOver(); }}
+      onDragStart={(e) => {
+        e.stopPropagation();
+        onDragStart();
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onDragOver();
+      }}
       onDragEnd={onDragEnd}
     >
-      {/* Drag handle */}
-      <span className="text-[10px] text-text-quaternary cursor-grab select-none">⠿</span>
+      {/* Drag handle (2x3 dots like mockup) */}
+      <span
+        className="text-text-quaternary/60 cursor-grab select-none leading-none shrink-0"
+        aria-hidden
+      >
+        <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+          <circle cx="2" cy="3" r="1" />
+          <circle cx="8" cy="3" r="1" />
+          <circle cx="2" cy="7" r="1" />
+          <circle cx="8" cy="7" r="1" />
+          <circle cx="2" cy="11" r="1" />
+          <circle cx="8" cy="11" r="1" />
+        </svg>
+      </span>
 
       {/* Scene title */}
       {editing ? (
@@ -160,31 +222,33 @@ function SceneRow({
           onBlur={commitRename}
           onKeyDown={(e) => {
             if (e.key === "Enter") commitRename();
-            if (e.key === "Escape") { setEditValue(scene.title); setEditing(false); }
+            if (e.key === "Escape") {
+              setEditValue(scene.title);
+              setEditing(false);
+            }
           }}
-          className="flex-1 px-1.5 py-0.5 text-[12px] border border-primary-border rounded bg-bg-primary text-text-primary outline-none"
+          className="flex-1 px-1.5 py-0.5 text-[12.5px] border border-[var(--color-accent-border)] rounded bg-bg-primary text-text-primary outline-none"
         />
       ) : (
         <span
-          onDoubleClick={() => { setEditing(true); setEditValue(scene.title); }}
-          className="flex-1 text-[12px] text-text-secondary cursor-default"
+          onDoubleClick={() => {
+            setEditing(true);
+            setEditValue(scene.title);
+          }}
+          className="flex-1 text-[12.5px] text-text-secondary cursor-text truncate"
+          title="Double-cliquer pour renommer"
         >
           {scene.title}
         </span>
       )}
 
-      {/* Status badge */}
-      <button
-        onClick={onStatusCycle}
-        className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer transition-colors shrink-0 ${statusInfo.color}`}
-      >
-        {statusInfo.label}
-      </button>
+      <SceneStatusPill status={scene.status} onClick={onStatusCycle} />
 
       {/* Delete */}
       <button
         onClick={() => setShowConfirm(true)}
-        className="hidden group-hover:flex w-4 h-4 items-center justify-center text-[10px] text-text-quaternary hover:text-red cursor-pointer border-none bg-transparent shrink-0"
+        className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center text-[12px] text-text-quaternary hover:text-red-400 cursor-pointer shrink-0 transition-opacity"
+        title="Supprimer la scène"
       >
         ✕
       </button>
@@ -192,9 +256,58 @@ function SceneRow({
   );
 }
 
+/* ---- Chapter card title (splits "title · theme" style) ---- */
+function ChapterCardHeader({
+  chapter,
+  scenesCount,
+  summary,
+}: {
+  chapter: ChapterItem;
+  scenesCount: number;
+  summary: { label: string; tone: string };
+}) {
+  const themes = Array.isArray(chapter.themes) ? chapter.themes.filter(Boolean) : [];
+  const title = (chapter.title || "Sans titre").trim();
+
+  const summaryColor =
+    summary.tone === "teal"
+      ? "#8fd9c2"
+      : summary.tone === "amber"
+        ? "#e4b48c"
+        : summary.tone === "peach"
+          ? "var(--color-accent)"
+          : "var(--text-quaternary, #737687)";
+
+  return (
+    <header className="flex items-baseline justify-between gap-4 mb-3">
+      <div className="min-w-0 flex items-baseline gap-2 flex-wrap">
+        <h3 className="font-serif text-[22px] leading-tight text-text-primary">
+          {title}
+        </h3>
+        {themes.length > 0 && (
+          <>
+            <span className="text-text-quaternary/50 text-[13px]">·</span>
+            <span className="font-serif italic text-[15px] text-[var(--color-accent)]/95">
+              {themes.join(" · ")}
+            </span>
+          </>
+        )}
+      </div>
+      <div className="text-[11.5px] text-text-tertiary shrink-0 inline-flex items-center gap-1.5">
+        <span>
+          {scenesCount} scène{scenesCount > 1 ? "s" : ""}
+        </span>
+        <span className="text-text-quaternary/40">·</span>
+        <span className="font-serif italic" style={{ color: summaryColor }}>
+          {summary.label}
+        </span>
+      </div>
+    </header>
+  );
+}
+
 /* ---- Main OutlineView ---- */
 export function OutlineView({
-  novelId,
   chapters,
   setChapters,
   scenes,
@@ -206,25 +319,12 @@ export function OutlineView({
   scenes: SceneItem[];
   setScenes: Dispatch<SetStateAction<SceneItem[]>>;
 }) {
-  const [openChapters, setOpenChapters] = useState<Set<string>>(() => new Set(chapters.map((c) => c.id)));
-
-  // Scene drag state
   const [dragSceneId, setDragSceneId] = useState<string | null>(null);
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
 
   const supabaseRef = useRef(createClient());
   const sorted = [...chapters].sort((a, b) => a.position - b.position);
 
-  function toggleChapter(id: string) {
-    setOpenChapters((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  /* ---- Synopsis save ---- */
   async function saveSynopsis(chapterId: string, synopsis: string) {
     setChapters((prev) =>
       prev.map((c) => (c.id === chapterId ? { ...c, synopsis: synopsis || null } : c))
@@ -235,10 +335,11 @@ export function OutlineView({
       .eq("id", chapterId);
   }
 
-  /* ---- Scene CRUD ---- */
   async function addScene(chapterId: string) {
     const supabase = supabaseRef.current;
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     const chapterScenes = scenes.filter((s) => s.chapter_id === chapterId);
@@ -277,7 +378,6 @@ export function OutlineView({
     await supabaseRef.current.from("scenes").update({ status: next }).eq("id", sceneId);
   }
 
-  /* ---- Scene reorder ---- */
   async function handleSceneDrop(chapterId: string) {
     if (!dragSceneId || !dragOverSceneId || dragSceneId === dragOverSceneId) {
       setDragSceneId(null);
@@ -306,102 +406,138 @@ export function OutlineView({
 
     const supabase = supabaseRef.current;
     await Promise.all(
-      updated.map((s) => supabase.from("scenes").update({ position: s.position }).eq("id", s.id))
+      updated.map((s) =>
+        supabase.from("scenes").update({ position: s.position }).eq("id", s.id)
+      )
     );
   }
 
   return (
-    <div className="flex-1 overflow-auto p-4">
-      <div className="max-w-[700px] mx-auto">
-        {sorted.map((chapter) => {
-          const isOpen = openChapters.has(chapter.id);
+    <div className="flex-1 overflow-auto px-6 pt-8 pb-14">
+      <div className="max-w-[1100px] mx-auto relative">
+        {/* Timeline centrale */}
+        {sorted.length > 0 && (
+          <div
+            className="absolute top-6 bottom-6 w-px left-1/2 -translate-x-px"
+            style={{
+              background:
+                "linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.08) 6%, rgba(255,255,255,0.08) 94%, transparent 100%)",
+            }}
+            aria-hidden
+          />
+        )}
+
+        {sorted.map((chapter, idx) => {
           const chapterScenes = scenes
             .filter((s) => s.chapter_id === chapter.id)
             .sort((a, b) => a.position - b.position);
-          const dotColor = STATUS_DOT[chapter.status] ?? STATUS_DOT.a_ecrire;
+          const summary = summaryForScenes(chapterScenes);
+          const onRight = idx % 2 === 0;
 
           return (
-            <div key={chapter.id} className="mb-3">
-              {/* Chapter header */}
-              <button
-                onClick={() => toggleChapter(chapter.id)}
-                className="flex items-center gap-2 w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] bg-bg-tertiary hover:bg-bg-hover transition-colors cursor-pointer border-none"
+            <div
+              key={chapter.id}
+              className="relative mb-8 last:mb-0 grid grid-cols-2 gap-8"
+            >
+              {/* Point de timeline, centré sur la ligne, aligné avec le haut de la carte */}
+              <div
+                className="absolute top-7 left-1/2 -translate-x-1/2 w-[18px] h-[18px] rounded-full flex items-center justify-center z-[1]"
+                style={{
+                  background: "var(--color-accent-bg)",
+                  border: "1px solid var(--color-accent-border)",
+                }}
+                aria-hidden
               >
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 10 10"
-                  fill="none"
-                  className={`transition-transform duration-150 shrink-0 ${isOpen ? "" : "-rotate-90"}`}
-                >
-                  <path d="M2 3.5L5 6.5 8 3.5" stroke="#534AB7" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                <span className="text-[13px] font-medium text-text-primary flex-1">
-                  {chapter.title}
-                </span>
-                <span className="text-[11px] text-text-quaternary">
-                  {chapterScenes.length} scène{chapterScenes.length !== 1 ? "s" : ""}
-                </span>
-              </button>
+                <span
+                  className="w-[7px] h-[7px] rounded-full"
+                  style={{ background: "var(--color-accent)" }}
+                />
+              </div>
 
-              {/* Chapter content */}
-              {isOpen && (
-                <div className="mt-1 ml-2 border-l-2 border-border pl-2 pb-2">
-                  {/* Synopsis */}
-                  <div className="mb-2">
-                    <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider px-3 mb-0.5">
-                      Résumé
-                    </div>
-                    <EditableSynopsis
-                      value={chapter.synopsis ?? ""}
-                      onSave={(val) => saveSynopsis(chapter.id, val)}
-                    />
-                  </div>
+              {/* Cellule vide + carte, selon la parité */}
+              {onRight ? <div /> : null}
+              <section
+                className="rounded-[var(--radius-lg)] border border-white/[0.06] bg-bg-tertiary/30 p-5"
+                style={{
+                  boxShadow:
+                    "0 1px 0 rgba(255,255,255,0.02) inset, 0 8px 24px -12px rgba(0,0,0,0.35)",
+                }}
+              >
+                <ChapterCardHeader
+                  chapter={chapter}
+                  scenesCount={chapterScenes.length}
+                  summary={summary}
+                />
 
-                  {/* Scenes */}
-                  <div className="mb-1">
-                    <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider px-3 mb-1">
-                      Scènes
-                    </div>
-
-                    {chapterScenes.length === 0 ? (
-                      <div className="ml-4 px-3 text-[12px] text-text-quaternary italic mb-1">
-                        Aucune scène
-                      </div>
-                    ) : (
-                      <div
-                        onDrop={(e) => { e.preventDefault(); handleSceneDrop(chapter.id); }}
-                        onDragOver={(e) => e.preventDefault()}
-                      >
-                        {chapterScenes.map((scene) => (
-                          <SceneRow
-                            key={scene.id}
-                            scene={scene}
-                            onRename={(t) => renameScene(scene.id, t)}
-                            onDelete={() => deleteScene(scene.id)}
-                            onStatusCycle={() => cycleSceneStatus(scene.id)}
-                            onDragStart={() => setDragSceneId(scene.id)}
-                            onDragOver={() => setDragOverSceneId(scene.id)}
-                            onDragEnd={() => { setDragSceneId(null); setDragOverSceneId(null); }}
-                            isDragOver={dragOverSceneId === scene.id && dragSceneId !== scene.id}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={() => addScene(chapter.id)}
-                      className="ml-4 mt-1 text-[11px] text-primary hover:text-primary-dark cursor-pointer border-none bg-transparent transition-colors"
-                    >
-                      + Ajouter une scène
-                    </button>
-                  </div>
+                {/* Synopsis */}
+                <div className="mb-5">
+                  <EditableSynopsis
+                    value={chapter.synopsis ?? ""}
+                    onSave={(val) => saveSynopsis(chapter.id, val)}
+                  />
                 </div>
-              )}
+
+                {/* Scenes */}
+                <div
+                  className="text-[10px] font-medium text-text-quaternary uppercase mb-2.5"
+                  style={{ letterSpacing: "0.18em" }}
+                >
+                  Scènes
+                </div>
+
+                {chapterScenes.length === 0 ? (
+                  <div className="text-[12px] text-text-quaternary italic font-serif mb-2">
+                    Aucune scène planifiée pour ce chapitre.
+                  </div>
+                ) : (
+                  <div
+                    className="flex flex-col gap-1.5"
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleSceneDrop(chapter.id);
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                  >
+                    {chapterScenes.map((scene) => (
+                      <SceneRow
+                        key={scene.id}
+                        scene={scene}
+                        onRename={(t) => renameScene(scene.id, t)}
+                        onDelete={() => deleteScene(scene.id)}
+                        onStatusCycle={() => cycleSceneStatus(scene.id)}
+                        onDragStart={() => setDragSceneId(scene.id)}
+                        onDragOver={() => setDragOverSceneId(scene.id)}
+                        onDragEnd={() => {
+                          setDragSceneId(null);
+                          setDragOverSceneId(null);
+                        }}
+                        isDragOver={
+                          dragOverSceneId === scene.id && dragSceneId !== scene.id
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-3 text-center">
+                  <button
+                    onClick={() => addScene(chapter.id)}
+                    className="text-[11.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer font-serif italic transition-colors"
+                  >
+                    + Ajouter une scène
+                  </button>
+                </div>
+              </section>
+              {!onRight ? <div /> : null}
             </div>
           );
         })}
+
+        {sorted.length === 0 && (
+          <div className="text-center py-12 text-text-quaternary italic font-serif">
+            Aucun chapitre pour le moment. Ajoute-les depuis le Chapitrage.
+          </div>
+        )}
       </div>
     </div>
   );
