@@ -108,7 +108,6 @@ export function ProjectSettings({ project }: { project: ProjectData }) {
         project_id: project.id,
         user_id: user.id,
         title: newNovelTitle.trim(),
-        ui_theme: "blanc",
       })
       .select()
       .single();

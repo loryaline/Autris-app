@@ -88,7 +88,6 @@ export function DashboardClient({
         project_id: project.id,
         user_id: user.id,
         title: novelTitle.trim(),
-        ui_theme: "blanc",
       })
       .select()
       .single();

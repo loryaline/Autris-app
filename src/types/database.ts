@@ -69,7 +69,6 @@ export interface Novel {
   title: string;
   current_words: number;
   word_goal: number | null;
-  ui_theme: string;
   narrative_template: NarrativeTemplate;
   created_at: string;
   updated_at: string;

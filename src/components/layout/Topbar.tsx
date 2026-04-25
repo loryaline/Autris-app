@@ -48,21 +48,6 @@ export function Topbar({ username }: { username?: string | null }) {
 
       <div className="flex-1" />
 
-      {/* Search pill */}
-      <button
-        type="button"
-        className="flex items-center gap-2 h-8 px-3 rounded-full bg-white/[0.04] border border-white/[0.06] text-text-tertiary hover:text-text-secondary hover:bg-white/[0.06] transition-colors cursor-pointer"
-      >
-        <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-          <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2" />
-          <path d="M9 9L12 12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-        </svg>
-        <span className="text-[12px]">Rechercher</span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-text-quaternary border border-white/[0.05]">
-          ⌘K
-        </span>
-      </button>
-
       {/* User menu */}
       <div className="relative">
         <button

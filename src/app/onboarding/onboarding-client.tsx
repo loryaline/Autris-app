@@ -103,7 +103,6 @@ export function OnboardingClient() {
         project_id: project.id,
         user_id: user.id,
         title: "Mon roman",
-        ui_theme: "blanc",
         narrative_template: narrativeTemplate,
         word_goal: parseInt(wordGoalPerSession) * 120 || 60000,
         is_active: true,
