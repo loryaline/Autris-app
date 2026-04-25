@@ -673,10 +673,13 @@ export function ChapterTable({
           className="overflow-auto h-full border border-white/[0.06] rounded-[var(--radius-lg)] bg-bg-secondary/30"
         >
           <div style={{ minWidth: "max-content" }}>
-            {/* Header */}
+            {/* Header — opaque pour ne pas laisser transparaître les lignes au scroll */}
             <div
-              className="grid bg-bg-tertiary/60 border-b border-white/[0.06] sticky top-0 z-10"
-              style={{ gridTemplateColumns: gridTemplate }}
+              className="grid border-b border-white/[0.08] sticky top-0 z-20 shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+              style={{
+                gridTemplateColumns: gridTemplate,
+                background: "var(--color-bg-tertiary)",
+              }}
             >
               {visibleColumns.map((col) => (
                 <div

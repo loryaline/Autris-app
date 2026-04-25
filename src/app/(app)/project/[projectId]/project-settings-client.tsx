@@ -467,7 +467,10 @@ function NovelSettings({
   }
 
   return (
-    <Card className={`p-4 mb-3 ${novel.is_active ? "border-primary-border" : ""}`}>
+    <Card
+      id={`novel-${novel.id}`}
+      className={`p-4 mb-3 scroll-mt-4 ${novel.is_active ? "border-primary-border" : ""}`}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <h2 className="text-[15px] font-medium text-text-primary">{novel.title}</h2>

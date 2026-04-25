@@ -540,7 +540,7 @@ export function NovelEditor({
           </>
         )}
 
-        {/* Editor area — parchment / cream card */}
+        {/* Editor area — feuille blanche pleine hauteur */}
         <div
           className="flex-1 overflow-y-auto flex justify-center items-start"
           style={{ background: "var(--color-bg-primary)" }}
@@ -549,7 +549,7 @@ export function NovelEditor({
             className="w-full chapter-card"
             style={{
               maxWidth: "760px",
-              margin: "40px 0 50vh",
+              margin: "24px 0 24px",
               padding: "48px 64px 72px",
             }}
           >

@@ -179,11 +179,12 @@ body {
   color: inherit !important;
 }
 
-/* === Carte chapitre — parchemin crème (éditeur de rédaction) === */
+/* === Carte chapitre — feuille blanche pleine hauteur (éditeur de rédaction) === */
 .chapter-card {
-  background: #f5ead6;
-  color: #2a241d;
+  background: #ffffff;
+  color: #1a1a1a;
   border-radius: 14px;
+  min-height: calc(100vh - 48px);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.04) inset,
     0 30px 60px -20px rgba(0, 0, 0, 0.55),
@@ -246,15 +247,15 @@ body {
   );
 }
 
-/* Prose : on override la cascade .tiptap (qui hérite color cream sur bg navy)
-   pour retomber sur un texte sombre sur le crème. */
+/* Prose : Times New Roman uniquement, texte sombre sur blanc. */
 .chapter-prose .tiptap,
 .chapter-prose .tiptap * {
-  color: #2a241d;
+  color: #1a1a1a;
+  font-family: "Times New Roman", Times, serif;
 }
 
 .chapter-prose .tiptap {
-  font-family: var(--font-serif);
+  font-family: "Times New Roman", Times, serif;
   font-size: 16px;
   line-height: 1.75;
   text-align: justify;
@@ -284,8 +285,8 @@ body {
 }
 
 .chapter-prose .tiptap blockquote {
-  border-left: 3px solid #b5693f;
-  color: #5a4a3a;
+  border-left: 3px solid #888;
+  color: #555;
   font-style: italic;
   padding-left: 1em;
   margin: 1em 0;
@@ -294,15 +295,15 @@ body {
 
 .chapter-prose .tiptap h2,
 .chapter-prose .tiptap h3 {
-  font-family: var(--font-sans);
-  color: #3a2f25;
+  font-family: "Times New Roman", Times, serif;
+  color: #1a1a1a;
   text-indent: 0;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
 }
 
 .chapter-prose .tiptap p.is-editor-empty:first-child::before {
-  color: #9a8a74;
+  color: #888;
 }
 
 /* === Synopsis en blockquote serif italique (outline) === */

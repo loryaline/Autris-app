@@ -248,7 +248,8 @@ export function DashboardClient({
                               {novel.is_active ? "✦" : "›"}
                             </span>
                             <a
-                              href={`/editor/${novel.id}`}
+                              href={`/project/${project.id}#novel-${novel.id}`}
+                              title="Paramètres du roman"
                               className="flex-1 min-w-0 text-[12.5px] text-text-secondary hover:text-text-primary truncate no-underline"
                             >
                               {novel.title}

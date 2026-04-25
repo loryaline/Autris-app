@@ -65,7 +65,7 @@ export default function LoginPage() {
             <div className="mb-3 p-2.5 rounded-[var(--radius-sm)] bg-teal-bg border border-teal-border text-teal-dark text-[12.5px] leading-snug">
               Votre compte a été marqué pour suppression. Vous avez 30 jours
               pour annuler en écrivant à{" "}
-              <a href="mailto:bonjour@autris.fr" className="underline">
+              <a href="mailto:contact@autris.app?subject=Demande%20d%27annulation%20de%20suppression%20de%20compte" className="underline">
                 bonjour@autris.fr
               </a>
               .
