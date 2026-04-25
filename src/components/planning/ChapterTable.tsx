@@ -967,7 +967,7 @@ export function ChapterTable({
               return (
                 <div
                   key={chapter.id}
-                  className={`group/row relative grid border-b border-white/[0.04] last:border-b-0 transition-colors items-start ${
+                  className={`group/row relative grid border-b border-white/[0.04] last:border-b-0 transition-colors items-stretch ${
                     dragOverRowIdx === idx && dragRowIdx !== idx
                       ? "border-t-2 border-t-[var(--color-accent)]"
                       : ""
