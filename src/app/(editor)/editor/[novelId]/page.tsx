@@ -22,7 +22,7 @@ export default async function EditorPage({
 
   const { data: novel } = await supabase
     .from("novels")
-    .select("id, title, current_words, word_goal, project_id, chapters(id, title, content, word_count, position, status, synopsis)")
+    .select("id, title, current_words, word_goal, project_id, chapters(id, title, content, word_count, position, status, synopsis, updated_at)")
     .eq("id", novelId)
     .single();
 
@@ -48,10 +48,21 @@ export default async function EditorPage({
     .neq("status", "archive")
     .order("updated_at", { ascending: false });
 
+  // Affichage trié par position (StructurePanel attend cet ordre)
   const chapters = (novel.chapters ?? [])
+    .slice()
     .sort((a, b) => a.position - b.position);
 
-  const firstChapter = chapters[0] ?? null;
+  // Chapitre ouvert par défaut : le dernier modifié, peu importe sa position.
+  // Fallback sur le premier chapitre par position si aucune date dispo.
+  type ChapterRow = (typeof chapters)[number];
+  const lastEdited = chapters.reduce<ChapterRow | null>((acc, c) => {
+    const t = c.updated_at ? new Date(c.updated_at).getTime() : 0;
+    if (!acc) return c;
+    const accT = acc.updated_at ? new Date(acc.updated_at).getTime() : 0;
+    return t > accT ? c : acc;
+  }, null);
+  const firstChapter = lastEdited ?? chapters[0] ?? null;
 
   return (
     <NovelEditor

@@ -6,6 +6,134 @@ import { ChapterTable } from "@/components/planning/ChapterTable";
 import { OutlineView } from "@/components/planning/OutlineView";
 import type { ChapterStatus } from "@/types/database";
 
+/* ---- Export CSV ---- */
+// Mapping clé de colonne → libellé + extraction depuis ChapterData.
+// Doit rester aligné avec DEFAULT_COLUMNS dans ChapterTable.tsx.
+const DEFAULT_COL_MAP: Record<
+  string,
+  { label: string; extract: (c: ChapterData) => string }
+> = {
+  chapitre:       { label: "Chapitre",                    extract: (c) => c.title ?? "" },
+  theme:          { label: "Thème",                       extract: (c) => (c.themes ?? []).join(" · ") },
+  resume:         { label: "Résumé du Chapitre",          extract: (c) => c.synopsis ?? "" },
+  plot_elements:  { label: "Éléments intrigue globale",   extract: (c) => c.plot_elements ?? "" },
+  minor_elements: { label: "Éléments mineurs/ambiances",  extract: (c) => c.minor_elements ?? "" },
+  observations:   { label: "Observations / remarques",    extract: (c) => c.observations ?? "" },
+  tension:        { label: "Indices/tension relative",    extract: (c) => c.tension_indices ?? "" },
+  pivot:          { label: "Bascule",                     extract: (c) => c.pivot ?? "" },
+  noeud:          { label: "Nœud narratif",               extract: (c) => c.narrative_knot ?? "" },
+};
+const DEFAULT_KEYS = Object.keys(DEFAULT_COL_MAP);
+
+function stripHtml(html: string): string {
+  if (!html) return "";
+  // Remplace les balises de bloc par un saut de ligne, retire les autres,
+  // puis decode quelques entités HTML usuelles. Largement suffisant pour
+  // les cellules TipTap (gras / italique / souligné / couleur / surlignage).
+  return html
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6])\s*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function csvEscape(value: string): string {
+  // RFC 4180 : si la valeur contient ; , " ou un saut de ligne, la quoter
+  // et doubler les guillemets internes. On utilise ; comme séparateur (Excel FR).
+  if (/[;,"\r\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function buildChapterCsv(
+  chapters: ChapterData[],
+  customColumns: CustomColumn[],
+  cellValues: CellValue[],
+  columnOrder: string[] | null | undefined,
+): string {
+  // Ordre des colonnes par défaut respecté ; on filtre les clés inconnues.
+  // Les colonnes custom sont ajoutées à la fin, dans leur ordre `position`.
+  const orderedDefaults = (columnOrder && columnOrder.length > 0
+    ? columnOrder.filter((k) => k in DEFAULT_COL_MAP)
+    : DEFAULT_KEYS);
+
+  const customSorted = [...customColumns].sort(
+    (a, b) => a.position - b.position,
+  );
+
+  // Index cellValues par (column_id, chapter_id) pour lookup O(1)
+  const cellIndex = new Map<string, string>();
+  for (const v of cellValues) {
+    cellIndex.set(`${v.column_id}::${v.chapter_id}`, v.value ?? "");
+  }
+
+  const headers = [
+    "Position",
+    ...orderedDefaults.map((k) => DEFAULT_COL_MAP[k].label),
+    ...customSorted.map((c) => c.name),
+    "Statut",
+    "Mots",
+  ];
+
+  const STATUS_LABEL: Record<ChapterStatus, string> = {
+    a_ecrire:    "À écrire",
+    premier_jet: "Premier jet",
+    revision:    "Révision",
+    reecriture:  "Réécriture",
+    correction:  "Correction",
+    termine:     "Terminé",
+  };
+
+  const rows = chapters
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((c, idx) => {
+      const cells = [
+        String(idx + 1),
+        ...orderedDefaults.map((k) => stripHtml(DEFAULT_COL_MAP[k].extract(c))),
+        ...customSorted.map((col) =>
+          stripHtml(cellIndex.get(`${col.id}::${c.id}`) ?? ""),
+        ),
+        STATUS_LABEL[c.status] ?? c.status,
+        String(c.word_count ?? 0),
+      ];
+      return cells.map(csvEscape).join(";");
+    });
+
+  // BOM UTF-8 pour qu'Excel reconnaisse l'encodage
+  return "﻿" + [headers.map(csvEscape).join(";"), ...rows].join("\r\n");
+}
+
+function downloadCsv(filename: string, csv: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function slugify(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "chapitrage";
+}
+
 export interface ChapterData {
   id: string;
   title: string;
@@ -185,7 +313,16 @@ export function PlanningClient({
               {activeView === "tableau" && (
                 <div className="flex items-center gap-2 pt-1 shrink-0">
                   <button
-                    onClick={() => window.print()}
+                    onClick={() => {
+                      const csv = buildChapterCsv(
+                        chapters,
+                        customColumns,
+                        cellValues,
+                        columnOrder,
+                      );
+                      downloadCsv(`${slugify(novelTitle)}-chapitrage.csv`, csv);
+                    }}
+                    title="Télécharger le tableau au format CSV (Excel, Numbers, LibreOffice)"
                     className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12.5px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
                   >
                     <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
