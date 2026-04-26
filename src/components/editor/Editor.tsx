@@ -7,7 +7,6 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
-import Typography from "@tiptap/extension-typography";
 import { createClient } from "@/lib/supabase/client";
 import { Toolbar } from "./Toolbar";
 import { StatusBar } from "./StatusBar";
@@ -96,6 +95,11 @@ export function NovelEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
+    // Désactive les input rules globalement — éviter que TipTap intercepte
+    // les frappes pour appliquer des règles auto (smart quotes, tirets,
+    // etc) qui rentrent en conflit avec la composition iOS.
+    enableInputRules: false,
+    enablePasteRules: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -107,7 +111,8 @@ export function NovelEditor({
         showOnlyCurrent: true,
       }),
       CharacterCount,
-      Typography,
+      // Typography retiré : ses smart quotes / tirets em sont déclenchés
+      // par les input rules et perturbent la composition iOS Safari.
     ],
     // Contenu initial figé via useRef — ne change plus à chaque render,
     // donc useEditor ne ré-instancie pas l'éditeur sous nous.
@@ -121,6 +126,8 @@ export function NovelEditor({
         autocapitalize: "off",
         autocomplete: "off",
         spellcheck: "false",
+        // Hint inputmode pour iOS — text simple, pas de search/url/etc.
+        inputmode: "text",
       },
     },
     onUpdate: ({ editor }) => {
