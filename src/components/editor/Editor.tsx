@@ -94,6 +94,12 @@ export function NovelEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
+    // CRITIQUE iOS Safari : empêche @tiptap/react de re-render le composant
+    // React à chaque transaction (= chaque frappe). Sans ça, NovelEditor
+    // se re-render sur chaque keystroke, ProseMirror réattache sa view
+    // au DOM, et la composition iOS est perdue (lettre écrasée par la
+    // suivante, curseur figé). Ce flag est la solution réelle.
+    shouldRerenderOnTransaction: false,
     // Désactive les input rules globalement — éviter que TipTap intercepte
     // les frappes pour appliquer des règles auto (smart quotes, tirets,
     // etc) qui rentrent en conflit avec la composition iOS.
