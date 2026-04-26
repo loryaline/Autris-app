@@ -141,6 +141,7 @@ export function ChapterTable({
   setCellValues,
   initialColumnOrder,
   initialColumnColors,
+  initialColumnWidths,
 }: {
   novelId: string;
   chapters: ChapterRow[];
@@ -151,6 +152,7 @@ export function ChapterTable({
   setCellValues: Dispatch<SetStateAction<CellValue[]>>;
   initialColumnOrder?: string[] | null;
   initialColumnColors?: Record<string, string>;
+  initialColumnWidths?: Record<string, number>;
 }) {
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
@@ -249,12 +251,17 @@ export function ChapterTable({
   const [dragColKey, setDragColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
-  // Column widths (pixels)
+  // Column widths (pixels) — fusion defaults < customColumns < persisted
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     const widths: Record<string, number> = { ...DEFAULT_WIDTHS };
     customColumns.forEach((c) => {
       widths[`custom:${c.id}`] = 160;
     });
+    if (initialColumnWidths) {
+      for (const [k, v] of Object.entries(initialColumnWidths)) {
+        if (typeof v === "number" && v > 0) widths[k] = v;
+      }
+    }
     return widths;
   });
 
@@ -326,14 +333,25 @@ export function ChapterTable({
     e.stopPropagation();
     const startX = e.clientX;
     const startWidth = columnWidths[colKey] ?? 160;
+    let lastWidth = startWidth;
 
     const onMove = (ev: MouseEvent) => {
       const newWidth = Math.max(60, startWidth + ev.clientX - startX);
+      lastWidth = newWidth;
       setColumnWidths((prev) => ({ ...prev, [colKey]: newWidth }));
     };
     const onUp = () => {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
+      // Persistence DB : on n'écrit qu'à la fin du drag pour éviter
+      // de spammer Supabase à chaque pixel bougé.
+      if (lastWidth !== startWidth) {
+        const next = { ...columnWidths, [colKey]: lastWidth };
+        supabaseRef.current
+          .from("novels")
+          .update({ column_widths: next })
+          .eq("id", novelId);
+      }
     };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);

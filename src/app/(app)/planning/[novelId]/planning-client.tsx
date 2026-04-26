@@ -197,6 +197,7 @@ export function PlanningClient({
   milestones,
   columnOrder,
   columnColors: initialColumnColors,
+  columnWidths: initialColumnWidths,
 }: {
   novelId: string;
   novelTitle: string;
@@ -208,6 +209,7 @@ export function PlanningClient({
   milestones: Milestone[];
   columnOrder?: string[] | null;
   columnColors?: Record<string, string>;
+  columnWidths?: Record<string, number>;
 }) {
   const [activeView, setActiveView] = useState<PlanningView>("tableau");
   const [chapters, setChapters] = useState<ChapterData[]>(initialChapters);
@@ -374,6 +376,7 @@ export function PlanningClient({
             setCellValues={setCellValues}
             initialColumnOrder={columnOrder}
             initialColumnColors={initialColumnColors}
+            initialColumnWidths={initialColumnWidths}
           />
         )}
 
