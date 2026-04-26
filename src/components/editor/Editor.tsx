@@ -84,6 +84,14 @@ export function NovelEditor({
   const latestContentRef = useRef<{ html: string; words: number } | null>(null);
   const supabaseRef = useRef(createClient());
 
+  // Contenu initial figé une fois pour toutes — pas recalculé à chaque
+  // render. Évite que useEditor ré-instancie l'éditeur (cause d'écrasement
+  // de lettres pendant la composition iOS Safari). Fallback <p></p>
+  // explicite pour donner à ProseMirror un doc valide non-vide à l'init.
+  const initialContentRef = useRef<string>(
+    chapters.find((c) => c.id === initialChapterId)?.content?.trim() || "<p></p>"
+  );
+
   const activeChapter = localChapters.find((c) => c.id === activeChapterId);
 
   const editor = useEditor({
@@ -95,17 +103,15 @@ export function NovelEditor({
       Underline,
       Placeholder.configure({
         placeholder: "Commencez à écrire votre histoire…",
+        showOnlyWhenEditable: true,
+        showOnlyCurrent: true,
       }),
       CharacterCount,
       Typography,
     ],
-    // Contenu initial uniquement — le contenu en cours d'édition est géré
-    // ensuite par editor.commands.setContent() au changement de chapitre.
-    // Si on lit `activeChapter?.content` ici à chaque rendu, certaines
-    // versions de @tiptap/react peuvent re-instancier l'éditeur et
-    // sur iOS Safari ça se traduit par chaque lettre qui écrase la
-    // précédente (clavier prédictif perdu pendant la composition).
-    content: chapters.find((c) => c.id === initialChapterId)?.content || "",
+    // Contenu initial figé via useRef — ne change plus à chaque render,
+    // donc useEditor ne ré-instancie pas l'éditeur sous nous.
+    content: initialContentRef.current,
     editorProps: {
       attributes: {
         class: "tiptap",
