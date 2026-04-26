@@ -78,6 +78,10 @@ export function NovelEditor({
   const [localChapters, setLocalChapters] = useState(chapters);
   const [, setTick] = useState(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Debounce du setState React pour ne pas perturber la composition iOS
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestContentRef = useRef<{ html: string; words: number } | null>(null);
   const supabaseRef = useRef(createClient());
 
   const activeChapter = localChapters.find((c) => c.id === activeChapterId);
@@ -121,21 +125,38 @@ export function NovelEditor({
       const text = editor.getText();
       const words = countWords(text);
 
-      setLocalChapters((prev) =>
-        prev.map((c) =>
-          c.id === currentId
-            ? { ...c, content: html, word_count: words }
-            : c
-        )
-      );
+      // Sur iOS Safari, mettre à jour le state React sur chaque frappe
+      // perturbe la composition du clavier prédictif (lettres écrasées).
+      // On débounce le setLocalChapters de 250ms pour laisser TipTap
+      // gérer ses transactions sans interférence React. Le content est
+      // toujours sauvegardé dans le ref pour les autres handlers.
+      latestContentRef.current = { html, words };
 
       setSyncStatus("saving");
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        setLocalChapters((prev) =>
+          prev.map((c) =>
+            c.id === currentId
+              ? { ...c, content: html, word_count: words }
+              : c
+          )
+        );
+      }, 250);
+
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         saveChapter(currentId, html, words);
       }, 2000);
     },
-    onSelectionUpdate: () => setTick((t) => t + 1),
+    onSelectionUpdate: () => {
+      // Debounce léger pour éviter de spammer setTick à chaque tap
+      if (selectionTimeoutRef.current) return;
+      selectionTimeoutRef.current = setTimeout(() => {
+        selectionTimeoutRef.current = null;
+        setTick((t) => t + 1);
+      }, 100);
+    },
     // onTransaction RETIRÉ : il déclenchait un setState à chaque frappe,
     // ce qui causait sur iOS Safari l'écrasement de la lettre en cours
     // d'écriture par la suivante.

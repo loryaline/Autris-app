@@ -186,12 +186,10 @@ export function ChapterTable({
 
   /**
    * Démarre une sélection par glisser depuis une pastille de cellule.
-   * - On capture mousemove / mouseup au niveau du document.
-   * - À chaque mousemove on cherche l'élément `data-cell-key` sous le curseur
-   *   et on l'ajoute à la sélection.
-   * - Sur mouseup, si la sélection a changé, on ouvre la palette ancrée près
-   *   de la pastille initiale. Si pas de drag (juste un click), même chose
-   *   sur la cellule unique.
+   * Gère à la fois la souris (desktop) et le tactile (iPad / mobile).
+   * - À chaque mouvement on cherche l'élément `data-cell-key` sous le
+   *   pointeur et on l'ajoute à la sélection.
+   * - Au lâcher : on ouvre la palette quoi qu'il arrive (click ou drag).
    */
   function startCellDragSelect(
     chapterId: string,
@@ -203,8 +201,8 @@ export function ChapterTable({
     setDragSelecting(false);
     let moved = false;
 
-    const onMove = (ev: MouseEvent) => {
-      const target = document.elementFromPoint(ev.clientX, ev.clientY);
+    const handlePoint = (clientX: number, clientY: number) => {
+      const target = document.elementFromPoint(clientX, clientY);
       if (!target) return;
       const cellEl = (target as HTMLElement).closest("[data-cell-key]") as HTMLElement | null;
       if (!cellEl) return;
@@ -222,11 +220,22 @@ export function ChapterTable({
       });
     };
 
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+    const onMouseMove = (ev: MouseEvent) => handlePoint(ev.clientX, ev.clientY);
+    const onTouchMove = (ev: TouchEvent) => {
+      ev.preventDefault(); // empêche le scroll pendant la sélection tactile
+      const t = ev.touches[0];
+      if (!t) return;
+      handlePoint(t.clientX, t.clientY);
+    };
+
+    const cleanup = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onEnd);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onEnd);
+      document.removeEventListener("touchcancel", onEnd);
       setDragSelecting(false);
-      // On ouvre la palette quoi qu'il arrive (click simple ou drag)
+      // On ouvre la palette quoi qu'il arrive (tap / click / drag)
       setPalette({
         kind: "cell",
         chapterId,
@@ -234,9 +243,14 @@ export function ChapterTable({
         anchor,
       });
     };
+    const onEnd = () => cleanup();
 
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onEnd);
+    // passive:false pour pouvoir preventDefault sur touchmove
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onEnd);
+    document.addEventListener("touchcancel", onEnd);
   }
 
   // Column order: provided by parent (lifted state) — fallback if null/empty
@@ -1065,6 +1079,14 @@ export function ChapterTable({
                           type="button"
                           onMouseDown={(e) => {
                             e.preventDefault();
+                            e.stopPropagation();
+                            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            startCellDragSelect(chapter.id, col.key, {
+                              top: r.bottom + 4,
+                              left: r.left - 80,
+                            });
+                          }}
+                          onTouchStart={(e) => {
                             e.stopPropagation();
                             const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
                             startCellDragSelect(chapter.id, col.key, {
