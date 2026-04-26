@@ -265,6 +265,27 @@ export function ChapterTable({
     return widths;
   });
 
+  // Si le serveur renvoie de nouvelles largeurs (par ex. après un
+  // router.refresh suite à l'ajout d'une colonne custom), on intègre
+  // les largeurs persistées sans écraser celles qu'on vient de bouger.
+  // Comparaison sur la stringify pour éviter une boucle infinie.
+  const initialWidthsKey = JSON.stringify(initialColumnWidths ?? {});
+  useEffect(() => {
+    if (!initialColumnWidths) return;
+    setColumnWidths((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const [k, v] of Object.entries(initialColumnWidths)) {
+        if (typeof v === "number" && v > 0 && next[k] !== v) {
+          next[k] = v;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialWidthsKey]);
+
   // Hidden columns
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [showColumnMenu, setShowColumnMenu] = useState(false);
@@ -340,17 +361,20 @@ export function ChapterTable({
       lastWidth = newWidth;
       setColumnWidths((prev) => ({ ...prev, [colKey]: newWidth }));
     };
-    const onUp = () => {
+    const onUp = async () => {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
       // Persistence DB : on n'écrit qu'à la fin du drag pour éviter
       // de spammer Supabase à chaque pixel bougé.
-      if (lastWidth !== startWidth) {
-        const next = { ...columnWidths, [colKey]: lastWidth };
-        supabaseRef.current
-          .from("novels")
-          .update({ column_widths: next })
-          .eq("id", novelId);
+      if (lastWidth === startWidth) return;
+      const next = { ...columnWidths, [colKey]: lastWidth };
+      const { error } = await supabaseRef.current
+        .from("novels")
+        .update({ column_widths: next })
+        .eq("id", novelId);
+      if (error) {
+        // Souvent : migration column_widths pas encore passée en base.
+        console.error("[chapitrage] save column_widths failed:", error);
       }
     };
     document.addEventListener("mousemove", onMove);
