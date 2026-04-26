@@ -75,20 +75,19 @@ export function NovelEditor({
   const [leftWidth, setLeftWidth] = useState(155);
   const [rightWidth, setRightWidth] = useState(320);
   const [localChapters, setLocalChapters] = useState(chapters);
-  const [, setTick] = useState(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Debounce du setState React pour ne pas perturber la composition iOS
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestContentRef = useRef<{ html: string; words: number } | null>(null);
   const supabaseRef = useRef(createClient());
 
-  // Contenu initial figé une fois pour toutes — pas recalculé à chaque
-  // render. Évite que useEditor ré-instancie l'éditeur (cause d'écrasement
-  // de lettres pendant la composition iOS Safari). Fallback <p></p>
-  // explicite pour donner à ProseMirror un doc valide non-vide à l'init.
-  const initialContentRef = useRef<string>(
-    chapters.find((c) => c.id === initialChapterId)?.content?.trim() || "<p></p>"
+  // Contenu initial figé une fois pour toutes via useState lazy init —
+  // pas recalculé à chaque render. Évite que useEditor ré-instancie
+  // l'éditeur (cause d'écrasement de lettres pendant la composition iOS
+  // Safari). Fallback <p></p> explicite pour donner à ProseMirror un
+  // doc valide non-vide à l'init.
+  const [initialContent] = useState<string>(
+    () => chapters.find((c) => c.id === initialChapterId)?.content?.trim() || "<p></p>"
   );
 
   const activeChapter = localChapters.find((c) => c.id === activeChapterId);
@@ -114,9 +113,9 @@ export function NovelEditor({
       // Typography retiré : ses smart quotes / tirets em sont déclenchés
       // par les input rules et perturbent la composition iOS Safari.
     ],
-    // Contenu initial figé via useRef — ne change plus à chaque render,
+    // Contenu initial figé via useState — ne change plus à chaque render,
     // donc useEditor ne ré-instancie pas l'éditeur sous nous.
-    content: initialContentRef.current,
+    content: initialContent,
     editorProps: {
       attributes: {
         class: "tiptap",
@@ -140,14 +139,13 @@ export function NovelEditor({
 
       // Sur iOS Safari, mettre à jour le state React sur chaque frappe
       // perturbe la composition du clavier prédictif (lettres écrasées).
-      // On débounce le setLocalChapters de 250ms pour laisser TipTap
-      // gérer ses transactions sans interférence React. Le content est
-      // toujours sauvegardé dans le ref pour les autres handlers.
+      // On débounce TOUS les setState de 250ms pour laisser ProseMirror
+      // gérer ses transactions sans interférence React.
       latestContentRef.current = { html, words };
 
-      setSyncStatus("saving");
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
+        setSyncStatus("saving");
         setLocalChapters((prev) =>
           prev.map((c) =>
             c.id === currentId
@@ -155,6 +153,14 @@ export function NovelEditor({
               : c
           )
         );
+        // Stats également mises à jour en différé
+        try {
+          setEditorStats({
+            chars: editor.storage.characterCount.characters(),
+            charsNoSpaces: text.replace(/\s/g, "").length,
+            paragraphs: text ? text.split(/\n\n+/).filter((p) => p.trim()).length : 0,
+          });
+        } catch { /* editor view détruite */ }
       }, 250);
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -162,14 +168,10 @@ export function NovelEditor({
         saveChapter(currentId, html, words);
       }, 2000);
     },
-    onSelectionUpdate: () => {
-      // Debounce léger pour éviter de spammer setTick à chaque tap
-      if (selectionTimeoutRef.current) return;
-      selectionTimeoutRef.current = setTimeout(() => {
-        selectionTimeoutRef.current = null;
-        setTick((t) => t + 1);
-      }, 100);
-    },
+    // onSelectionUpdate retiré : il déclenchait un setTick toutes les
+    // 100ms pendant la frappe, causant des re-renders qui perturbaient
+    // l'éditeur. L'état actif/inactif des boutons Bold/Italic/Underline
+    // dans la toolbar sera légèrement différé — acceptable.
     // onTransaction RETIRÉ : il déclenchait un setState à chaque frappe,
     // ce qui causait sur iOS Safari l'écrasement de la lettre en cours
     // d'écriture par la suivante.
@@ -442,14 +444,19 @@ export function NovelEditor({
 
   const totalWords = localChapters.reduce((sum, c) => sum + c.word_count, 0);
 
-  const editorText = editor ? editor.getText() : "";
-  const paragraphCount = editorText
-    ? editorText.split(/\n\n+/).filter((p) => p.trim()).length
-    : 0;
-  const charCount = editor
-    ? editor.storage.characterCount.characters()
-    : 0;
-  const charCountNoSpaces = editorText.replace(/\s/g, "").length;
+  // Stats dérivées de l'éditeur — calculées uniquement dans onUpdate
+  // (ou au montage) et stockées en state. On NE LIT PLUS editor.getText()
+  // ni editor.storage pendant le render : sur iOS Safari, lire l'état
+  // d'un ProseMirror en cours de composition réattache la view et écrase
+  // la lettre en cours d'écriture.
+  const [editorStats, setEditorStats] = useState({
+    chars: 0,
+    charsNoSpaces: 0,
+    paragraphs: 0,
+  });
+  const charCount = editorStats.chars;
+  const charCountNoSpaces = editorStats.charsNoSpaces;
+  const paragraphCount = editorStats.paragraphs;
 
   const canNavigateHome = syncStatus === "saved";
 
