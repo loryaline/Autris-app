@@ -258,30 +258,16 @@ body {
   font-family: "Times New Roman", Times, serif;
   font-size: 16px;
   line-height: 1.75;
-  text-align: justify;
-  hyphens: auto;
+  /* text-align justify + hyphens auto retirés : ils causent un bug
+     iOS Safari où le curseur reste figé et la composition échoue dans
+     un contentEditable. */
 }
 
 .chapter-prose .tiptap p {
   margin: 0 0 1em;
-  text-indent: 1.5em;
-}
-
-.chapter-prose .tiptap > p:first-of-type {
-  text-indent: 0;
-}
-
-/* Reset explicite : pas de lettrine / drop-cap sur le premier paragraphe. */
-.chapter-prose .tiptap > p:first-of-type::first-letter,
-.chapter-prose .tiptap p::first-letter {
-  font-family: inherit;
-  float: none;
-  font-size: inherit;
-  line-height: inherit;
-  padding: 0;
-  margin: 0;
-  color: inherit;
-  font-weight: inherit;
+  /* text-indent retiré pour la même raison — le retrait de première
+     ligne en contentEditable iOS Safari interfère avec le positionnement
+     du curseur lors de la frappe. */
 }
 
 .chapter-prose .tiptap blockquote {

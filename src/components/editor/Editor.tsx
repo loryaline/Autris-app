@@ -7,7 +7,6 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
-import Typography from "@tiptap/extension-typography";
 import { createClient } from "@/lib/supabase/client";
 import { Toolbar } from "./Toolbar";
 import { StatusBar } from "./StatusBar";
@@ -76,14 +75,36 @@ export function NovelEditor({
   const [leftWidth, setLeftWidth] = useState(155);
   const [rightWidth, setRightWidth] = useState(320);
   const [localChapters, setLocalChapters] = useState(chapters);
-  const [, setTick] = useState(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Debounce du setState React pour ne pas perturber la composition iOS
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestContentRef = useRef<{ html: string; words: number } | null>(null);
   const supabaseRef = useRef(createClient());
+
+  // Contenu initial figé une fois pour toutes via useState lazy init —
+  // pas recalculé à chaque render. Évite que useEditor ré-instancie
+  // l'éditeur (cause d'écrasement de lettres pendant la composition iOS
+  // Safari). Fallback <p></p> explicite pour donner à ProseMirror un
+  // doc valide non-vide à l'init.
+  const [initialContent] = useState<string>(
+    () => chapters.find((c) => c.id === initialChapterId)?.content?.trim() || "<p></p>"
+  );
 
   const activeChapter = localChapters.find((c) => c.id === activeChapterId);
 
   const editor = useEditor({
     immediatelyRender: false,
+    // CRITIQUE iOS Safari : empêche @tiptap/react de re-render le composant
+    // React à chaque transaction (= chaque frappe). Sans ça, NovelEditor
+    // se re-render sur chaque keystroke, ProseMirror réattache sa view
+    // au DOM, et la composition iOS est perdue (lettre écrasée par la
+    // suivante, curseur figé). Ce flag est la solution réelle.
+    shouldRerenderOnTransaction: false,
+    // Désactive les input rules globalement — éviter que TipTap intercepte
+    // les frappes pour appliquer des règles auto (smart quotes, tirets,
+    // etc) qui rentrent en conflit avec la composition iOS.
+    enableInputRules: false,
+    enablePasteRules: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -91,14 +112,27 @@ export function NovelEditor({
       Underline,
       Placeholder.configure({
         placeholder: "Commencez à écrire votre histoire…",
+        showOnlyWhenEditable: true,
+        showOnlyCurrent: true,
       }),
       CharacterCount,
-      Typography,
+      // Typography retiré : ses smart quotes / tirets em sont déclenchés
+      // par les input rules et perturbent la composition iOS Safari.
     ],
-    content: activeChapter?.content || "",
+    // Contenu initial figé via useState — ne change plus à chaque render,
+    // donc useEditor ne ré-instancie pas l'éditeur sous nous.
+    content: initialContent,
     editorProps: {
       attributes: {
         class: "tiptap",
+        // Désactive l'auto-correct / clavier prédictif iOS qui peut
+        // perturber les events de composition de TipTap.
+        autocorrect: "off",
+        autocapitalize: "off",
+        autocomplete: "off",
+        spellcheck: "false",
+        // Hint inputmode pour iOS — text simple, pas de search/url/etc.
+        inputmode: "text",
       },
     },
     onUpdate: ({ editor }) => {
@@ -109,22 +143,44 @@ export function NovelEditor({
       const text = editor.getText();
       const words = countWords(text);
 
-      setLocalChapters((prev) =>
-        prev.map((c) =>
-          c.id === currentId
-            ? { ...c, content: html, word_count: words }
-            : c
-        )
-      );
+      // Sur iOS Safari, mettre à jour le state React sur chaque frappe
+      // perturbe la composition du clavier prédictif (lettres écrasées).
+      // On débounce TOUS les setState de 250ms pour laisser ProseMirror
+      // gérer ses transactions sans interférence React.
+      latestContentRef.current = { html, words };
 
-      setSyncStatus("saving");
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        setSyncStatus("saving");
+        setLocalChapters((prev) =>
+          prev.map((c) =>
+            c.id === currentId
+              ? { ...c, content: html, word_count: words }
+              : c
+          )
+        );
+        // Stats également mises à jour en différé
+        try {
+          setEditorStats({
+            chars: editor.storage.characterCount.characters(),
+            charsNoSpaces: text.replace(/\s/g, "").length,
+            paragraphs: text ? text.split(/\n\n+/).filter((p) => p.trim()).length : 0,
+          });
+        } catch { /* editor view détruite */ }
+      }, 250);
+
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         saveChapter(currentId, html, words);
       }, 2000);
     },
-    onSelectionUpdate: () => setTick((t) => t + 1),
-    onTransaction: () => setTick((t) => t + 1),
+    // onSelectionUpdate retiré : il déclenchait un setTick toutes les
+    // 100ms pendant la frappe, causant des re-renders qui perturbaient
+    // l'éditeur. L'état actif/inactif des boutons Bold/Italic/Underline
+    // dans la toolbar sera légèrement différé — acceptable.
+    // onTransaction RETIRÉ : il déclenchait un setState à chaque frappe,
+    // ce qui causait sur iOS Safari l'écrasement de la lettre en cours
+    // d'écriture par la suivante.
   });
 
   // Snapshot du contenu courant dans chapter_versions
@@ -394,14 +450,19 @@ export function NovelEditor({
 
   const totalWords = localChapters.reduce((sum, c) => sum + c.word_count, 0);
 
-  const editorText = editor ? editor.getText() : "";
-  const paragraphCount = editorText
-    ? editorText.split(/\n\n+/).filter((p) => p.trim()).length
-    : 0;
-  const charCount = editor
-    ? editor.storage.characterCount.characters()
-    : 0;
-  const charCountNoSpaces = editorText.replace(/\s/g, "").length;
+  // Stats dérivées de l'éditeur — calculées uniquement dans onUpdate
+  // (ou au montage) et stockées en state. On NE LIT PLUS editor.getText()
+  // ni editor.storage pendant le render : sur iOS Safari, lire l'état
+  // d'un ProseMirror en cours de composition réattache la view et écrase
+  // la lettre en cours d'écriture.
+  const [editorStats, setEditorStats] = useState({
+    chars: 0,
+    charsNoSpaces: 0,
+    paragraphs: 0,
+  });
+  const charCount = editorStats.chars;
+  const charCountNoSpaces = editorStats.charsNoSpaces;
+  const paragraphCount = editorStats.paragraphs;
 
   const canNavigateHome = syncStatus === "saved";
 
