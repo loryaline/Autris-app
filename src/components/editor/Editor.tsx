@@ -95,10 +95,22 @@ export function NovelEditor({
       CharacterCount,
       Typography,
     ],
-    content: activeChapter?.content || "",
+    // Contenu initial uniquement — le contenu en cours d'édition est géré
+    // ensuite par editor.commands.setContent() au changement de chapitre.
+    // Si on lit `activeChapter?.content` ici à chaque rendu, certaines
+    // versions de @tiptap/react peuvent re-instancier l'éditeur et
+    // sur iOS Safari ça se traduit par chaque lettre qui écrase la
+    // précédente (clavier prédictif perdu pendant la composition).
+    content: chapters.find((c) => c.id === initialChapterId)?.content || "",
     editorProps: {
       attributes: {
         class: "tiptap",
+        // Désactive l'auto-correct / clavier prédictif iOS qui peut
+        // perturber les events de composition de TipTap.
+        autocorrect: "off",
+        autocapitalize: "off",
+        autocomplete: "off",
+        spellcheck: "false",
       },
     },
     onUpdate: ({ editor }) => {
@@ -124,7 +136,9 @@ export function NovelEditor({
       }, 2000);
     },
     onSelectionUpdate: () => setTick((t) => t + 1),
-    onTransaction: () => setTick((t) => t + 1),
+    // onTransaction RETIRÉ : il déclenchait un setState à chaque frappe,
+    // ce qui causait sur iOS Safari l'écrasement de la lettre en cours
+    // d'écriture par la suivante.
   });
 
   // Snapshot du contenu courant dans chapter_versions
