@@ -139,9 +139,12 @@ export function ChapterTable({
   setCustomColumns,
   cellValues,
   setCellValues,
-  initialColumnOrder,
-  initialColumnColors,
-  initialColumnWidths,
+  columnOrder: columnOrderProp,
+  setColumnOrder: setColumnOrderProp,
+  columnColors: columnColorsProp,
+  setColumnColors: setColumnColorsProp,
+  columnWidths: columnWidthsProp,
+  setColumnWidths: setColumnWidthsProp,
 }: {
   novelId: string;
   chapters: ChapterRow[];
@@ -150,17 +153,19 @@ export function ChapterTable({
   setCustomColumns: Dispatch<SetStateAction<CustomColumn[]>>;
   cellValues: CellValue[];
   setCellValues: Dispatch<SetStateAction<CellValue[]>>;
-  initialColumnOrder?: string[] | null;
-  initialColumnColors?: Record<string, string>;
-  initialColumnWidths?: Record<string, number>;
+  columnOrder: string[] | null;
+  setColumnOrder: Dispatch<SetStateAction<string[] | null>>;
+  columnColors: Record<string, string>;
+  setColumnColors: Dispatch<SetStateAction<Record<string, string>>>;
+  columnWidths: Record<string, number>;
+  setColumnWidths: Dispatch<SetStateAction<Record<string, number>>>;
 }) {
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
 
-  // Couleurs des colonnes (persistées sur le roman)
-  const [columnColors, setColumnColors] = useState<Record<string, string>>(
-    initialColumnColors ?? {},
-  );
+  // Couleurs des colonnes — controlled par PlanningClient
+  const columnColors = columnColorsProp;
+  const setColumnColors = setColumnColorsProp;
 
   // État de la palette ouverte (anchor + cible)
   const [palette, setPalette] = useState<
@@ -234,14 +239,15 @@ export function ChapterTable({
     document.addEventListener("mouseup", onUp);
   }
 
-  // Column order: default columns + custom columns
-  const [columnOrder, setColumnOrder] = useState<string[]>(() => {
-    if (initialColumnOrder && initialColumnOrder.length > 0) return initialColumnOrder;
-    return [
-      ...DEFAULT_COLUMN_ORDER,
-      ...customColumns.map((c) => `custom:${c.id}`),
-    ];
-  });
+  // Column order: provided by parent (lifted state) — fallback if null/empty
+  const columnOrder: string[] =
+    columnOrderProp && columnOrderProp.length > 0
+      ? columnOrderProp
+      : [
+          ...DEFAULT_COLUMN_ORDER,
+          ...customColumns.map((c) => `custom:${c.id}`),
+        ];
+  const setColumnOrder = setColumnOrderProp;
 
   // Row drag state
   const [dragRowIdx, setDragRowIdx] = useState<number | null>(null);
@@ -251,40 +257,20 @@ export function ChapterTable({
   const [dragColKey, setDragColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
-  // Column widths (pixels) — fusion defaults < customColumns < persisted
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
-    const widths: Record<string, number> = { ...DEFAULT_WIDTHS };
+  // Largeurs des colonnes (pixels) — controlled par PlanningClient.
+  // Fusion : defaults DEFAULT_WIDTHS + customColumns à 160 + valeurs
+  // explicitement bougées par l'utilisateur (columnWidthsProp).
+  const columnWidths: Record<string, number> = (() => {
+    const w: Record<string, number> = { ...DEFAULT_WIDTHS };
     customColumns.forEach((c) => {
-      widths[`custom:${c.id}`] = 160;
+      w[`custom:${c.id}`] = 160;
     });
-    if (initialColumnWidths) {
-      for (const [k, v] of Object.entries(initialColumnWidths)) {
-        if (typeof v === "number" && v > 0) widths[k] = v;
-      }
+    for (const [k, v] of Object.entries(columnWidthsProp)) {
+      if (typeof v === "number" && v > 0) w[k] = v;
     }
-    return widths;
-  });
-
-  // Si le serveur renvoie de nouvelles largeurs (par ex. après un
-  // router.refresh suite à l'ajout d'une colonne custom), on intègre
-  // les largeurs persistées sans écraser celles qu'on vient de bouger.
-  // Comparaison sur la stringify pour éviter une boucle infinie.
-  const initialWidthsKey = JSON.stringify(initialColumnWidths ?? {});
-  useEffect(() => {
-    if (!initialColumnWidths) return;
-    setColumnWidths((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const [k, v] of Object.entries(initialColumnWidths)) {
-        if (typeof v === "number" && v > 0 && next[k] !== v) {
-          next[k] = v;
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialWidthsKey]);
+    return w;
+  })();
+  const setColumnWidths = setColumnWidthsProp;
 
   // Hidden columns
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());

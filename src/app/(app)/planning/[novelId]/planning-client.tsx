@@ -217,6 +217,20 @@ export function PlanningClient({
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>(initialCustomColumns);
   const [cellValues, setCellValues] = useState<CellValue[]>(initialCellValues);
 
+  // État partagé du tableau — remonté ici pour survivre à un changement
+  // de vue (Tableau ↔ Outline ↔ Post-its). Sinon ChapterTable se démonte
+  // et perd ses largeurs/couleurs/ordre tant qu'il n'y a pas eu de
+  // router.refresh().
+  const [tableColumnOrder, setTableColumnOrder] = useState<string[] | null>(
+    columnOrder ?? null,
+  );
+  const [tableColumnColors, setTableColumnColors] = useState<Record<string, string>>(
+    initialColumnColors ?? {},
+  );
+  const [tableColumnWidths, setTableColumnWidths] = useState<Record<string, number>>(
+    initialColumnWidths ?? {},
+  );
+
   const chapterCount = chapters.length;
   const sceneCount = scenes.length;
   const viewLabel =
@@ -374,9 +388,12 @@ export function PlanningClient({
             setCustomColumns={setCustomColumns}
             cellValues={cellValues}
             setCellValues={setCellValues}
-            initialColumnOrder={columnOrder}
-            initialColumnColors={initialColumnColors}
-            initialColumnWidths={initialColumnWidths}
+            columnOrder={tableColumnOrder}
+            setColumnOrder={setTableColumnOrder}
+            columnColors={tableColumnColors}
+            setColumnColors={setTableColumnColors}
+            columnWidths={tableColumnWidths}
+            setColumnWidths={setTableColumnWidths}
           />
         )}
 
