@@ -153,6 +153,14 @@ function LoginForm() {
             </a>
           </p>
         </div>
+
+        <div className="mt-4 flex items-center justify-center gap-3 text-[11px] text-text-quaternary">
+          <a href="/legal/mentions" className="hover:text-text-tertiary">Mentions légales</a>
+          <span>·</span>
+          <a href="/legal/cgu" className="hover:text-text-tertiary">CGU</a>
+          <span>·</span>
+          <a href="/legal/confidentialite" className="hover:text-text-tertiary">Confidentialité</a>
+        </div>
       </div>
     </div>
   );

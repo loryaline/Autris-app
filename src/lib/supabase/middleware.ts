@@ -39,8 +39,10 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/signup");
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback");
   const isOnboarding = request.nextUrl.pathname.startsWith("/onboarding");
+  // Pages légales accessibles sans connexion (mentions, CGU, confidentialité)
+  const isLegal = request.nextUrl.pathname.startsWith("/legal");
 
-  if (!user && !isAuthRoute && !isAuthCallback) {
+  if (!user && !isAuthRoute && !isAuthCallback && !isLegal) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

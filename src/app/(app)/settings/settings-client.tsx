@@ -228,6 +228,23 @@ export function SettingsClient({
         </p>
       </Section>
 
+      {/* Liens légaux */}
+      <Section title="Informations légales">
+        <div className="flex items-center gap-3 text-[12.5px]">
+          <a href="/legal/mentions" target="_blank" className="text-text-secondary hover:text-[var(--color-accent)] underline underline-offset-2">
+            Mentions légales
+          </a>
+          <span className="text-text-quaternary">·</span>
+          <a href="/legal/cgu" target="_blank" className="text-text-secondary hover:text-[var(--color-accent)] underline underline-offset-2">
+            CGU
+          </a>
+          <span className="text-text-quaternary">·</span>
+          <a href="/legal/confidentialite" target="_blank" className="text-text-secondary hover:text-[var(--color-accent)] underline underline-offset-2">
+            Politique de confidentialité
+          </a>
+        </div>
+      </Section>
+
       {/* Zone dangereuse */}
       <DangerZone username={profile.username} />
 
