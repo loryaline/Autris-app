@@ -1,3 +1,14 @@
-export default function EditorLayout({ children }: { children: React.ReactNode }) {
-  return <div className="h-full">{children}</div>;
+import { createClient } from "@/lib/supabase/server";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
+
+export default async function EditorLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  return (
+    <div className="h-full">
+      {children}
+      <FeedbackButton userEmail={user?.email ?? null} />
+    </div>
+  );
 }
