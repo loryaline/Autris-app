@@ -26,7 +26,11 @@ const TYPES: { value: FeedbackType; label: string; icon: string }[] = [
   { value: "question", label: "Question",  icon: "?" },
 ];
 
-export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
+// La prop userEmail est conservée pour rétro-compatibilité avec les
+// layouts existants, mais n'est plus utilisée : on n'envoie plus
+// l'email du compte de manière implicite (privacy).
+export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
+  void _props;
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<FeedbackType>("bug");
@@ -37,11 +41,18 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset à l'ouverture
+  // Reset à l'ouverture — différé pour éviter le set-state-in-effect.
   useEffect(() => {
     if (!open) return;
-    setSubmitted(false);
-    setError(null);
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      setSubmitted(false);
+      setError(null);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   function buildContext() {
@@ -57,7 +68,10 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
     if (typeof window !== "undefined") {
       ctx.viewport = `${window.innerWidth} × ${window.innerHeight}`;
     }
-    if (userEmail) ctx.accountEmail = userEmail;
+    // Volontairement : on n'envoie JAMAIS l'email du compte connecté
+    // de manière implicite. L'utilisatrice doit le saisir activement
+    // dans le champ « Votre email pour le suivi » si elle veut être
+    // contactable. Sinon le retour reste vraiment anonyme.
     return ctx;
   }
 
@@ -194,12 +208,12 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
                     type="email"
                     value={replyEmail}
                     onChange={(e) => setReplyEmail(e.target.value)}
-                    placeholder={userEmail ?? "vous@exemple.com"}
+                    placeholder="vous@exemple.com"
                     className="w-full h-9 px-3 text-[13px] bg-bg-primary border border-white/[0.08] rounded-[var(--radius-sm)] focus:outline-none focus:border-[var(--color-accent-border)] text-text-primary placeholder:text-text-quaternary"
                   />
                   <p className="text-[10.5px] text-text-quaternary mt-1">
-                    Si vous voulez qu&apos;on vous réponde directement.
-                    Sinon votre retour reste anonyme.
+                    Renseignez votre email seulement si vous voulez qu&apos;on vous réponde.
+                    Sinon le retour reste anonyme — votre email de compte n&apos;est pas transmis.
                   </p>
                 </div>
 
