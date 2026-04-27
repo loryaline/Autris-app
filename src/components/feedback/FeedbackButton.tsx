@@ -7,26 +7,23 @@ import { usePathname } from "next/navigation";
  * Bouton flottant de retour (bug / suggestion / question), visible
  * en bas à droite de toutes les pages authentifiées.
  *
- * À l'envoi, on construit un mailto: pré-rempli avec :
- *  - type de retour
- *  - description de l'utilisatrice
- *  - URL de la page
- *  - user-agent + plateforme
- *  - email du compte (passé en prop par le layout)
+ * À l'envoi, on POST vers /api/feedback qui envoie un email à
+ * aline@autris.app via Resend. Pas d'ouverture de client mail —
+ * tout passe côté serveur.
  *
- * Pas de DB ni d'API tierce — la soumission ouvre simplement le client
- * mail (Mail.app, Gmail web, Outlook, etc) sur aline@autris.app.
- *
- * Plus tard, on pourra ajouter une table `feedback` côté Supabase pour
- * un traçage centralisé. En V1 bêta, le mailto suffit largement.
+ * Champs :
+ *  - type (bug / idée / question)
+ *  - message (obligatoire)
+ *  - replyEmail (optionnel — pour qu'on puisse répondre)
+ *  - includeContext : joindre l'URL, navigateur, résolution, etc.
  */
 
 type FeedbackType = "bug" | "idee" | "question";
 
-const TYPES: { value: FeedbackType; label: string; icon: string; subject: string }[] = [
-  { value: "bug",      label: "Bug",       icon: "🐛", subject: "Bug" },
-  { value: "idee",     label: "Idée",      icon: "✨", subject: "Suggestion" },
-  { value: "question", label: "Question",  icon: "?",  subject: "Question" },
+const TYPES: { value: FeedbackType; label: string; icon: string }[] = [
+  { value: "bug",      label: "Bug",       icon: "🐛" },
+  { value: "idee",     label: "Idée",      icon: "✨" },
+  { value: "question", label: "Question",  icon: "?" },
 ];
 
 export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
@@ -34,55 +31,72 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<FeedbackType>("bug");
   const [message, setMessage] = useState("");
+  const [replyEmail, setReplyEmail] = useState("");
   const [includeContext, setIncludeContext] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Reset à l'ouverture
   useEffect(() => {
     if (!open) return;
     setSubmitted(false);
+    setError(null);
   }, [open]);
 
-  function buildMailto(): string {
-    const t = TYPES.find((x) => x.value === type)!;
-    const subject = `[Autris bêta · ${t.subject}] ${message.slice(0, 60).trim() || "Retour"}`;
-
-    const lines: string[] = [];
-    lines.push(message.trim() || "(Décrivez ici votre retour)");
-    lines.push("");
-    if (includeContext) {
-      lines.push("---");
-      lines.push("Contexte technique (joint automatiquement) :");
-      lines.push(`Page : ${typeof window !== "undefined" ? window.location.href : pathname}`);
-      if (typeof navigator !== "undefined") {
-        lines.push(`Navigateur : ${navigator.userAgent}`);
-        const lang = navigator.language;
-        if (lang) lines.push(`Langue : ${lang}`);
-      }
-      if (typeof window !== "undefined") {
-        lines.push(`Résolution : ${window.innerWidth} × ${window.innerHeight}`);
-      }
-      if (userEmail) lines.push(`Compte : ${userEmail}`);
-      lines.push(`Date : ${new Date().toISOString()}`);
+  function buildContext() {
+    if (!includeContext) return null;
+    const ctx: Record<string, string | null> = {
+      url: typeof window !== "undefined" ? window.location.href : pathname,
+      timestamp: new Date().toISOString(),
+    };
+    if (typeof navigator !== "undefined") {
+      ctx.userAgent = navigator.userAgent;
+      ctx.language = navigator.language || null;
     }
-
-    const body = encodeURIComponent(lines.join("\n"));
-    const subj = encodeURIComponent(subject);
-    return `mailto:aline@autris.app?subject=${subj}&body=${body}`;
+    if (typeof window !== "undefined") {
+      ctx.viewport = `${window.innerWidth} × ${window.innerHeight}`;
+    }
+    if (userEmail) ctx.accountEmail = userEmail;
+    return ctx;
   }
 
-  function handleSubmit() {
-    if (!message.trim()) return;
-    const url = buildMailto();
-    // Ouvre le client mail. On ne fait pas window.location.href (qui peut
-    // bloquer la navigation) — on laisse le navigateur gérer le mailto.
-    window.location.href = url;
-    setSubmitted(true);
-    // Auto-close après 4s, le temps que le client mail s'ouvre
-    setTimeout(() => {
-      setOpen(false);
-      setMessage("");
-    }, 4000);
+  async function handleSubmit() {
+    if (!message.trim() || submitting) return;
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type,
+          message: message.trim(),
+          replyEmail: replyEmail.trim() || undefined,
+          context: buildContext(),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? "L'envoi a échoué. Réessayez plus tard.");
+        setSubmitting(false);
+        return;
+      }
+
+      setSubmitted(true);
+      setSubmitting(false);
+      // Auto-close après 3s
+      setTimeout(() => {
+        setOpen(false);
+        setMessage("");
+        setReplyEmail("");
+      }, 3000);
+    } catch {
+      setError("Erreur réseau. Vérifiez votre connexion.");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -109,7 +123,7 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
+            onClick={() => !submitting && setOpen(false)}
           />
           <div className="relative bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-lg)] w-full max-w-[460px] shadow-2xl">
             <div className="p-4 border-b border-white/[0.06]">
@@ -163,8 +177,30 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
                     }
                     autoFocus
                     rows={5}
+                    maxLength={5000}
                     className="w-full text-[13px] leading-relaxed px-3 py-2 bg-bg-primary border border-white/[0.08] rounded-[var(--radius-sm)] resize-none focus:outline-none focus:border-[var(--color-accent-border)] text-text-primary placeholder:text-text-quaternary"
                   />
+                </div>
+
+                {/* Reply email facultatif */}
+                <div>
+                  <div className="text-[10px] uppercase text-text-quaternary tracking-wider mb-1.5 flex items-center gap-2">
+                    <span>Votre email pour le suivi</span>
+                    <span className="text-text-quaternary normal-case tracking-normal">
+                      (facultatif)
+                    </span>
+                  </div>
+                  <input
+                    type="email"
+                    value={replyEmail}
+                    onChange={(e) => setReplyEmail(e.target.value)}
+                    placeholder={userEmail ?? "vous@exemple.com"}
+                    className="w-full h-9 px-3 text-[13px] bg-bg-primary border border-white/[0.08] rounded-[var(--radius-sm)] focus:outline-none focus:border-[var(--color-accent-border)] text-text-primary placeholder:text-text-quaternary"
+                  />
+                  <p className="text-[10.5px] text-text-quaternary mt-1">
+                    Si vous voulez qu&apos;on vous réponde directement.
+                    Sinon votre retour reste anonyme.
+                  </p>
                 </div>
 
                 {/* Contexte technique */}
@@ -182,24 +218,31 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
                   </span>
                 </label>
 
+                {error && (
+                  <div className="p-2.5 rounded-[var(--radius-sm)] bg-red-bg/40 border border-red/30 text-red text-[12px]">
+                    {error}
+                  </div>
+                )}
+
                 {/* Boutons */}
-                <div className="flex justify-end gap-2 mt-2">
+                <div className="flex justify-end gap-2 mt-1">
                   <button
                     onClick={() => setOpen(false)}
-                    className="h-8 px-3 rounded-[var(--radius-sm)] text-[12.5px] text-text-tertiary hover:text-text-primary cursor-pointer"
+                    disabled={submitting}
+                    className="h-8 px-3 rounded-[var(--radius-sm)] text-[12.5px] text-text-tertiary hover:text-text-primary cursor-pointer disabled:opacity-50"
                   >
                     Annuler
                   </button>
                   <button
                     onClick={handleSubmit}
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || submitting}
                     className={`h-8 px-3.5 rounded-[var(--radius-sm)] text-[12.5px] font-medium transition-colors ${
-                      message.trim()
+                      message.trim() && !submitting
                         ? "bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] cursor-pointer"
                         : "bg-white/[0.05] text-text-quaternary cursor-not-allowed"
                     }`}
                   >
-                    Envoyer
+                    {submitting ? "Envoi…" : "Envoyer"}
                   </button>
                 </div>
               </div>
@@ -210,16 +253,8 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
                   <span className="italic">Merci.</span>
                 </div>
                 <p className="text-[12px] text-text-tertiary leading-relaxed">
-                  Votre client mail vient de s&apos;ouvrir avec votre retour pré-rempli.
-                  <br />
-                  Cliquez sur <strong>Envoyer</strong> dans votre client pour finaliser.
-                </p>
-                <p className="text-[11px] text-text-quaternary mt-3">
-                  Rien ne se passe ? Écrivez-nous directement à{" "}
-                  <a href="mailto:aline@autris.app" className="text-[var(--color-accent)] underline">
-                    aline@autris.app
-                  </a>
-                  .
+                  Votre retour est bien parti.
+                  {replyEmail && " On vous écrira à l'adresse indiquée si nécessaire."}
                 </p>
               </div>
             )}
