@@ -15,7 +15,7 @@ import { usePathname } from "next/navigation";
  *  - email du compte (passé en prop par le layout)
  *
  * Pas de DB ni d'API tierce — la soumission ouvre simplement le client
- * mail (Mail.app, Gmail web, Outlook, etc) sur contact@autris.app.
+ * mail (Mail.app, Gmail web, Outlook, etc) sur aline@autris.app.
  *
  * Plus tard, on pourra ajouter une table `feedback` côté Supabase pour
  * un traçage centralisé. En V1 bêta, le mailto suffit largement.
@@ -68,7 +68,7 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
 
     const body = encodeURIComponent(lines.join("\n"));
     const subj = encodeURIComponent(subject);
-    return `mailto:contact@autris.app?subject=${subj}&body=${body}`;
+    return `mailto:aline@autris.app?subject=${subj}&body=${body}`;
   }
 
   function handleSubmit() {
@@ -216,8 +216,8 @@ export function FeedbackButton({ userEmail }: { userEmail: string | null }) {
                 </p>
                 <p className="text-[11px] text-text-quaternary mt-3">
                   Rien ne se passe ? Écrivez-nous directement à{" "}
-                  <a href="mailto:contact@autris.app" className="text-[var(--color-accent)] underline">
-                    contact@autris.app
+                  <a href="mailto:aline@autris.app" className="text-[var(--color-accent)] underline">
+                    aline@autris.app
                   </a>
                   .
                 </p>

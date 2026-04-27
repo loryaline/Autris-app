@@ -214,7 +214,7 @@ export function SettingsClient({
       {/* Contact / support */}
       <Section title="Aide & contact" subtitle="Une question, un bug, une demande ? On lit chaque message.">
         <a
-          href="mailto:contact@autris.app?subject=Question%20support%20Autris&body=Bonjour%2C%0A%0A"
+          href="mailto:aline@autris.app?subject=Question%20support%20Autris&body=Bonjour%2C%0A%0A"
           className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--radius-sm)] border border-white/[0.08] bg-bg-primary text-[13px] text-text-secondary hover:bg-bg-hover hover:text-text-primary cursor-pointer transition-colors no-underline self-start"
         >
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -224,7 +224,7 @@ export function SettingsClient({
           Écrire à l&apos;équipe Autris
         </a>
         <p className="text-[11px] text-text-quaternary">
-          Le bouton ouvre votre client mail (ou Gmail web, Outlook…) sur l&apos;adresse <span className="font-mono">contact@autris.app</span>.
+          Le bouton ouvre votre client mail (ou Gmail web, Outlook…) sur l&apos;adresse <span className="font-mono">aline@autris.app</span>.
         </p>
       </Section>
 
@@ -523,7 +523,7 @@ function DangerZone({ username }: { username: string | null }) {
         <p className="text-[12px] text-text-tertiary mb-3 leading-relaxed">
           Vos romans, fiches univers, planifications et statistiques seront marqués pour suppression.
           Vous avez <span className="font-medium text-text-secondary">30 jours</span> pour annuler en
-          écrivant à <a href="mailto:contact@autris.app?subject=Demande%20d%27annulation%20de%20suppression%20de%20compte&body=Bonjour%2C%0A%0AJ%27aimerais%20annuler%20la%20suppression%20de%20mon%20compte%20Autris.%0A%0AEmail%20du%20compte%20%3A%20%0A%0AMerci%20%21" className="text-[var(--color-accent)] underline">l&apos;équipe Autris</a>.
+          écrivant à <a href="mailto:aline@autris.app?subject=Demande%20d%27annulation%20de%20suppression%20de%20compte&body=Bonjour%2C%0A%0AJ%27aimerais%20annuler%20la%20suppression%20de%20mon%20compte%20Autris.%0A%0AEmail%20du%20compte%20%3A%20%0A%0AMerci%20%21" className="text-[var(--color-accent)] underline">l&apos;équipe Autris</a>.
           Au-delà, tout est définitivement effacé.
         </p>
 

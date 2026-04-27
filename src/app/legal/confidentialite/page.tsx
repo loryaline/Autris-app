@@ -21,7 +21,7 @@ export default function ConfidentialitePage() {
       <p>
         Le responsable du traitement de vos données est{" "}
         <strong>Chênerêve Éditions</strong> (Suisse). Contact :{" "}
-        <a href="mailto:contact@autris.app">contact@autris.app</a>.
+        <a href="mailto:aline@autris.app">aline@autris.app</a>.
       </p>
 
       <h2>2. Données collectées</h2>
@@ -139,7 +139,7 @@ export default function ConfidentialitePage() {
         <li>
           <strong>Opposition</strong> : refuser certains traitements (nous
           contacter à{" "}
-          <a href="mailto:contact@autris.app">contact@autris.app</a>).
+          <a href="mailto:aline@autris.app">aline@autris.app</a>).
         </li>
       </ul>
 
@@ -161,7 +161,7 @@ export default function ConfidentialitePage() {
       <h2>10. Contact &amp; réclamations</h2>
       <p>
         Pour toute question ou exercice de vos droits :{" "}
-        <a href="mailto:contact@autris.app">contact@autris.app</a>.
+        <a href="mailto:aline@autris.app">aline@autris.app</a>.
       </p>
       <p>
         Si vous estimez que vos droits ne sont pas respectés, vous pouvez

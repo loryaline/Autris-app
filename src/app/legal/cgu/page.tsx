@@ -97,7 +97,7 @@ export default function CguPage() {
       <h2>10. Contact</h2>
       <p>
         Pour toute question :{" "}
-        <a href="mailto:contact@autris.app">contact@autris.app</a>.
+        <a href="mailto:aline@autris.app">aline@autris.app</a>.
       </p>
 
       <p className="meta">Dernière mise à jour : <em>(à compléter)</em></p>

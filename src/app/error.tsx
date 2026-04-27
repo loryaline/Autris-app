@@ -59,7 +59,7 @@ export default function ErrorPage({
             Retour à l&apos;accueil
           </Link>
           <a
-            href={`mailto:contact@autris.app?subject=Erreur%20Autris${error?.digest ? `%20%5B${encodeURIComponent(error.digest)}%5D` : ""}&body=${encodeURIComponent(
+            href={`mailto:aline@autris.app?subject=Erreur%20Autris${error?.digest ? `%20%5B${encodeURIComponent(error.digest)}%5D` : ""}&body=${encodeURIComponent(
               `Bonjour,\n\nJ'ai rencontré une erreur sur Autris.\n\nDétails techniques :\n- Référence : ${error?.digest ?? "(aucune)"}\n- Message : ${error?.message ?? "(aucun)"}\n- Page : ${typeof window !== "undefined" ? window.location.href : ""}\n\nMerci !`
             )}`}
             className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] border border-white/[0.08] text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] text-[13px] transition-colors no-underline"

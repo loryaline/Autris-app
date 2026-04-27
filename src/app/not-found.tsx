@@ -30,7 +30,7 @@ export default function NotFound() {
             ← Retour à l&apos;accueil
           </Link>
           <a
-            href="mailto:contact@autris.app?subject=Page%20introuvable%20Autris"
+            href="mailto:aline@autris.app?subject=Page%20introuvable%20Autris"
             className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] border border-white/[0.08] text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] text-[13px] transition-colors no-underline"
           >
             Signaler le lien cassé

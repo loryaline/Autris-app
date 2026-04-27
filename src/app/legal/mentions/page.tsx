@@ -22,7 +22,7 @@ export default function MentionsPage() {
       <ul>
         <li>
           Email :{" "}
-          <a href="mailto:contact@autris.app">contact@autris.app</a>
+          <a href="mailto:aline@autris.app">aline@autris.app</a>
         </li>
         <li>Adresse postale : <em>(à compléter)</em></li>
         <li>N° AVS / IDE : <em>(à compléter)</em></li>
@@ -66,7 +66,7 @@ export default function MentionsPage() {
       <p>
         Pour toute question relative au site, à la propriété intellectuelle
         ou pour signaler un contenu illicite :{" "}
-        <a href="mailto:contact@autris.app">contact@autris.app</a>.
+        <a href="mailto:aline@autris.app">aline@autris.app</a>.
       </p>
 
       <p className="meta">Dernière mise à jour : <em>(à compléter)</em></p>

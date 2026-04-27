@@ -21,10 +21,10 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
         <footer className="mt-16 pt-6 border-t border-white/[0.04] text-[12px] text-text-quaternary">
           Une question ?{" "}
           <a
-            href="mailto:contact@autris.app"
+            href="mailto:aline@autris.app"
             className="text-[var(--color-accent)] underline"
           >
-            contact@autris.app
+            aline@autris.app
           </a>
         </footer>
       </main>
