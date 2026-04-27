@@ -135,11 +135,11 @@ export async function POST(req: Request) {
 
   try {
     const resend = new Resend(apiKey);
-    // Tant que autris.app n'est pas vérifié dans Resend, on envoie via
-    // l'adresse d'onboarding fournie gratuitement par Resend.
-    // Quand le domaine sera vérifié, remplacer par "Autris <noreply@autris.app>".
+    // Domaine autris.app vérifié dans Resend (DKIM + SPF + MX) — on
+    // envoie depuis noreply@autris.app pour un rendu pro et une
+    // délivrabilité optimale (pas de risque de spam).
     const { error } = await resend.emails.send({
-      from: "Autris <onboarding@resend.dev>",
+      from: "Autris <noreply@autris.app>",
       to: ["aline@autris.app"],
       replyTo: replyEmail || undefined,
       subject,
