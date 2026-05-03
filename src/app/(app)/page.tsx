@@ -41,6 +41,28 @@ export default async function DashboardPage() {
     .gte("date", monthStartIso)
     .lte("date", monthEndIso);
 
+  // Mots écrits cette semaine (lundi → aujourd'hui), bornes calculées
+  // indépendamment du mois courant. La requête mensuelle ci-dessus rate
+  // les jours de la semaine qui appartiennent au mois précédent (par ex.
+  // dimanche 3 mai dont le lundi de référence est le 27 avril).
+  const weekStartIso = (() => {
+    const d = new Date(nowForQuery);
+    const offset = (d.getDay() + 6) % 7; // lundi = 0
+    d.setDate(d.getDate() - offset);
+    return d.toISOString().slice(0, 10);
+  })();
+  const todayForWeekIso = nowForQuery.toISOString().slice(0, 10);
+  const { data: weekActivityRows } = await supabase
+    .from("daily_activity")
+    .select("date, words_written")
+    .eq("user_id", user.id)
+    .gte("date", weekStartIso)
+    .lte("date", todayForWeekIso);
+  const weekWordsTotal = (weekActivityRows ?? []).reduce(
+    (s, r) => s + Math.max(0, r.words_written ?? 0),
+    0,
+  );
+
   const { data: lastWbRow } = await supabase
     .from("daily_activity")
     .select("date")
@@ -257,11 +279,9 @@ export default async function DashboardPage() {
 
   const monthName = now.toLocaleDateString("fr-FR", { month: "long" });
 
-  // Week this month : how many words written during current calendar week so far
-  const weekStart = todayNum - ((now.getDay() + 6) % 7);
-  const weekWords = monthActivity
-    .filter((d) => d.day >= Math.max(1, weekStart) && d.day <= todayNum)
-    .reduce((s, d) => s + d.wordsDisplay, 0);
+  // Mots de la semaine — calculé plus haut via une requête dédiée qui
+  // traverse correctement la frontière entre mois.
+  const weekWords = weekWordsTotal;
 
   // Novels split by status (rédaction / réécriture / relecture…) — light summary
   const novelsRedac = allNovels.filter((n: { status?: string }) =>
