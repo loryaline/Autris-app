@@ -253,12 +253,24 @@ export default async function DashboardPage() {
   const activeGoal = (activeNovel as { word_goal?: number | null } | undefined)?.word_goal ?? 0;
   const activeWords = (activeNovel as { current_words?: number } | undefined)?.current_words ?? 0;
   const remainingWords = Math.max(0, activeGoal - activeWords);
+  // Le roman actif a déjà atteint son objectif total → on n'a plus rien
+  // à projeter (pas de fin estimée, pas de restant). Le bandeau d'objectif
+  // mensuel est remplacé par un message de félicitations + suggestion.
+  const activeNovelGoalReached = activeGoal > 0 && activeWords >= activeGoal;
+  const activeNovelTitle =
+    (activeNovel as { title?: string } | undefined)?.title ?? null;
+  const activeNovelId = (activeNovel as { id?: string } | undefined)?.id ?? null;
+  const activeProjectId =
+    (activeNovel as { project_id?: string } | undefined)?.project_id ?? null;
   const realDailyPace = todayNum > 0 ? monthWordsTotal / todayNum : 0;
-  const etaDays = realDailyPace > 0 ? Math.ceil(remainingWords / realDailyPace) : 0;
+  const etaDays =
+    realDailyPace > 0 && remainingWords > 0
+      ? Math.ceil(remainingWords / realDailyPace)
+      : 0;
   const etaDate = etaDays > 0 ? new Date(nowMs + etaDays * 86_400_000) : null;
   const paceDelta = realDailyPace - DAILY_GOAL;
   const paceVerdict =
-    activeGoal === 0
+    activeGoal === 0 || activeNovelGoalReached
       ? null
       : realDailyPace <= 0
         ? "noData"
@@ -401,50 +413,84 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          {/* Progress */}
-          <div className="mb-3">
-            <div className="flex items-center justify-between text-[11px] mb-1">
-              <div className="text-text-tertiary">
-                Ce mois · <span className="text-text-secondary">{monthWordsTotal.toLocaleString("fr-FR")}</span>
-                <span className="text-text-quaternary"> / {monthExpectedTotal.toLocaleString("fr-FR")} attendus</span>
+          {/* Progress — masqué si le roman actif a déjà atteint son objectif,
+              sinon le pourcentage n'a pas de sens. */}
+          {!activeNovelGoalReached && (
+            <div className="mb-3">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <div className="text-text-tertiary">
+                  Ce mois · <span className="text-text-secondary">{monthWordsTotal.toLocaleString("fr-FR")}</span>
+                  <span className="text-text-quaternary"> / {monthExpectedTotal.toLocaleString("fr-FR")} attendus</span>
+                </div>
+                <div className="text-[var(--color-accent)] font-medium">{monthPct} %</div>
               </div>
-              <div className="text-[var(--color-accent)] font-medium">{monthPct} %</div>
+              <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[var(--color-accent)]"
+                  style={{ width: `${Math.min(100, monthPct)}%` }}
+                />
+              </div>
             </div>
-            <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden">
-              <div
-                className="h-full rounded-full bg-[var(--color-accent)]"
-                style={{ width: `${Math.min(100, monthPct)}%` }}
-              />
-            </div>
-          </div>
+          )}
 
-          {/* Metrics row */}
-          <div className="grid grid-cols-4 gap-3 pb-3 mb-3 border-b border-white/[0.05]">
-            <Metric
-              label="Fin estimée"
-              value={
-                etaDate
-                  ? etaDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
-                  : "—"
-              }
-              accent={paceVerdict === "behind"}
-            />
-            <Metric
-              label="Rythme"
-              value={realDailyPace > 0 ? `${Math.round(realDailyPace).toLocaleString("fr-FR")}` : "—"}
-              suffix="mots/j"
-            />
-            <Metric
-              label="Restant"
-              value={remainingWords > 0 ? remainingWords.toLocaleString("fr-FR") : "—"}
-            />
-            <div>
-              <div className="text-[10px] font-medium text-text-quaternary uppercase mb-1.5" style={{ letterSpacing: "0.16em" }}>
-                Statut
+          {activeNovelGoalReached ? (
+            /* Roman actif terminé : bandeau de félicitations + appel à l'action.
+               On n'affiche pas les métriques d'estimation qui n'ont plus de sens. */
+            <div className="mb-3 pb-3 border-b border-white/[0.05] flex items-center gap-3 rounded-[var(--radius-md)] bg-teal-bg/40 border border-teal-border/30 p-3">
+              <div className="w-9 h-9 shrink-0 rounded-full bg-teal-bg border border-teal-border/40 flex items-center justify-center text-teal-dark text-[16px]">
+                ✓
               </div>
-              <PaceChip verdict={paceVerdict} onTrack={onTrackRatio} />
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] text-text-primary font-medium">
+                  Objectif atteint
+                  {activeNovelTitle ? (
+                    <> pour <span className="font-serif italic text-[var(--color-accent)]">{activeNovelTitle}</span></>
+                  ) : null}.
+                </div>
+                <div className="text-[11.5px] text-text-tertiary mt-0.5">
+                  {activeWords.toLocaleString("fr-FR")} / {activeGoal.toLocaleString("fr-FR")} mots —
+                  ce mois&nbsp;: <span className="text-text-secondary">{monthWordsTotal.toLocaleString("fr-FR")}</span>.
+                  Activez un autre roman ou relevez l&apos;objectif pour reprendre les estimations.
+                </div>
+              </div>
+              {activeProjectId && (
+                <a
+                  href={`/project/${activeProjectId}${activeNovelId ? `#novel-${activeNovelId}` : ""}`}
+                  className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] text-[12px] text-text-secondary hover:text-[var(--color-accent)] border border-white/[0.08] hover:border-[var(--color-accent-border)] no-underline transition-colors"
+                >
+                  Paramètres du roman
+                </a>
+              )}
             </div>
-          </div>
+          ) : (
+            /* Metrics row standard */
+            <div className="grid grid-cols-4 gap-3 pb-3 mb-3 border-b border-white/[0.05]">
+              <Metric
+                label="Fin estimée"
+                value={
+                  etaDate
+                    ? etaDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                    : "—"
+                }
+                accent={paceVerdict === "behind"}
+              />
+              <Metric
+                label="Rythme"
+                value={realDailyPace > 0 ? `${Math.round(realDailyPace).toLocaleString("fr-FR")}` : "—"}
+                suffix="mots/j"
+              />
+              <Metric
+                label="Restant"
+                value={remainingWords > 0 ? remainingWords.toLocaleString("fr-FR") : "—"}
+              />
+              <div>
+                <div className="text-[10px] font-medium text-text-quaternary uppercase mb-1.5" style={{ letterSpacing: "0.16em" }}>
+                  Statut
+                </div>
+                <PaceChip verdict={paceVerdict} onTrack={onTrackRatio} />
+              </div>
+            </div>
+          )}
 
           {/* Calendrier */}
           <div>
