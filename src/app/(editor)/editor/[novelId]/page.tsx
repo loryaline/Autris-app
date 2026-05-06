@@ -10,21 +10,35 @@ export default async function EditorPage({
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
-  let pomoDuration = 25;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("pomo_duration")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (profile?.pomo_duration) pomoDuration = profile.pomo_duration;
-  }
 
-  const { data: novel } = await supabase
-    .from("novels")
-    .select("id, title, current_words, word_goal, project_id, chapters(id, title, content, word_count, position, status, synopsis, updated_at)")
-    .eq("id", novelId)
-    .single();
+  // Phase 1 : profil + roman (avec titre projet joint) en parallèle.
+  // L'ancien code faisait 4 awaits séquentiels — ici on en fait 1 puis 1.
+  const [profileRes, novelRes] = await Promise.all([
+    user
+      ? supabase
+          .from("profiles")
+          .select("pomo_duration")
+          .eq("id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("novels")
+      .select(
+        // projects(title) joint la table parent en une seule requête —
+        // évite un round-trip supplémentaire pour le breadcrumb.
+        `id, title, current_words, word_goal, project_id,
+         projects ( title ),
+         chapters (
+           id, title, content, word_count, position, status, synopsis, updated_at
+         )`,
+      )
+      .eq("id", novelId)
+      .single(),
+  ]);
+
+  const pomoDuration =
+    (profileRes.data as { pomo_duration?: number } | null)?.pomo_duration ?? 25;
+  const novel = novelRes.data;
 
   if (!novel) {
     return (
@@ -34,13 +48,18 @@ export default async function EditorPage({
     );
   }
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("title")
-    .eq("id", novel.project_id)
-    .single();
+  // Le titre du projet est déjà joint via la relation Supabase.
+  const projectTitle =
+    (novel as unknown as { projects?: { title: string } | { title: string }[] })
+      .projects
+      ? Array.isArray(
+          (novel as unknown as { projects: { title: string }[] }).projects,
+        )
+        ? (novel as unknown as { projects: { title: string }[] }).projects[0]?.title
+        : (novel as unknown as { projects: { title: string } }).projects.title
+      : "Mon projet";
 
-  // Fiches WB du projet pour l'onglet "World" de l'éditeur
+  // Phase 2 : fiches WB du projet (a besoin du project_id résolu phase 1)
   const { data: wbEntries } = await supabase
     .from("wb_entries")
     .select("id, title, subtitle, category, subcategory, main_image_url, status")
@@ -69,7 +88,7 @@ export default async function EditorPage({
       novelId={novel.id}
       projectId={novel.project_id}
       novelTitle={novel.title}
-      projectTitle={project?.title ?? "Mon projet"}
+      projectTitle={projectTitle ?? "Mon projet"}
       chapters={chapters}
       initialChapterId={firstChapter?.id ?? null}
       wordGoal={novel.word_goal}

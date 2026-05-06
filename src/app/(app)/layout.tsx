@@ -11,20 +11,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let sidebarProjects: { id: string; title: string; novels: { id: string; title: string }[] }[] = [];
 
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .single();
-    username = profile?.username ?? null;
+    // Profil + sidebar projects en parallèle (avant : 2 awaits séquentiels)
+    const [profileRes, projectsRes] = await Promise.all([
+      supabase.from("profiles").select("username").eq("id", user.id).single(),
+      supabase
+        .from("projects")
+        .select("id, title, novels(id, title)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true }),
+    ]);
 
-    const { data: projects } = await supabase
-      .from("projects")
-      .select("id, title, novels(id, title)")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true });
-
-    sidebarProjects = (projects ?? []).map(p => ({
+    username = profileRes.data?.username ?? null;
+    sidebarProjects = (projectsRes.data ?? []).map(p => ({
       id: p.id,
       title: p.title,
       novels: p.novels ?? [],

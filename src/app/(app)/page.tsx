@@ -15,89 +15,124 @@ export default async function DashboardPage() {
 
   if (!user) return null;
 
-  // Fetch projects with novels and their chapters
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("*, novels(*, status, chapters(id, title, updated_at, word_count))")
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
-
-  // Calculate total words
-  const totalWords = projects?.reduce((sum, p) =>
-    sum + (p.novels?.reduce((s: number, n: { current_words: number }) => s + n.current_words, 0) ?? 0), 0) ?? 0;
-
   const nowForQuery = new Date();
   const monthStartIso = new Date(nowForQuery.getFullYear(), nowForQuery.getMonth(), 1)
     .toISOString().slice(0, 10);
   const monthEndIso = new Date(nowForQuery.getFullYear(), nowForQuery.getMonth() + 1, 0)
     .toISOString().slice(0, 10);
-
-  // Source de vérité unique : daily_activity (alimenté par triggers côté DB).
-  // Rédaction = words_written (tous romans), WB et planif = counts dédiés.
-  const { data: activityRows } = await supabase
-    .from("daily_activity")
-    .select("date, words_written, wb_activity, wb_count, plan_activity, plan_count")
-    .eq("user_id", user.id)
-    .gte("date", monthStartIso)
-    .lte("date", monthEndIso);
-
-  // Mots écrits cette semaine (lundi → aujourd'hui), bornes calculées
-  // indépendamment du mois courant. La requête mensuelle ci-dessus rate
-  // les jours de la semaine qui appartiennent au mois précédent (par ex.
-  // dimanche 3 mai dont le lundi de référence est le 27 avril).
+  const todayIso = nowForQuery.toISOString().slice(0, 10);
+  const soonIso = (() => {
+    const d = new Date(nowForQuery);
+    d.setDate(d.getDate() + MILESTONE_SOON_DAYS);
+    return d.toISOString().slice(0, 10);
+  })();
   const weekStartIso = (() => {
     const d = new Date(nowForQuery);
     const offset = (d.getDay() + 6) % 7; // lundi = 0
     d.setDate(d.getDate() - offset);
     return d.toISOString().slice(0, 10);
   })();
-  const todayForWeekIso = nowForQuery.toISOString().slice(0, 10);
-  const { data: weekActivityRows } = await supabase
-    .from("daily_activity")
-    .select("date, words_written")
-    .eq("user_id", user.id)
-    .gte("date", weekStartIso)
-    .lte("date", todayForWeekIso);
+  const todayForWeekIso = todayIso;
+
+  // === Toutes les requêtes en parallèle ===
+  // Avant : 7 awaits séquentiels (somme des latences, ~1-2 s sur Supabase).
+  // Maintenant : Promise.all → max des latences (~150-300 ms).
+  // On a aussi resserré les SELECT (plus de novels(*) ni chapters(...)),
+  // et on fetch séparément le dernier chapitre modifié au lieu de tirer
+  // tous les chapitres de tous les romans.
+  const [
+    projectsRes,
+    activityRes,
+    weekActivityRes,
+    lastWbRes,
+    milestoneRes,
+    alertMilestoneRes,
+    wbCountRes,
+    lastChapterRes,
+  ] = await Promise.all([
+    supabase
+      .from("projects")
+      .select(
+        // Colonnes nécessaires uniquement. Plus de novels(*) qui pulle
+        // notes/cover/etc inutiles ni chapters(...) qui pouvait être lourd.
+        `id, title, genre, created_at, updated_at, cover_image_url,
+         novels (
+           id, title, current_words, word_goal, is_active, status,
+           activated_at, activation_word_count, project_id, updated_at
+         )`,
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("daily_activity")
+      .select("date, words_written, wb_activity, wb_count, plan_activity, plan_count")
+      .eq("user_id", user.id)
+      .gte("date", monthStartIso)
+      .lte("date", monthEndIso),
+    supabase
+      .from("daily_activity")
+      .select("date, words_written")
+      .eq("user_id", user.id)
+      .gte("date", weekStartIso)
+      .lte("date", todayForWeekIso),
+    supabase
+      .from("daily_activity")
+      .select("date")
+      .eq("user_id", user.id)
+      .eq("wb_activity", true)
+      .order("date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("planning_milestones")
+      .select("id, title, type, status, color, target_date")
+      .eq("user_id", user.id)
+      .not("target_date", "is", null)
+      .gte("target_date", monthStartIso)
+      .lte("target_date", monthEndIso),
+    supabase
+      .from("planning_milestones")
+      .select("id, title, type, status, color, target_date, novel_id, novels(title)")
+      .eq("user_id", user.id)
+      .not("target_date", "is", null)
+      .neq("status", "done")
+      .lte("target_date", soonIso)
+      .order("target_date", { ascending: true }),
+    supabase
+      .from("wb_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id),
+    // Dernier chapitre modifié pour le hero « Reprenez votre histoire »
+    // — un seul résultat, indépendant du nombre total de chapitres
+    // (avant on tirait TOUS les chapitres pour n'en utiliser qu'un).
+    supabase
+      .from("chapters")
+      .select("id, title, updated_at, novel_id")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const projects = projectsRes.data;
+  const activityRows = activityRes.data;
+  const weekActivityRows = weekActivityRes.data;
+  const lastWbRow = lastWbRes.data;
+  const milestoneRows = milestoneRes.data;
+  const alertMilestoneRows = alertMilestoneRes.data;
+  const wbCount = wbCountRes.count;
+  const lastChapterAcrossAll = lastChapterRes.data;
+
+  // Mots écrits totaux (tous romans, tous projets)
+  const totalWords = projects?.reduce((sum, p) =>
+    sum + ((p as { novels?: { current_words: number }[] }).novels
+      ?.reduce((s, n) => s + n.current_words, 0) ?? 0), 0) ?? 0;
+
+  // Mots de la semaine
   const weekWordsTotal = (weekActivityRows ?? []).reduce(
     (s, r) => s + Math.max(0, r.words_written ?? 0),
     0,
   );
-
-  const { data: lastWbRow } = await supabase
-    .from("daily_activity")
-    .select("date")
-    .eq("user_id", user.id)
-    .eq("wb_activity", true)
-    .order("date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  // Milestones du mois (tous romans confondus) — pour la grille calendrier.
-  const { data: milestoneRows } = await supabase
-    .from("planning_milestones")
-    .select("id, title, type, status, color, target_date")
-    .eq("user_id", user.id)
-    .not("target_date", "is", null)
-    .gte("target_date", monthStartIso)
-    .lte("target_date", monthEndIso);
-
-  // Milestones à notifier : dépassés (status ≠ done) ou approchant dans les
-  // MILESTONE_SOON_DAYS jours. Indépendant du mois courant : un jalon en
-  // retard de 2 mois doit toujours être affiché.
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const soonIso = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + MILESTONE_SOON_DAYS);
-    return d.toISOString().slice(0, 10);
-  })();
-  const { data: alertMilestoneRows } = await supabase
-    .from("planning_milestones")
-    .select("id, title, type, status, color, target_date, novel_id, novels(title)")
-    .eq("user_id", user.id)
-    .not("target_date", "is", null)
-    .neq("status", "done")
-    .lte("target_date", soonIso)
-    .order("target_date", { ascending: true });
 
   type AlertRow = {
     id: string;
@@ -171,10 +206,6 @@ export default async function DashboardPage() {
 
   const allNovels = projects?.flatMap(p => p.novels ?? []) ?? [];
   const activeNovel = allNovels.find((n: { is_active?: boolean }) => n.is_active);
-
-  const lastNovel = allNovels.sort((a, b) =>
-    new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-  )[0];
 
   const DAILY_GOAL = (() => {
     if (!activeNovel) return DEFAULT_DAILY_GOAL;
@@ -307,15 +338,22 @@ export default async function DashboardPage() {
       })
     : null;
 
-  const lastProject = lastNovel
-    ? projects?.find(p => p.id === lastNovel.project_id)
+  // Roman correspondant au dernier chapitre modifié (pour le hero
+  // « Reprenez votre histoire »). On le résout depuis la liste des romans
+  // déjà chargés — pas de requête supplémentaire.
+  const lastChapter = lastChapterAcrossAll
+    ? {
+        title: lastChapterAcrossAll.title,
+        updated_at: lastChapterAcrossAll.updated_at,
+        novel_id: lastChapterAcrossAll.novel_id,
+      }
     : null;
-
-  const lastChapter = lastNovel?.chapters
-    ?.sort((a: { updated_at: string }, b: { updated_at: string }) =>
-      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    )[0] ?? null;
-
+  const lastNovel = lastChapter
+    ? allNovels.find((n: { id: string }) => n.id === lastChapter.novel_id) ?? null
+    : null;
+  const lastProject = lastNovel
+    ? projects?.find(p => p.id === (lastNovel as { project_id: string }).project_id)
+    : null;
 
   // Mots de la semaine — calculé plus haut via une requête dédiée qui
   // traverse correctement la frontière entre mois.
@@ -328,12 +366,6 @@ export default async function DashboardPage() {
   const novelsReecr = allNovels.filter((n: { status?: string }) =>
     n.status === "reecriture" || n.status === "relecture"
   ).length;
-
-  // Total WB entries across projects (as the caption "+N fiches univers" uses it)
-  const { count: wbCount } = await supabase
-    .from("wb_entries")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id);
 
   return (
     <div className="px-6 py-5 max-w-[1280px] mx-auto">
