@@ -438,15 +438,37 @@ export function ChapterTable({
     [setChapters]
   );
 
-  /* ---- Color save : ligne ---- */
+  /* ---- Color save : ligne ----
+   * Quand on pose une couleur de ligne, on efface aussi toutes les
+   * couleurs individuelles des cases de cette ligne (cell_colors +
+   * planning_cell_values.color). Sinon les couleurs de cellule existantes
+   * persistent par-dessus la nouvelle couleur de ligne et ça donne
+   * visuellement une « addition » de couleurs au lieu d'un fond uniforme.
+   */
   async function saveRowColor(chapterId: string, color: string | null) {
     setChapters((prev) =>
-      prev.map((c) => (c.id === chapterId ? { ...c, row_color: color } : c)),
+      prev.map((c) =>
+        c.id === chapterId
+          ? { ...c, row_color: color, cell_colors: {} }
+          : c,
+      ),
     );
-    await supabaseRef.current
-      .from("chapters")
-      .update({ row_color: color })
-      .eq("id", chapterId);
+    setCellValues((prev) =>
+      prev.map((cv) =>
+        cv.chapter_id === chapterId ? { ...cv, color: null } : cv,
+      ),
+    );
+    const supabase = supabaseRef.current;
+    await Promise.all([
+      supabase
+        .from("chapters")
+        .update({ row_color: color, cell_colors: {} })
+        .eq("id", chapterId),
+      supabase
+        .from("planning_cell_values")
+        .update({ color: null })
+        .eq("chapter_id", chapterId),
+    ]);
   }
 
   /* ---- Color save : colonne (toutes lignes) ---- */
@@ -459,59 +481,6 @@ export function ChapterTable({
       .from("novels")
       .update({ column_colors: next })
       .eq("id", novelId);
-  }
-
-  /* ---- Color save : cellule (colonne par défaut) ---- */
-  async function saveDefaultCellColor(
-    chapterId: string,
-    colKey: string,
-    color: string | null,
-  ) {
-    setChapters((prev) =>
-      prev.map((c) => {
-        if (c.id !== chapterId) return c;
-        const cur = c.cell_colors ?? {};
-        const next = { ...cur };
-        if (color) next[colKey] = color;
-        else delete next[colKey];
-        return { ...c, cell_colors: next };
-      }),
-    );
-    const chapter = chapters.find((c) => c.id === chapterId);
-    const cur = chapter?.cell_colors ?? {};
-    const next = { ...cur };
-    if (color) next[colKey] = color;
-    else delete next[colKey];
-    await supabaseRef.current
-      .from("chapters")
-      .update({ cell_colors: next })
-      .eq("id", chapterId);
-  }
-
-  /* ---- Color save : cellule (colonne custom) ---- */
-  async function saveCustomCellColor(
-    columnId: string,
-    chapterId: string,
-    color: string | null,
-  ) {
-    const supabase = supabaseRef.current;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    setCellValues((prev) => {
-      const existing = prev.find(
-        (cv) => cv.column_id === columnId && cv.chapter_id === chapterId,
-      );
-      if (existing) {
-        return prev.map((cv) =>
-          cv.id === existing.id ? { ...cv, color } : cv,
-        );
-      }
-      return [...prev, { id: "temp", column_id: columnId, chapter_id: chapterId, value: null, color }];
-    });
-    await supabase.from("planning_cell_values").upsert(
-      { column_id: columnId, chapter_id: chapterId, user_id: user.id, color },
-      { onConflict: "column_id,chapter_id" },
-    );
   }
 
   /* ---- Helpers cellule ---- */
@@ -528,13 +497,134 @@ export function ChapterTable({
     return chapter.cell_colors?.[col.key];
   }
 
-  function applyCellColor(chapterId: string, colKey: string, color: string | null) {
-    const def = allColumnDefs.find((c) => c.key === colKey);
-    if (def?.type === "custom" && def.customId) {
-      saveCustomCellColor(def.customId, chapterId, color);
-    } else {
-      saveDefaultCellColor(chapterId, colKey, color);
+  /**
+   * Applique une couleur (ou null = effacer) à un ensemble de cases
+   * désignées par leurs clés "chapterId::colKey", de manière atomique
+   * par chapitre.
+   *
+   * Ancien bug : on appelait saveDefaultCellColor pour chaque case dans
+   * une boucle. Chaque appel lisait `chapters` depuis sa closure (= état
+   * du render) → plusieurs appels lisaient le MÊME état initial et
+   * écrivaient leur seul changement, le dernier écrasant tout. Au
+   * refresh, seules les cases du dernier write gardaient leur couleur.
+   *
+   * Correctif : on regroupe les clés par chapitre, on construit le
+   * cell_colors final UNE fois par chapitre, on fait un seul update DB
+   * par chapitre. Idem pour les colonnes custom (planning_cell_values).
+   */
+  async function applyColorToCells(
+    cellKeys: string[],
+    color: string | null,
+  ) {
+    if (cellKeys.length === 0) return;
+
+    // Map customColumn keys → customId
+    const customCols = new Map<string, string>();
+    for (const def of allColumnDefs) {
+      if (def.type === "custom" && def.customId) {
+        customCols.set(def.key, def.customId);
+      }
     }
+
+    // Groupement par chapitre
+    type CellRef = { chId: string; colK: string };
+    const refs: CellRef[] = cellKeys
+      .map((k) => {
+        const [chId, colK] = k.split("::");
+        return chId && colK ? { chId, colK } : null;
+      })
+      .filter((r): r is CellRef => r !== null);
+    const byChapter = new Map<string, Set<string>>();
+    for (const r of refs) {
+      if (!byChapter.has(r.chId)) byChapter.set(r.chId, new Set());
+      byChapter.get(r.chId)!.add(r.colK);
+    }
+
+    // Mise à jour locale atomique des chapters (toutes cases d'un chapitre
+    // recalculées via le setter callback → pas de race condition).
+    setChapters((prev) =>
+      prev.map((c) => {
+        const colKeys = byChapter.get(c.id);
+        if (!colKeys) return c;
+        const cur = c.cell_colors ?? {};
+        const next = { ...cur };
+        for (const k of colKeys) {
+          if (customCols.has(k)) continue; // custom = via planning_cell_values
+          if (color) next[k] = color;
+          else delete next[k];
+        }
+        return { ...c, cell_colors: next };
+      }),
+    );
+
+    // Mise à jour locale atomique des cellValues (custom columns)
+    setCellValues((prev) => {
+      const next = [...prev];
+      for (const r of refs) {
+        const customId = customCols.get(r.colK);
+        if (!customId) continue;
+        const idx = next.findIndex(
+          (cv) => cv.column_id === customId && cv.chapter_id === r.chId,
+        );
+        if (idx >= 0) {
+          next[idx] = { ...next[idx], color };
+        } else {
+          next.push({
+            id: `temp_${r.chId}_${customId}`,
+            column_id: customId,
+            chapter_id: r.chId,
+            value: null,
+            color,
+          });
+        }
+      }
+      return next;
+    });
+
+    // Persistance DB — un update par chapitre pour cell_colors,
+    // un upsert par cellule custom.
+    const supabase = supabaseRef.current;
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // PromiseLike pour accepter les query builders Supabase (thenables)
+    const dbWrites: PromiseLike<unknown>[] = [];
+
+    for (const [chId, colKeys] of byChapter) {
+      // Recalcul du next cell_colors à partir de l'état chapters CONNU,
+      // mais comme React peut ne pas avoir flush, on s'aligne sur le
+      // même calcul que setChapters ci-dessus.
+      const chapter = chapters.find((c) => c.id === chId);
+      const cur = chapter?.cell_colors ?? {};
+      const next = { ...cur };
+      for (const k of colKeys) {
+        if (customCols.has(k)) continue;
+        if (color) next[k] = color;
+        else delete next[k];
+      }
+      dbWrites.push(
+        supabase.from("chapters").update({ cell_colors: next }).eq("id", chId),
+      );
+    }
+
+    if (user) {
+      for (const r of refs) {
+        const customId = customCols.get(r.colK);
+        if (!customId) continue;
+        dbWrites.push(
+          supabase.from("planning_cell_values").upsert(
+            {
+              column_id: customId,
+              chapter_id: r.chId,
+              user_id: user.id,
+              color,
+            },
+            { onConflict: "column_id,chapter_id" },
+          ),
+        );
+      }
+    }
+
+    await Promise.all(dbWrites);
   }
 
   function applyPaletteColor(color: string | null) {
@@ -544,16 +634,12 @@ export function ChapterTable({
     } else if (palette.kind === "col") {
       saveColumnColor(palette.colKey, color);
     } else if (palette.kind === "cell") {
-      // Si plusieurs cellules sont sélectionnées, on applique à toutes.
-      // Sinon, juste à la cellule cible de la palette.
-      if (selectedCells.size > 1) {
-        for (const k of selectedCells) {
-          const [chId, colK] = k.split("::");
-          applyCellColor(chId, colK, color);
-        }
-      } else {
-        applyCellColor(palette.chapterId, palette.colKey, color);
-      }
+      // Multi-sélection si > 1, sinon la case cible uniquement.
+      const keys =
+        selectedCells.size > 1
+          ? Array.from(selectedCells)
+          : [`${palette.chapterId}::${palette.colKey}`];
+      applyColorToCells(keys, color);
     }
     setSelectedCells(new Set());
     setPalette(null);
