@@ -1219,6 +1219,13 @@ export function ChapterTable({
                         // right-click.
                         onContextMenu={(e) => {
                           e.preventDefault();
+                          // Sortir l'éditeur du mode édition s'il y est :
+                          // sinon le double outline (cell-focused +
+                          // selection) rend la cellule visuellement trop
+                          // grosse, et le right-click n'a pas vocation à
+                          // démarrer une saisie de texte.
+                          window.getSelection()?.removeAllRanges();
+                          (document.activeElement as HTMLElement | null)?.blur?.();
                           setSelectedCells(new Set([k]));
                           setPalette({
                             kind: "cell",
