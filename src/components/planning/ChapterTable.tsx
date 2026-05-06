@@ -185,46 +185,71 @@ export function ChapterTable({
   }
 
   /**
-   * Démarre une sélection par glisser depuis une pastille de cellule.
-   * Gère à la fois la souris (desktop) et le tactile (iPad / mobile).
-   * - À chaque mouvement on cherche l'élément `data-cell-key` sous le
-   *   pointeur et on l'ajoute à la sélection.
-   * - Au lâcher : on ouvre la palette quoi qu'il arrive (click ou drag).
+   * Démarre un tracking de sélection multi-cellule depuis n'importe où
+   * dans la case (mousedown sur la case elle-même, plus de pastille
+   * dédiée). On NE bloque PAS le mousedown — l'éditeur de la case
+   * source reçoit le click et entre normalement en édition.
+   *
+   * Ce n'est qu'à la traversée d'une frontière de case (le pointeur
+   * survole une case avec un `data-cell-key` différent) qu'on bascule
+   * en mode sélection multi-cellule :
+   *   - on annule la sélection texte navigateur
+   *   - on blur l'éditeur de la case source (la cellule sort du mode
+   *     édition et recolle son contenu)
+   *   - on accumule les cases survolées dans selectedCells
+   *
+   * Au lâcher, si la sélection a effectivement traversé une frontière,
+   * on ouvre la palette pour appliquer une couleur à toutes les cases
+   * sélectionnées. Sinon, comportement normal (édition de la case
+   * d'origine, pas de palette).
    */
-  function startCellDragSelect(
-    chapterId: string,
-    colKey: string,
-    anchor: { top: number; left: number },
-  ) {
-    const initialKey = cellKey(chapterId, colKey);
-    setSelectedCells(new Set([initialKey]));
-    setDragSelecting(false);
-    let moved = false;
+  function startCellRangeSelect(originChapterId: string, originColKey: string) {
+    const originKey = cellKey(originChapterId, originColKey);
+    let active = false; // devient true à la première traversée de frontière
+    let lastClientX = 0;
+    let lastClientY = 0;
 
     const handlePoint = (clientX: number, clientY: number) => {
+      lastClientX = clientX;
+      lastClientY = clientY;
       const target = document.elementFromPoint(clientX, clientY);
       if (!target) return;
-      const cellEl = (target as HTMLElement).closest("[data-cell-key]") as HTMLElement | null;
+      const cellEl = (target as HTMLElement).closest(
+        "[data-cell-key]",
+      ) as HTMLElement | null;
       if (!cellEl) return;
-      const key = cellEl.getAttribute("data-cell-key");
-      if (!key) return;
-      if (!moved) {
-        moved = true;
-        setDragSelecting(true);
+      const k = cellEl.getAttribute("data-cell-key");
+      if (!k) return;
+
+      if (k === originKey && !active) {
+        // Toujours dans la case d'origine et pas encore sorti → on laisse
+        // le navigateur / l'éditeur gérer normalement.
+        return;
       }
-      setSelectedCells((prev) => {
-        if (prev.has(key)) return prev;
-        const next = new Set(prev);
-        next.add(key);
-        return next;
-      });
+      if (!active) {
+        // Première traversée de frontière → on bascule en mode sélection.
+        active = true;
+        setDragSelecting(true);
+        window.getSelection()?.removeAllRanges();
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        setSelectedCells(new Set([originKey, k]));
+      } else {
+        setSelectedCells((prev) => {
+          if (prev.has(k)) return prev;
+          const next = new Set(prev);
+          next.add(k);
+          return next;
+        });
+      }
     };
 
     const onMouseMove = (ev: MouseEvent) => handlePoint(ev.clientX, ev.clientY);
     const onTouchMove = (ev: TouchEvent) => {
-      ev.preventDefault(); // empêche le scroll pendant la sélection tactile
       const t = ev.touches[0];
       if (!t) return;
+      // preventDefault uniquement quand on est passé en mode sélection,
+      // sinon on bloquerait le scroll naturel sur tactile.
+      if (active) ev.preventDefault();
       handlePoint(t.clientX, t.clientY);
     };
 
@@ -235,19 +260,28 @@ export function ChapterTable({
       document.removeEventListener("touchend", onEnd);
       document.removeEventListener("touchcancel", onEnd);
       setDragSelecting(false);
-      // On ouvre la palette quoi qu'il arrive (tap / click / drag)
-      setPalette({
-        kind: "cell",
-        chapterId,
-        colKey,
-        anchor,
-      });
+      if (active) {
+        // Palette ancrée sous la dernière case survolée
+        const lastEl = document.elementFromPoint(lastClientX, lastClientY);
+        const cellEl = (lastEl as HTMLElement | null)?.closest(
+          "[data-cell-key]",
+        ) as HTMLElement | null;
+        const r = cellEl?.getBoundingClientRect();
+        setPalette({
+          kind: "cell",
+          chapterId: originChapterId,
+          colKey: originColKey,
+          anchor: {
+            top: (r?.bottom ?? lastClientY) + 4,
+            left: Math.max(8, (r?.left ?? lastClientX) - 60),
+          },
+        });
+      }
     };
     const onEnd = () => cleanup();
 
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onEnd);
-    // passive:false pour pouvoir preventDefault sur touchmove
     document.addEventListener("touchmove", onTouchMove, { passive: false });
     document.addEventListener("touchend", onEnd);
     document.addEventListener("touchcancel", onEnd);
@@ -1062,7 +1096,20 @@ export function ChapterTable({
                       <div
                         key={col.key}
                         data-cell-key={k}
-                        className={`group/cell relative last:border-r-0 ${
+                        // mousedown sur la cellule entière : on ne bloque
+                        // pas l'événement (pas de preventDefault) pour
+                        // laisser l'éditeur entrer en mode édition. Si
+                        // l'utilisatrice sort vers une autre case en
+                        // gardant le bouton enfoncé, startCellRangeSelect
+                        // basculera en mode sélection multi-cellule.
+                        onMouseDown={(e) => {
+                          if (e.button !== 0) return;
+                          startCellRangeSelect(chapter.id, col.key);
+                        }}
+                        onTouchStart={() => {
+                          startCellRangeSelect(chapter.id, col.key);
+                        }}
+                        className={`relative last:border-r-0 ${
                           isSelected
                             ? "outline outline-2 outline-[var(--color-accent)] outline-offset-[-2px]"
                             : ""
@@ -1072,43 +1119,6 @@ export function ChapterTable({
                         }}
                       >
                         {renderCell(col, chapter)}
-                        {/* Pastille de coloration cellule — coin sup. droit.
-                            Click  : ouvre la palette pour la cellule
-                            Drag   : étend la sélection aux cases survolées */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                            startCellDragSelect(chapter.id, col.key, {
-                              top: r.bottom + 4,
-                              left: r.left - 80,
-                            });
-                          }}
-                          onTouchStart={(e) => {
-                            e.stopPropagation();
-                            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                            startCellDragSelect(chapter.id, col.key, {
-                              top: r.bottom + 4,
-                              left: r.left - 80,
-                            });
-                          }}
-                          title={
-                            selectedCells.size > 1 && selectedCells.has(k)
-                              ? `Couleur (${selectedCells.size} cellules)`
-                              : "Couleur · maintenez et glissez pour sélectionner plusieurs"
-                          }
-                          className={`absolute top-1 right-1 w-3 h-3 rounded-full transition-opacity cursor-pointer z-10 border ${
-                            isSelected
-                              ? "opacity-100 border-[var(--color-accent)]"
-                              : "opacity-0 group-hover/cell:opacity-90 border-white/40"
-                          }`}
-                          style={{
-                            background: cellColor ?? "rgba(255,255,255,0.25)",
-                            boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
-                          }}
-                        />
                       </div>
                     );
                   })}
