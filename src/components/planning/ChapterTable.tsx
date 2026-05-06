@@ -567,6 +567,23 @@ export function ChapterTable({
   }
 
   /* ---- Add chapter ---- */
+  /* ---- Delete chapter ---- */
+  const handleDeleteChapter = useCallback(
+    async (chapterId: string) => {
+      const supabase = supabaseRef.current;
+      // Optimistic : on retire localement avant le retour serveur
+      setChapters((prev) => prev.filter((c) => c.id !== chapterId));
+      const { error } = await supabase
+        .from("chapters")
+        .delete()
+        .eq("id", chapterId);
+      if (error) {
+        console.error("[chapitrage] delete chapter failed:", error);
+      }
+    },
+    [setChapters],
+  );
+
   const handleAddChapter = useCallback(async () => {
     const supabase = supabaseRef.current;
     const { data: { user } } = await supabase.auth.getUser();
@@ -1175,7 +1192,7 @@ export function ChapterTable({
             </div>
             {palette.kind === "cell" && selectedCells.size <= 1 && (
               <div className="px-1 pb-1 text-[10px] text-text-quaternary italic font-serif">
-                Glissez depuis la pastille pour sélectionner plusieurs cases.
+                Glissez d&apos;une case à l&apos;autre pour en sélectionner plusieurs.
               </div>
             )}
             <div className="grid grid-cols-4 gap-1">
@@ -1195,6 +1212,32 @@ export function ChapterTable({
             >
               Effacer la couleur
             </button>
+
+            {/* Action destructrice — exclusive au mode ligne. Confirmation
+                native pour éviter une suppression accidentelle. */}
+            {palette.kind === "row" && (
+              <>
+                <div className="my-1 border-t border-white/[0.06]" />
+                <button
+                  onClick={() => {
+                    if (!palette || palette.kind !== "row") return;
+                    const ch = chapters.find((c) => c.id === palette.chapterId);
+                    const name = ch?.title?.trim() || "ce chapitre";
+                    if (
+                      confirm(
+                        `Supprimer « ${name} » ? Cette action est irréversible.`,
+                      )
+                    ) {
+                      handleDeleteChapter(palette.chapterId);
+                      setPalette(null);
+                    }
+                  }}
+                  className="h-7 px-2 text-[11px] text-red border border-red/30 rounded-[var(--radius-sm)] bg-transparent hover:bg-red/10 cursor-pointer transition-colors"
+                >
+                  Supprimer le chapitre
+                </button>
+              </>
+            )}
           </div>
         </>
       )}
