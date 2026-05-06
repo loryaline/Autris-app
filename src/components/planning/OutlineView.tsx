@@ -121,6 +121,7 @@ function SceneStatusPill({
 /* ---- Scene Row ---- */
 function SceneRow({
   scene,
+  autoEdit = false,
   onRename,
   onDelete,
   onStatusCycle,
@@ -130,6 +131,7 @@ function SceneRow({
   isDragOver,
 }: {
   scene: SceneItem;
+  autoEdit?: boolean;
   onRename: (title: string) => void;
   onDelete: () => void;
   onStatusCycle: () => void;
@@ -138,7 +140,9 @@ function SceneRow({
   onDragEnd: () => void;
   isDragOver: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
+  // Si autoEdit (scène fraîchement créée), on entre en édition direct
+  // pour permettre de la nommer immédiatement sans double-click.
+  const [editing, setEditing] = useState(autoEdit);
   const [editValue, setEditValue] = useState(scene.title);
   const [showConfirm, setShowConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -321,6 +325,9 @@ export function OutlineView({
 }) {
   const [dragSceneId, setDragSceneId] = useState<string | null>(null);
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
+  // ID de la scène fraîchement créée → autoEdit pour démarrer
+  // directement en édition de titre.
+  const [justCreatedSceneId, setJustCreatedSceneId] = useState<string | null>(null);
 
   const supabaseRef = useRef(createClient());
   const sorted = [...chapters].sort((a, b) => a.position - b.position);
@@ -356,7 +363,10 @@ export function OutlineView({
       .select("id, chapter_id, title, position, status")
       .single();
 
-    if (data) setScenes((prev) => [...prev, data as SceneItem]);
+    if (data) {
+      setScenes((prev) => [...prev, data as SceneItem]);
+      setJustCreatedSceneId((data as SceneItem).id);
+    }
   }
 
   async function renameScene(sceneId: string, title: string) {
@@ -502,7 +512,13 @@ export function OutlineView({
                       <SceneRow
                         key={scene.id}
                         scene={scene}
-                        onRename={(t) => renameScene(scene.id, t)}
+                        autoEdit={scene.id === justCreatedSceneId}
+                        onRename={(t) => {
+                          renameScene(scene.id, t);
+                          if (scene.id === justCreatedSceneId) {
+                            setJustCreatedSceneId(null);
+                          }
+                        }}
                         onDelete={() => deleteScene(scene.id)}
                         onStatusCycle={() => cycleSceneStatus(scene.id)}
                         onDragStart={() => setDragSceneId(scene.id)}

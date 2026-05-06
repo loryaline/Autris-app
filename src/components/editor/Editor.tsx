@@ -464,6 +464,34 @@ export function NovelEditor({
   const charCountNoSpaces = editorStats.charsNoSpaces;
   const paragraphCount = editorStats.paragraphs;
 
+  // Recompute stats à l'ouverture / au changement de chapitre — sinon
+  // « Signes » et « Paragraphes » restent à 0 tant que l'utilisatrice
+  // n'a pas tapé un nouveau caractère (les stats n'étaient calculées
+  // que dans onUpdate). On reste dans un useEffect pour ne pas lire
+  // l'état ProseMirror pendant le render.
+  useEffect(() => {
+    if (!editor) return;
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      try {
+        const text = editor.getText();
+        setEditorStats({
+          chars: editor.storage.characterCount.characters(),
+          charsNoSpaces: text.replace(/\s/g, "").length,
+          paragraphs: text
+            ? text.split(/\n\n+/).filter((p) => p.trim()).length
+            : 0,
+        });
+      } catch {
+        /* editor view détruite */
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [editor, activeChapterId]);
+
   const canNavigateHome = syncStatus === "saved";
 
   // Status → couleur pastille affichée dans le fil d'Ariane
