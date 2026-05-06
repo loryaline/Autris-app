@@ -44,11 +44,75 @@ export function DashboardClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Ajout inline d'un roman dans une carte projet
+  const [addNovelToProjectId, setAddNovelToProjectId] = useState<string | null>(null);
+  const [newNovelTitle, setNewNovelTitle] = useState("");
+  const [addingNovel, setAddingNovel] = useState(false);
 
   async function handleCycleNovelStatus(novelId: string, current: NovelStatus) {
     const next = nextNovelStatus(current);
     const supabase = createClient();
     await supabase.from("novels").update({ status: next }).eq("id", novelId);
+    router.refresh();
+  }
+
+  async function handleActivateNovel(novelId: string, currentWords: number) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // Désactiver tous les romans de l'utilisatrice, puis activer celui-ci
+    // avec activated_at + activation_word_count fraîchement posés (cf.
+    // dashboard estimations scopées au roman actif depuis activation).
+    await supabase.from("novels").update({ is_active: false }).eq("user_id", user.id);
+    await supabase
+      .from("novels")
+      .update({
+        is_active: true,
+        activated_at: new Date().toISOString(),
+        activation_word_count: currentWords ?? 0,
+      })
+      .eq("id", novelId);
+    router.refresh();
+  }
+
+  async function handleAddNovel(projectId: string) {
+    if (!newNovelTitle.trim()) return;
+    setAddingNovel(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setAddingNovel(false);
+      return;
+    }
+
+    const { data: novel, error: novelErr } = await supabase
+      .from("novels")
+      .insert({
+        project_id: projectId,
+        user_id: user.id,
+        title: newNovelTitle.trim(),
+      })
+      .select("id")
+      .single();
+
+    if (novelErr || !novel) {
+      setAddingNovel(false);
+      return;
+    }
+
+    // Premier chapitre vide pour démarrer
+    await supabase
+      .from("chapters")
+      .insert({
+        novel_id: novel.id,
+        user_id: user.id,
+        title: "Chapitre 1",
+        position: 0,
+      });
+
+    setNewNovelTitle("");
+    setAddNovelToProjectId(null);
+    setAddingNovel(false);
     router.refresh();
   }
 
@@ -244,9 +308,29 @@ export function DashboardClient({
                             key={novel.id}
                             className="group flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] hover:bg-white/[0.03] transition-colors"
                           >
-                            <span className="text-[13px] text-text-quaternary">
-                              {novel.is_active ? "✦" : "›"}
-                            </span>
+                            {/* ✦ activable : roman actif → accent rempli ;
+                                inactif → étoile creuse, hover invite à
+                                l'activer. Click change l'actif global. */}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (novel.is_active) return; // déjà actif
+                                handleActivateNovel(novel.id, novel.current_words);
+                              }}
+                              title={
+                                novel.is_active
+                                  ? "Roman actif — pilote le calendrier"
+                                  : "Activer ce roman — pilotera le calendrier de l'accueil"
+                              }
+                              className={`text-[13px] leading-none w-5 h-5 flex items-center justify-center rounded transition-colors ${
+                                novel.is_active
+                                  ? "text-[var(--color-accent)] cursor-default"
+                                  : "text-text-quaternary hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-bg)]/40 cursor-pointer"
+                              }`}
+                            >
+                              {novel.is_active ? "✦" : "☆"}
+                            </button>
                             <a
                               href={`/project/${project.id}#novel-${novel.id}`}
                               title="Paramètres du roman"
@@ -274,6 +358,57 @@ export function DashboardClient({
                     </div>
                   ) : (
                     <div className="px-2 py-1 text-[12px] text-text-quaternary italic">Aucun roman</div>
+                  )}
+
+                  {/* Ajouter un roman — formulaire inline */}
+                  {addNovelToProjectId === project.id ? (
+                    <div className="mt-1 px-2 py-2 border-t border-white/[0.05]">
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={newNovelTitle}
+                          onChange={(e) => setNewNovelTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleAddNovel(project.id);
+                            if (e.key === "Escape") {
+                              setAddNovelToProjectId(null);
+                              setNewNovelTitle("");
+                            }
+                          }}
+                          placeholder="Titre du roman"
+                          autoFocus
+                          className="flex-1 h-7 px-2 text-[12px] bg-bg-primary border border-white/[0.08] rounded-[var(--radius-sm)] text-text-primary focus:outline-none focus:border-[var(--color-accent-border)]"
+                        />
+                        <button
+                          onClick={() => handleAddNovel(project.id)}
+                          disabled={addingNovel || !newNovelTitle.trim()}
+                          className={`h-7 px-2.5 rounded-[var(--radius-sm)] text-[11px] font-medium transition-colors ${
+                            newNovelTitle.trim() && !addingNovel
+                              ? "bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] cursor-pointer"
+                              : "bg-white/[0.05] text-text-quaternary cursor-not-allowed"
+                          }`}
+                        >
+                          {addingNovel ? "…" : "Ajouter"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAddNovelToProjectId(null);
+                            setNewNovelTitle("");
+                          }}
+                          className="h-7 px-2 text-[11px] text-text-tertiary hover:text-text-primary cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setAddNovelToProjectId(project.id)}
+                      className="mt-1 w-full px-2 py-1 text-[11.5px] text-text-quaternary hover:text-[var(--color-accent)] cursor-pointer transition-colors flex items-center gap-1.5"
+                    >
+                      <span className="text-[12px]">+</span>
+                      <span>Ajouter un roman</span>
+                    </button>
                   )}
 
                   {/* Supprimer */}
