@@ -106,6 +106,8 @@ export function OnboardingClient() {
         narrative_template: narrativeTemplate,
         word_goal: parseInt(wordGoalPerSession) * 120 || 60000,
         is_active: true,
+        activated_at: new Date().toISOString(),
+        activation_word_count: 0,
       })
       .select("id")
       .single();

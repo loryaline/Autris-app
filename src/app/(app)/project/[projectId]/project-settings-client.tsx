@@ -84,9 +84,22 @@ export function ProjectSettings({ project }: { project: ProjectData }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Lire le current_words du roman pour figer le mot-base d'activation
+    const target = novels.find((n) => n.id === novelId);
+    const baseWords = target?.current_words ?? 0;
+    const nowIso = new Date().toISOString();
+
     // Désactiver tous les romans de l'utilisateur, puis activer celui-ci
+    // avec activated_at + activation_word_count fraîchement posés.
     await supabase.from("novels").update({ is_active: false }).eq("user_id", user.id);
-    await supabase.from("novels").update({ is_active: true }).eq("id", novelId);
+    await supabase
+      .from("novels")
+      .update({
+        is_active: true,
+        activated_at: nowIso,
+        activation_word_count: baseWords,
+      })
+      .eq("id", novelId);
 
     setNovels((prev) =>
       prev.map((n) => ({ ...n, is_active: n.id === novelId }))

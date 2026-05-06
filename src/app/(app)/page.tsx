@@ -243,26 +243,44 @@ export default async function DashboardPage() {
     else break;
   }
 
+  // Total mots du mois courant (toujours utilisé en fallback dans le bandeau
+  // "objectif atteint" et pour info contextuelle dans le calendrier).
   const monthWordsTotal = monthActivity.reduce((s, d) => s + d.words, 0);
-  const expectedSoFar = DAILY_GOAL * todayNum;
-  const monthExpectedTotal = DAILY_GOAL * daysInMonth;
-  const monthRatio = monthExpectedTotal > 0 ? monthWordsTotal / monthExpectedTotal : 0;
-  const monthPct = Math.round(monthRatio * 100);
-  const onTrackRatio = expectedSoFar > 0 ? monthWordsTotal / expectedSoFar : 0;
 
   const activeGoal = (activeNovel as { word_goal?: number | null } | undefined)?.word_goal ?? 0;
   const activeWords = (activeNovel as { current_words?: number } | undefined)?.current_words ?? 0;
   const remainingWords = Math.max(0, activeGoal - activeWords);
-  // Le roman actif a déjà atteint son objectif total → on n'a plus rien
-  // à projeter (pas de fin estimée, pas de restant). Le bandeau d'objectif
-  // mensuel est remplacé par un message de félicitations + suggestion.
   const activeNovelGoalReached = activeGoal > 0 && activeWords >= activeGoal;
   const activeNovelTitle =
     (activeNovel as { title?: string } | undefined)?.title ?? null;
   const activeNovelId = (activeNovel as { id?: string } | undefined)?.id ?? null;
   const activeProjectId =
     (activeNovel as { project_id?: string } | undefined)?.project_id ?? null;
-  const realDailyPace = todayNum > 0 ? monthWordsTotal / todayNum : 0;
+
+  // ===== Calculs scopés sur le roman actif depuis sa date d'activation =====
+  // Avant : moyenne mensuelle calendaire qui n'avait pas de sens dès qu'on
+  // activait un roman en milieu de mois ou qu'on bascule entre romans.
+  // Maintenant : on borne la fenêtre de mesure à [activated_at, now()] et on
+  // ne compte que les mots écrits SUR le roman actif depuis l'activation.
+  const activatedAtRaw = (activeNovel as { activated_at?: string | null } | undefined)?.activated_at ?? null;
+  const activationBaseWords = (activeNovel as { activation_word_count?: number | null } | undefined)?.activation_word_count ?? 0;
+  const activatedAtDate = activatedAtRaw ? new Date(activatedAtRaw) : null;
+  const activatedAtMs = activatedAtDate ? activatedAtDate.getTime() : null;
+  // Jours écoulés depuis activation. Min 1 pour éviter div/0 et donner une
+  // valeur lisible le jour même de l'activation.
+  const daysSinceActivation = activatedAtMs
+    ? Math.max(1, Math.ceil((nowMs - activatedAtMs) / 86_400_000))
+    : 0;
+  // Mots écrits sur le roman actif depuis activation = current_words - base.
+  // Clampé à 0 (au cas où l'utilisatrice supprimerait du contenu).
+  const wordsSinceActivation = Math.max(0, activeWords - activationBaseWords);
+  // Mots attendus sur la même période, basés sur le rythme paramétré.
+  const expectedSinceActivation = DAILY_GOAL * daysSinceActivation;
+  const periodPct = expectedSinceActivation > 0
+    ? Math.round((wordsSinceActivation / expectedSinceActivation) * 100)
+    : 0;
+  // Rythme réel = mots / jours depuis activation.
+  const realDailyPace = daysSinceActivation > 0 ? wordsSinceActivation / daysSinceActivation : 0;
   const etaDays =
     realDailyPace > 0 && remainingWords > 0
       ? Math.ceil(remainingWords / realDailyPace)
@@ -280,6 +298,15 @@ export default async function DashboardPage() {
             ? "onTrack"
             : "behind";
 
+  // Affichage de la date d'activation, formatée FR.
+  const activationDateLabel = activatedAtDate
+    ? activatedAtDate.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+
   const lastProject = lastNovel
     ? projects?.find(p => p.id === lastNovel.project_id)
     : null;
@@ -289,7 +316,6 @@ export default async function DashboardPage() {
       new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     )[0] ?? null;
 
-  const monthName = now.toLocaleDateString("fr-FR", { month: "long" });
 
   // Mots de la semaine — calculé plus haut via une requête dédiée qui
   // traverse correctement la frontière entre mois.
@@ -392,18 +418,28 @@ export default async function DashboardPage() {
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-[10px] font-medium text-text-quaternary uppercase mb-1" style={{ letterSpacing: "0.18em" }}>
-                Objectif du mois
+                Roman actif
               </div>
-              <div className="flex items-baseline gap-2">
-                <div className="text-[20px] text-text-primary capitalize">
-                  {monthName}
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <div className="text-[20px] text-text-primary font-serif italic">
+                  {activeNovelTitle ?? "Aucun roman actif"}
                 </div>
-                <div className="font-serif italic text-[20px] text-[var(--color-accent)]">
-                  {year}
-                </div>
+                {activationDateLabel && (
+                  <div className="text-[11.5px] text-text-tertiary">
+                    actif depuis le {activationDateLabel}
+                  </div>
+                )}
               </div>
               <div className="text-[11px] text-text-tertiary mt-0.5">
                 Objectif quotidien · {DAILY_GOAL.toLocaleString("fr-FR")} mots
+                {daysSinceActivation > 0 && (
+                  <>
+                    {" · "}
+                    <span className="text-text-quaternary">
+                      {daysSinceActivation} jour{daysSinceActivation > 1 ? "s" : ""} de mesure
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             {streak > 0 && (
@@ -413,21 +449,21 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          {/* Progress — masqué si le roman actif a déjà atteint son objectif,
-              sinon le pourcentage n'a pas de sens. */}
-          {!activeNovelGoalReached && (
+          {/* Progress depuis activation — masqué si l'objectif est atteint. */}
+          {!activeNovelGoalReached && activeNovel && (
             <div className="mb-3">
               <div className="flex items-center justify-between text-[11px] mb-1">
                 <div className="text-text-tertiary">
-                  Ce mois · <span className="text-text-secondary">{monthWordsTotal.toLocaleString("fr-FR")}</span>
-                  <span className="text-text-quaternary"> / {monthExpectedTotal.toLocaleString("fr-FR")} attendus</span>
+                  Depuis l&apos;activation ·{" "}
+                  <span className="text-text-secondary">{wordsSinceActivation.toLocaleString("fr-FR")}</span>
+                  <span className="text-text-quaternary"> / {expectedSinceActivation.toLocaleString("fr-FR")} attendus</span>
                 </div>
-                <div className="text-[var(--color-accent)] font-medium">{monthPct} %</div>
+                <div className="text-[var(--color-accent)] font-medium">{periodPct} %</div>
               </div>
               <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden">
                 <div
                   className="h-full rounded-full bg-[var(--color-accent)]"
-                  style={{ width: `${Math.min(100, monthPct)}%` }}
+                  style={{ width: `${Math.min(100, periodPct)}%` }}
                 />
               </div>
             </div>
@@ -487,7 +523,7 @@ export default async function DashboardPage() {
                 <div className="text-[10px] font-medium text-text-quaternary uppercase mb-1.5" style={{ letterSpacing: "0.16em" }}>
                   Statut
                 </div>
-                <PaceChip verdict={paceVerdict} onTrack={onTrackRatio} />
+                <PaceChip verdict={paceVerdict} onTrack={periodPct / 100} />
               </div>
             </div>
           )}
