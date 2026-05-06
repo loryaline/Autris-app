@@ -107,6 +107,32 @@ body {
   color: inherit;
 }
 
+/* Cellules du chapitrage : le rendu doit être identique entre le mode
+   statique (rich-cell-display) et le mode édition (tiptap-cell), sinon
+   on voit un changement de typo / line-height au click. On reset les
+   héritages qui pourraient venir de .tiptap si l'éditeur est rendu
+   dans un contexte où cette règle s'applique. */
+.tiptap-cell,
+.tiptap-cell.tiptap,
+.rich-cell-display {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+  font-style: normal;
+}
+.tiptap-cell p,
+.rich-cell-display p {
+  margin: 0;
+}
+/* Une seule fenêtre de focus visible : la cellule active reçoit une
+   subtile bordure accent qui matérialise la sélection. */
+.cell-focused {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .tiptap p {
   margin-bottom: 0.75em;
 }

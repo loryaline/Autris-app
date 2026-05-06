@@ -220,7 +220,7 @@ function FocusedCell({
     <div
       ref={containerRef}
       onBlur={handleBlur}
-      className={className}
+      className={`cell-focused ${className ?? ""}`}
     >
       <EditorContent
         editor={editor}
