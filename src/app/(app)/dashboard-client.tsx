@@ -199,14 +199,31 @@ export function DashboardClient({
           {projects.map((project) => {
             const genreInfo = GENRES.find((g) => g.value === project.genre);
             const totalWords = project.novels.reduce((s, n) => s + n.current_words, 0);
-            const activeNovel =
-              project.novels.find((n) => n.is_active) ??
-              project.novels.find((n) => n.word_goal) ??
-              project.novels[0];
+            // Roman ACTIF de ce projet (au sens global : flag is_active = true).
+            // Si présent, sa progression individuelle est affichée.
+            const activeNovel = project.novels.find((n) => n.is_active);
             const activeGoal = activeNovel?.word_goal ?? 0;
             const activeWords = activeNovel?.current_words ?? 0;
             const activeProgress =
               activeGoal > 0 ? Math.min((activeWords / activeGoal) * 100, 100) : 0;
+            // Progression « série » : somme sur tous les romans qui ont un
+            // word_goal défini. Affichée à la place de la jauge individuelle
+            // quand aucun roman du projet n'est l'actif global.
+            const seriesGoal = project.novels.reduce(
+              (s, n) => s + (n.word_goal ?? 0),
+              0,
+            );
+            const seriesWords = project.novels.reduce(
+              (s, n) => s + (n.word_goal ? n.current_words : 0),
+              0,
+            );
+            const seriesProgress =
+              seriesGoal > 0 ? Math.min((seriesWords / seriesGoal) * 100, 100) : 0;
+            const showActiveBar = !!activeNovel && activeGoal > 0;
+            const showSeriesBar = !showActiveBar && seriesGoal > 0 && project.novels.length > 1;
+            const showSingleNoActiveBar =
+              !showActiveBar && !showSeriesBar && project.novels.length === 1
+                && (project.novels[0]?.word_goal ?? 0) > 0;
 
             return (
               <div
@@ -275,8 +292,12 @@ export function DashboardClient({
                   </div>
                 </div>
 
-                {/* Active novel progress strip */}
-                {activeNovel && activeGoal > 0 && (
+                {/* Jauge de progression — variante selon le contexte :
+                    - Roman actif global présent : sa progression individuelle.
+                    - Sinon plusieurs romans avec un goal : jauge cumulée série.
+                    - Sinon roman unique avec goal : sa progression seule.
+                    - Sinon : pas de jauge. */}
+                {showActiveBar && activeNovel && (
                   <div className="px-4 py-2.5 border-t border-white/[0.04] bg-white/[0.015]">
                     <div className="flex items-center justify-between text-[11px] mb-1">
                       <span className="text-text-tertiary truncate mr-2">
@@ -295,6 +316,49 @@ export function DashboardClient({
                     </div>
                   </div>
                 )}
+                {showSeriesBar && (
+                  <div className="px-4 py-2.5 border-t border-white/[0.04] bg-white/[0.015]">
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="text-text-tertiary truncate mr-2">
+                        Série · <span className="text-text-quaternary">tous les romans</span>
+                      </span>
+                      <span className="text-text-secondary shrink-0">
+                        {seriesWords.toLocaleString("fr-FR")} / {seriesGoal.toLocaleString("fr-FR")} ·{" "}
+                        <span className="text-[var(--color-accent)] font-medium">{Math.round(seriesProgress)} %</span>
+                      </span>
+                    </div>
+                    <div className="h-[2px] rounded-full bg-white/[0.05] overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--color-accent)]/70 rounded-full"
+                        style={{ width: `${seriesProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {showSingleNoActiveBar && (() => {
+                  const only = project.novels[0];
+                  const g = only.word_goal ?? 0;
+                  const pct = g > 0 ? Math.min((only.current_words / g) * 100, 100) : 0;
+                  return (
+                    <div className="px-4 py-2.5 border-t border-white/[0.04] bg-white/[0.015]">
+                      <div className="flex items-center justify-between text-[11px] mb-1">
+                        <span className="text-text-tertiary truncate mr-2">
+                          {only.title} · <span className="text-text-quaternary">non actif</span>
+                        </span>
+                        <span className="text-text-secondary shrink-0">
+                          {only.current_words.toLocaleString("fr-FR")} / {g.toLocaleString("fr-FR")} ·{" "}
+                          <span className="text-[var(--color-accent)] font-medium">{Math.round(pct)} %</span>
+                        </span>
+                      </div>
+                      <div className="h-[2px] rounded-full bg-white/[0.05] overflow-hidden">
+                        <div
+                          className="h-full bg-[var(--color-accent)]/70 rounded-full"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Novels list */}
                 <div className="px-2 py-2 bg-white/[0.01]">
