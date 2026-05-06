@@ -82,7 +82,11 @@ export function RichEditableCell({
           );
           setFocused({ pos });
         }}
-        className={`px-2 py-1.5 text-[12px] cursor-text min-h-[28px] whitespace-pre-wrap break-words rich-cell-display ${className ?? ""}`}
+        // h-full + w-full : la zone cliquable couvre toute la cellule,
+        // pas seulement la bounding-box du texte. Sans ça, cliquer dans
+        // l'espace vide d'une cellule étirée par une ligne haute ne
+        // déclenchait pas l'édition.
+        className={`h-full w-full px-2 py-1.5 text-[12px] cursor-text whitespace-pre-wrap break-words rich-cell-display ${className ?? ""}`}
       >
         {empty ? (
           <span className="text-text-quaternary">{placeholder ?? ""}</span>
@@ -148,8 +152,11 @@ function FocusedCell({
     shouldRerenderOnTransaction: false,
     editorProps: {
       attributes: {
+        // h-full + w-full pour aligner la zone éditable avec la zone
+        // cliquable du mode statique (toute la cellule, pas juste la
+        // bounding-box du texte).
         class:
-          "tiptap-cell outline-none min-h-[28px] px-2 py-1.5 text-[12px] text-text-primary whitespace-pre-wrap break-words",
+          "tiptap-cell outline-none h-full w-full px-2 py-1.5 text-[12px] text-text-primary whitespace-pre-wrap break-words",
       },
     },
     onSelectionUpdate: ({ editor: ed }) => {
@@ -220,7 +227,8 @@ function FocusedCell({
     <div
       ref={containerRef}
       onBlur={handleBlur}
-      className={`cell-focused ${className ?? ""}`}
+      // h-full pour que le wrapper de l'éditeur couvre toute la cellule
+      className={`h-full cell-focused ${className ?? ""}`}
     >
       <EditorContent
         editor={editor}
