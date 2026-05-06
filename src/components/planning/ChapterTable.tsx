@@ -1212,6 +1212,21 @@ export function ChapterTable({
                         onTouchStart={() => {
                           startCellRangeSelect(chapter.id, col.key);
                         }}
+                        // Right-click : ouvre la palette de couleur pour
+                        // CETTE seule case (équivalent du menu contextuel
+                        // d'Excel / Notion). Pour colorer plusieurs
+                        // cases, drag-select. Pour colorer une seule,
+                        // right-click.
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setSelectedCells(new Set([k]));
+                          setPalette({
+                            kind: "cell",
+                            chapterId: chapter.id,
+                            colKey: col.key,
+                            anchor: { top: e.clientY + 4, left: e.clientX - 60 },
+                          });
+                        }}
                         className={`relative last:border-r-0 ${
                           isSelected
                             ? "outline outline-2 outline-[var(--color-accent)] outline-offset-[-2px]"
@@ -1291,7 +1306,7 @@ export function ChapterTable({
             </div>
             {palette.kind === "cell" && selectedCells.size <= 1 && (
               <div className="px-1 pb-1 text-[10px] text-text-quaternary italic font-serif">
-                Glissez d&apos;une case à l&apos;autre pour en sélectionner plusieurs.
+                Glissez d&apos;une case à l&apos;autre pour en sélectionner plusieurs · clic droit pour une seule.
               </div>
             )}
             <div className="grid grid-cols-4 gap-1">
