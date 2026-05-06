@@ -1176,9 +1176,22 @@ export function ChapterTable({
             }}
           />
           <div
+            ref={(el) => {
+              // Mesure réelle de la popover après mount → si elle dépasse
+              // le viewport vers le bas, on la flip au-dessus de l'ancre.
+              if (!el) return;
+              const margin = 8;
+              const rect = el.getBoundingClientRect();
+              const overflowsBottom =
+                rect.bottom > window.innerHeight - margin;
+              if (overflowsBottom) {
+                // Flip au-dessus : ancre - hauteur popover - 8 px de marge
+                el.style.top = `${Math.max(margin, palette.anchor.top - rect.height - 8)}px`;
+              }
+            }}
             className="fixed z-50 bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-md)] shadow-xl p-2 flex flex-col gap-1"
             style={{
-              top: Math.min(palette.anchor.top, window.innerHeight - 100),
+              top: palette.anchor.top,
               left: Math.max(8, Math.min(palette.anchor.left, window.innerWidth - 220)),
             }}
             onClick={(e) => e.stopPropagation()}
