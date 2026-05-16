@@ -795,7 +795,7 @@ export function ContextPanel({
                                   setEditingId(scene.id);
                                   setEditValue(scene.title);
                                 }}
-                                className="flex-1 text-[12.5px] text-text-primary truncate"
+                                className="flex-1 min-w-0 text-[12.5px] text-text-primary break-words"
                                 title="Double-clic pour renommer"
                               >
                                 {scene.title}

@@ -58,11 +58,16 @@ export default async function DashboardPage() {
         `id, title, genre, created_at, updated_at, cover_image_url,
          novels (
            id, title, current_words, word_goal, is_active, status,
-           activated_at, activation_word_count, project_id, updated_at
+           activated_at, activation_word_count, project_id, created_at, updated_at
          )`,
       )
       .eq("user_id", user.id)
-      .order("updated_at", { ascending: false }),
+      .order("updated_at", { ascending: false })
+      // Ordre STABLE des romans dans chaque projet : par date de création
+      // croissante. Sans ça, Supabase renvoie les romans dans un ordre
+      // non garanti — qui changeait visuellement dès qu'on modifiait le
+      // statut d'un roman (updated_at modifié → réordonnancement implicite).
+      .order("created_at", { referencedTable: "novels", ascending: true }),
     supabase
       .from("daily_activity")
       .select("date, words_written, wb_activity, wb_count, plan_activity, plan_count")

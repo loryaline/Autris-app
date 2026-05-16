@@ -246,6 +246,28 @@ export function NovelEditor({
     []
   );
 
+  // Snapshot automatique périodique : toutes les 3 minutes, on tente
+  // une version "auto" du chapitre courant. createSnapshot dédupe si le
+  // contenu n'a pas changé depuis le dernier snapshot. Indispensable pour
+  // les romans à UN SEUL chapitre : le snapshot au changement de chapitre
+  // ne se déclenche jamais dans ce cas, donc sans cet intervalle aucune
+  // version n'était jamais créée.
+  useEffect(() => {
+    if (!editor) return;
+    const interval = setInterval(() => {
+      const id = activeChapterIdRef.current;
+      if (!id) return;
+      try {
+        const html = editor.getHTML();
+        const words = countWords(editor.getText());
+        createSnapshot(id, html, words, "auto");
+      } catch {
+        /* éditeur détruit */
+      }
+    }, 3 * 60_000);
+    return () => clearInterval(interval);
+  }, [editor, createSnapshot]);
+
   const saveChapter = useCallback(
     async (chapterId: string, content: string, wordCount: number) => {
       try {

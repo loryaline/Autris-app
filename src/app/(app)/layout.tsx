@@ -16,9 +16,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       supabase.from("profiles").select("username").eq("id", user.id).single(),
       supabase
         .from("projects")
-        .select("id, title, novels(id, title)")
+        .select("id, title, novels(id, title, created_at)")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: true }),
+        .order("created_at", { ascending: true })
+        // Ordre stable des romans dans la sidebar
+        .order("created_at", { referencedTable: "novels", ascending: true }),
     ]);
 
     username = profileRes.data?.username ?? null;

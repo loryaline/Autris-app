@@ -298,10 +298,11 @@ export function PlanningSubSidebar({
                   </div>
                 </div>
               ) : (
-                <button
+                // Ligne du jalon — div (et non button) pour pouvoir
+                // imbriquer le bouton de statut sans HTML invalide.
+                <div
                   key={m.id}
-                  onClick={() => startEdit(m)}
-                  className="group relative text-left p-2.5 rounded-[var(--radius-md)] border border-dashed border-white/[0.08] bg-white/[0.015] hover:bg-white/[0.03] hover:border-white/[0.12] transition-colors cursor-pointer"
+                  className="group relative p-2.5 rounded-[var(--radius-md)] border border-dashed border-white/[0.08] bg-white/[0.015] hover:bg-white/[0.03] hover:border-white/[0.12] transition-colors"
                 >
                   {m.target_date && (
                     <div
@@ -311,34 +312,48 @@ export function PlanningSubSidebar({
                       {fmtDate(m.target_date)}
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleStatus(m);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.stopPropagation();
-                          toggleStatus(m);
-                        }
-                      }}
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 cursor-pointer ${
+                  <div className="flex items-center gap-2">
+                    {/* Toggle de statut — case à cocher 3 états :
+                        planned (vide) → in_progress (demi) → done (✓). */}
+                    <button
+                      type="button"
+                      onClick={() => toggleStatus(m)}
+                      title={
                         m.status === "done"
-                          ? "bg-teal"
+                          ? "Terminé — cliquer pour réinitialiser"
                           : m.status === "in_progress"
-                            ? "bg-amber"
-                            : "bg-white/30"
+                            ? "En cours — cliquer pour marquer terminé"
+                            : "À faire — cliquer pour démarrer"
+                      }
+                      className={`w-4 h-4 shrink-0 rounded-[4px] border flex items-center justify-center cursor-pointer transition-colors ${
+                        m.status === "done"
+                          ? "bg-teal border-teal text-[#0f1a16]"
+                          : m.status === "in_progress"
+                            ? "border-amber text-amber"
+                            : "border-white/25 hover:border-white/50"
                       }`}
-                      title={`Statut : ${m.status}`}
-                    />
-                    <span className="text-[12.5px] text-text-primary truncate">
+                    >
+                      {m.status === "done" && (
+                        <span className="text-[10px] leading-none">✓</span>
+                      )}
+                      {m.status === "in_progress" && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber" />
+                      )}
+                    </button>
+                    {/* Clic sur le titre → édition du jalon */}
+                    <button
+                      type="button"
+                      onClick={() => startEdit(m)}
+                      className={`flex-1 min-w-0 text-left text-[12.5px] truncate cursor-pointer ${
+                        m.status === "done"
+                          ? "text-text-tertiary line-through"
+                          : "text-text-primary"
+                      }`}
+                    >
                       {m.title}
-                    </span>
+                    </button>
                   </div>
-                </button>
+                </div>
               )
             )}
           </div>
