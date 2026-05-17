@@ -1463,3 +1463,34 @@ body {
   transform: scale(1.08);
 }
 .editor-paper.focus .focus-btn { position: fixed; top: 20px; right: 20px; }
+
+/* ============================================================
+   Phase 5 — World Building : polish de la sous-sidebar
+   ============================================================ */
+.wb-cat {
+  width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: var(--r-sm);
+  font-size: 12.5px; color: var(--text-2);
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; transition: all 0.15s;
+  border: 1px solid transparent; background: transparent;
+}
+.wb-cat:hover { background: var(--surface); color: var(--text); }
+.wb-cat.active {
+  background: var(--accent-bg); color: var(--accent);
+  border-color: var(--accent-border);
+}
+.wb-cat-icon { font-size: 14px; line-height: 1; flex-shrink: 0; }
+.wb-cat-label {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wb-cat-count {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--text-4);
+  min-width: 18px; text-align: right;
+}
+.wb-cat.active .wb-cat-count { color: var(--accent); }
+.wb-cat-group {
+  padding: 0 10px; font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.18em;
+  color: var(--text-4); margin-bottom: 6px;
+}
