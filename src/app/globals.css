@@ -1262,3 +1262,197 @@ body {
   font-size: 11px; color: var(--text-3);
   font-family: var(--font-mono); white-space: nowrap;
 }
+
+/* ============================================================
+   Phase 4 — Éditeur : barre flottante + feuille de papier
+   ============================================================ */
+
+/* --- Barre d'outils flottante (4 ancres + libre) --- */
+.float-toolbar {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  z-index: 20; user-select: none;
+  backdrop-filter: blur(8px);
+}
+.float-toolbar.vertical { flex-direction: column; padding: 8px 5px; gap: 4px; }
+.float-toolbar.vertical .ft-group { flex-direction: column; gap: 2px; }
+.float-toolbar.vertical .ft-sep { width: 18px; height: 1px; }
+.float-toolbar.vertical .ft-handle { width: 22px; height: 14px; }
+.float-toolbar.vertical .ft-grip { transform: rotate(90deg); }
+.float-toolbar.vertical .ft-dock-row { flex-direction: column; }
+
+.float-toolbar.dock-top { position: sticky; top: 8px; margin: 0 auto 6px; align-self: center; }
+.float-toolbar.dock-bottom { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); }
+.float-toolbar.dock-left { position: absolute; top: 24px; left: 14px; }
+.float-toolbar.dock-right { position: absolute; top: 24px; right: 14px; }
+.float-toolbar.dock-free { position: absolute; cursor: default; }
+
+.ft-handle {
+  display: grid; place-items: center;
+  width: 14px; height: 22px; cursor: grab;
+  color: var(--text-4); font-size: 9px; letter-spacing: -1px; flex-shrink: 0;
+}
+.ft-handle:active { cursor: grabbing; }
+.ft-grip { font-family: var(--font-mono); display: inline-block; }
+.ft-group { display: flex; gap: 2px; }
+.ft-sep { width: 1px; height: 18px; background: var(--border-soft); flex-shrink: 0; }
+.ft-btn {
+  height: 26px; min-width: 28px; padding: 0 6px;
+  background: transparent; border: none; border-radius: 7px;
+  color: var(--text-2); font-size: 12.5px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.ft-btn:hover { background: var(--surface); color: var(--text); }
+.ft-btn:active { transform: scale(.94); }
+.ft-btn.active {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+.tool-h { font-family: var(--font-display); font-style: italic; font-size: 13px; }
+[data-theme="sf"] .tool-h, [data-theme="corporate"] .tool-h {
+  font-family: var(--font-sans); font-style: normal; font-weight: 600;
+}
+.tool-q { font-family: var(--font-display); font-size: 14px; line-height: .8; }
+
+.ft-dock-row { display: inline-flex; gap: 2px; align-items: center; }
+.ft-dockbtn {
+  width: 18px; height: 18px; display: grid; place-items: center;
+  background: transparent; border: 1px solid transparent; border-radius: 5px;
+  color: var(--text-4); font-size: 11px; cursor: pointer;
+  transition: all .15s; padding: 0; line-height: 1;
+}
+.ft-dockbtn:hover { color: var(--text); background: var(--surface); }
+.ft-dockbtn.active {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+/* --- Zone papier --- */
+.editor-paper {
+  position: relative; flex: 1; min-height: 0;
+  background: var(--bg-3);
+  overflow: auto;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 30px 0;
+}
+[data-theme="fantasy"] .editor-paper {
+  background:
+    radial-gradient(circle at 20% 0%, var(--rune-color) 0%, transparent 30%),
+    var(--bg-3);
+}
+.editor-paper.focus { padding: 70px 0 110px; background: var(--bg); }
+
+.paper-sheet {
+  width: min(680px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 56px 64px 72px;
+  background: #fdf8ee; color: #2a241d;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--r-md);
+  transition: background 0.4s var(--ease-out), color 0.4s var(--ease-out);
+  position: relative;
+}
+[data-theme="fantasy"] .paper-sheet {
+  background: #fdf6e6; color: #2a1f15;
+  background-image:
+    radial-gradient(at 12% 20%, rgba(181,105,63,0.05) 0px, transparent 50%),
+    radial-gradient(at 88% 78%, rgba(181,105,63,0.04) 0px, transparent 55%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.6) inset,
+    0 -1px 0 rgba(181,105,63,0.05) inset,
+    0 30px 60px -20px rgba(0,0,0,0.45),
+    0 4px 12px rgba(0,0,0,0.15);
+}
+[data-theme="sf"] .paper-sheet {
+  background: #f6f8fb; color: #11161f;
+  background-image: linear-gradient(180deg, #fbfcfe 0%, #f3f6fa 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.8) inset,
+    0 30px 60px -25px rgba(8,16,32,0.55),
+    0 2px 6px rgba(8,16,32,0.18);
+  border: 1px solid rgba(120,160,200,0.08);
+}
+[data-theme="corporate"] .paper-sheet {
+  background: #ffffff; color: #1a1d24;
+  border-radius: 8px;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.06),
+    0 12px 30px -12px rgba(0,0,0,0.25);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.editor-paper.focus .paper-sheet {
+  width: min(720px, calc(100% - 80px));
+  padding: 64px 80px 88px;
+}
+
+/* --- Prose dans la feuille --- */
+.paper-prose { font-size: 16px; line-height: 1.85; color: inherit; }
+.paper-prose .tiptap,
+.paper-prose .tiptap * { color: inherit; }
+.paper-prose .tiptap {
+  font-family: var(--font-display);
+  font-size: 16px; line-height: 1.85;
+  outline: none;
+}
+[data-theme="fantasy"] .paper-prose .tiptap {
+  font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  font-size: 18px;
+}
+[data-theme="sf"] .paper-prose .tiptap {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13.5px; line-height: 1.75; letter-spacing: -0.005em;
+}
+[data-theme="corporate"] .paper-prose .tiptap {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 15.5px; line-height: 1.7;
+}
+.paper-prose .tiptap p { margin: 0 0 1em; }
+.paper-prose .tiptap h1,
+.paper-prose .tiptap h2,
+.paper-prose .tiptap h3 {
+  font-family: var(--font-display); font-weight: 600;
+  margin: 1.4em 0 0.5em; line-height: 1.25;
+}
+.paper-prose .tiptap h1 { font-size: 1.7em; }
+.paper-prose .tiptap h2 { font-size: 1.4em; }
+.paper-prose .tiptap h3 { font-size: 1.18em; }
+.paper-prose .tiptap blockquote {
+  border-left: 3px solid color-mix(in srgb, currentColor 30%, transparent);
+  padding-left: 1em; margin: 1em 0; font-style: italic; opacity: 0.85;
+}
+.paper-prose .tiptap ul,
+.paper-prose .tiptap ol { margin: 0 0 1em; padding-left: 1.4em; }
+.paper-prose .tiptap li { margin: 0.2em 0; }
+.paper-prose .tiptap hr {
+  border: none; height: 1px; margin: 1.6em 0;
+  background: color-mix(in srgb, currentColor 25%, transparent);
+}
+.paper-prose .tiptap p.is-editor-empty:first-child::before {
+  color: color-mix(in srgb, currentColor 45%, transparent);
+  content: attr(data-placeholder);
+  float: left; height: 0; pointer-events: none; font-style: italic;
+}
+
+/* --- Bouton focus sur le papier --- */
+.focus-btn {
+  position: absolute; top: 14px; right: 14px; z-index: 25;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--bg-2) 88%, transparent);
+  border: 1px solid var(--border-soft);
+  color: var(--text-3); cursor: pointer;
+  transition: all .18s var(--ease-out);
+  backdrop-filter: blur(8px);
+}
+.focus-btn:hover {
+  color: var(--accent); border-color: var(--accent-border);
+  transform: scale(1.08);
+}
+.editor-paper.focus .focus-btn { position: fixed; top: 20px; right: 20px; }
