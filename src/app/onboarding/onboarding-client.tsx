@@ -150,8 +150,9 @@ export function OnboardingClient() {
   const weeksFor80k = Math.ceil(80000 / wordsPerWeek);
 
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-[520px]">
+    <div className="relative min-h-screen bg-bg-primary flex flex-col items-center justify-center p-6">
+      <div className="onb-glow" />
+      <div className="relative z-10 w-full max-w-[520px]">
 
         {/* Progress bar */}
         {step !== "accueil" && step !== "final" && (
@@ -182,7 +183,7 @@ export function OnboardingClient() {
 
             <button
               onClick={next}
-              className="w-full h-11 bg-primary text-white rounded-[var(--radius-md)] text-[15px] font-medium cursor-pointer hover:bg-primary-dark transition-colors border-none mb-4"
+              className="w-full h-11 bg-primary text-[var(--accent-ink)] rounded-[var(--radius-md)] text-[15px] font-medium cursor-pointer hover:bg-primary-dark transition-colors border-none mb-4"
             >
               Commencer la configuration
             </button>
@@ -253,7 +254,7 @@ export function OnboardingClient() {
                 disabled={!persona}
                 className={`flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors ${
                   persona
-                    ? "bg-primary text-white hover:bg-primary-dark"
+                    ? "bg-primary text-[var(--accent-ink)] hover:bg-primary-dark"
                     : "bg-border text-text-quaternary cursor-not-allowed"
                 }`}
               >
@@ -323,7 +324,7 @@ export function OnboardingClient() {
                 disabled={!projectTitle.trim()}
                 className={`flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors ${
                   projectTitle.trim()
-                    ? "bg-primary text-white hover:bg-primary-dark"
+                    ? "bg-primary text-[var(--accent-ink)] hover:bg-primary-dark"
                     : "bg-border text-text-quaternary cursor-not-allowed"
                 }`}
               >
@@ -385,7 +386,7 @@ export function OnboardingClient() {
               </button>
               <button
                 onClick={next}
-                className="flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors bg-primary text-white hover:bg-primary-dark"
+                className="flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors bg-primary text-[var(--accent-ink)] hover:bg-primary-dark"
               >
                 Continuer
               </button>
@@ -479,7 +480,7 @@ export function OnboardingClient() {
               <button
                 onClick={createProjectAndGoFinal}
                 disabled={saving}
-                className="flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors bg-primary text-white hover:bg-primary-dark disabled:opacity-60"
+                className="flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors bg-primary text-[var(--accent-ink)] hover:bg-primary-dark disabled:opacity-60"
               >
                 {saving ? "Création…" : "Terminer"}
               </button>

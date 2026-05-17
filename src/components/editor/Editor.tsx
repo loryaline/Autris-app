@@ -8,7 +8,7 @@ import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import { createClient } from "@/lib/supabase/client";
-import { Toolbar } from "./Toolbar";
+import { FloatingToolbar } from "./FloatingToolbar";
 import { StatusBar } from "./StatusBar";
 import { StructurePanel } from "./StructurePanel";
 import { ContextPanel } from "./ContextPanel";
@@ -449,6 +449,16 @@ export function NovelEditor({
     };
   }, []);
 
+  // Échap quitte le mode focus.
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFocusMode(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focusMode]);
+
   // Resize handlers
   const handleResizeLeft = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -578,10 +588,24 @@ export function NovelEditor({
               <span className="text-[11px] font-medium text-primary bg-primary-bg px-1.5 py-0.5 rounded">sauvegarde…</span>
             )}
             <button
-              onClick={() => setFocusMode(true)}
-              className="text-[12px] text-primary border border-primary-border rounded-[var(--radius-sm)] px-1.5 py-0.5 bg-transparent cursor-pointer hover:bg-primary-bg transition-colors"
+              onClick={() => setShowLeftPanel((v) => !v)}
+              title={showLeftPanel ? "Masquer la structure" : "Afficher la structure"}
+              className={`rd-icon-btn ${showLeftPanel ? "" : "opacity-50"}`}
             >
-              ⤢ Focus
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M5.5 2V12" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setShowRightPanel((v) => !v)}
+              title={showRightPanel ? "Masquer le contexte" : "Afficher le contexte"}
+              className={`rd-icon-btn ${showRightPanel ? "" : "opacity-50"}`}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M8.5 2V12" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
             </button>
           </div>
         </div>
@@ -615,18 +639,6 @@ export function NovelEditor({
         </div>
       )}
 
-      {/* Toolbar — always visible */}
-      <Toolbar
-        editor={editor}
-        wordCount={activeChapter?.word_count ?? 0}
-        totalChars={charCount}
-        totalCharsNoSpaces={charCountNoSpaces}
-        paragraphCount={paragraphCount}
-        onToggleLeft={() => setShowLeftPanel(!showLeftPanel)}
-        onToggleRight={() => setShowRightPanel(!showRightPanel)}
-        hidePanelToggles={focusMode}
-      />
-
       {/* Main area */}
       <div className="flex flex-1 min-h-0">
         {/* Structure panel — hidden in focus mode */}
@@ -651,26 +663,38 @@ export function NovelEditor({
           </>
         )}
 
-        {/* Editor area — feuille blanche pleine hauteur */}
-        <div
-          className="flex-1 overflow-y-auto flex justify-center items-start"
-          style={{ background: "var(--color-bg-primary)" }}
-        >
-          <div
-            className="w-full chapter-card"
-            style={{
-              maxWidth: "760px",
-              margin: "24px 0 24px",
-              padding: "48px 64px 72px",
-            }}
+        {/* Zone papier — barre flottante + feuille */}
+        <div className={`editor-paper${focusMode ? " focus" : ""}`}>
+          <FloatingToolbar editor={editor} />
+
+          <button
+            className="focus-btn"
+            onClick={() => setFocusMode((v) => !v)}
+            title={focusMode ? "Quitter le focus (Échap)" : "Mode focus"}
           >
+            {focusMode ? (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M5.5 5.5L2 2M5.5 5.5V2.5M5.5 5.5H2.5M8.5 8.5L12 12M8.5 8.5V11.5M8.5 8.5H11.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 5V2.5C2 2.22 2.22 2 2.5 2H5M9 2H11.5C11.78 2 12 2.22 12 2.5V5M12 9V11.5C12 11.78 11.78 12 11.5 12H9M5 12H2.5C2.22 12 2 11.78 2 11.5V9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
+
+          <div className="editor-scroll">
+            <div className="paper-sheet">
             {activeChapter ? (
-              <div className="chapter-prose">
+              <div className="paper-prose">
                 <EditorContent editor={editor} />
               </div>
             ) : (
-              <div className="text-center mt-20" style={{ fontFamily: "var(--font-sans)" }}>
-                <div className="text-text-tertiary text-[14px] mb-3 italic" style={{ fontFamily: "var(--font-serif)" }}>
+              <div className="text-center" style={{ fontFamily: "var(--font-sans)" }}>
+                <div
+                  className="text-[14px] mb-3 italic"
+                  style={{ fontFamily: "var(--font-display)", color: "#6b6258" }}
+                >
                   {localChapters.length === 0
                     ? "La page est blanche. À votre plume."
                     : "Choisissez un chapitre pour reprendre l'écriture."}
@@ -678,13 +702,14 @@ export function NovelEditor({
                 {localChapters.length === 0 && (
                   <button
                     onClick={handleAddChapter}
-                    className="text-[13px] text-primary border border-primary-border rounded-[var(--radius-sm)] px-3 py-1.5 bg-transparent cursor-pointer hover:bg-primary-bg transition-colors"
+                    className="rd-btn rd-btn-sm rd-btn-primary"
                   >
                     + Créer un chapitre
                   </button>
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
 

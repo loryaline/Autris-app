@@ -181,319 +181,278 @@ export function DashboardClient({
 
   return (
     <>
-      {/* Header : Vos univers + Nouveau projet */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-[18px] text-text-primary">
-          Vos <span className="font-serif italic text-[var(--color-accent)]">univers</span>
+      {/* En-tête : Vos univers + Nouveau projet */}
+      <div className="rd-boards-head">
+        <div className="rd-boards-title">
+          Vos <em>univers</em>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-[var(--color-accent-border)] text-[var(--color-accent)] text-[12px] hover:bg-[var(--color-accent-bg)] transition-colors cursor-pointer"
+          className="rd-btn rd-btn-sm rd-btn-pill"
+          style={{ color: "var(--accent)", borderColor: "var(--accent-border)" }}
         >
           + Nouveau projet
         </button>
       </div>
 
       {projects.length > 0 ? (
-        <div className="flex flex-col gap-3">
+        <div className="rd-board-stack">
           {projects.map((project) => {
             const genreInfo = GENRES.find((g) => g.value === project.genre);
             const totalWords = project.novels.reduce((s, n) => s + n.current_words, 0);
-            // Roman ACTIF de ce projet (au sens global : flag is_active = true).
-            // Si présent, sa progression individuelle est affichée.
+            // Roman ACTIF de ce projet (flag is_active global).
             const activeNovel = project.novels.find((n) => n.is_active);
-            const activeGoal = activeNovel?.word_goal ?? 0;
-            const activeWords = activeNovel?.current_words ?? 0;
-            const activeProgress =
-              activeGoal > 0 ? Math.min((activeWords / activeGoal) * 100, 100) : 0;
-            // Progression « série » : somme sur tous les romans qui ont un
-            // word_goal défini. Affichée à la place de la jauge individuelle
-            // quand aucun roman du projet n'est l'actif global.
-            const seriesGoal = project.novels.reduce(
-              (s, n) => s + (n.word_goal ?? 0),
-              0,
-            );
+            // Romans avec un word_goal défini → progression cumulée.
+            const seriesGoal = project.novels.reduce((s, n) => s + (n.word_goal ?? 0), 0);
             const seriesWords = project.novels.reduce(
               (s, n) => s + (n.word_goal ? n.current_words : 0),
               0,
             );
-            const seriesProgress =
-              seriesGoal > 0 ? Math.min((seriesWords / seriesGoal) * 100, 100) : 0;
-            const showActiveBar = !!activeNovel && activeGoal > 0;
-            const showSeriesBar = !showActiveBar && seriesGoal > 0 && project.novels.length > 1;
-            const showSingleNoActiveBar =
-              !showActiveBar && !showSeriesBar && project.novels.length === 1
-                && (project.novels[0]?.word_goal ?? 0) > 0;
+            // Jauge affichée : roman actif prioritaire, sinon série cumulée.
+            const bar = (() => {
+              if (activeNovel && (activeNovel.word_goal ?? 0) > 0) {
+                const g = activeNovel.word_goal ?? 0;
+                return {
+                  label: activeNovel.title,
+                  words: activeNovel.current_words,
+                  goal: g,
+                  pct: Math.min(100, Math.round((activeNovel.current_words / g) * 100)),
+                };
+              }
+              if (seriesGoal > 0) {
+                return {
+                  label: project.novels.length > 1 ? "Série" : project.novels[0]?.title ?? "",
+                  words: seriesWords,
+                  goal: seriesGoal,
+                  pct: Math.min(100, Math.round((seriesWords / seriesGoal) * 100)),
+                };
+              }
+              return null;
+            })();
 
             return (
-              <div
-                key={project.id}
-                className="relative overflow-hidden rounded-[var(--radius-xl)] border border-white/[0.06]"
-              >
-                {/* Hero / cover */}
+              <div key={project.id} className="rd-board-card">
+                {/* Couverture */}
                 <div
-                  className={`relative h-[110px] univers-glow flex items-end ${
-                    project.cover_image_url ? "" : ""
-                  }`}
+                  className="rd-board-cover"
                   style={
                     project.cover_image_url
                       ? {
-                          backgroundImage: `linear-gradient(180deg, rgba(26,26,43,0.15) 0%, rgba(26,26,43,0.85) 100%), url(${project.cover_image_url})`,
+                          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.8) 100%), url(${project.cover_image_url})`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                         }
                       : undefined
                   }
                 >
-                  {/* Moon */}
-                  {!project.cover_image_url && (
-                    <div
-                      className="absolute top-5 right-6 w-12 h-12 rounded-full"
-                      style={{
-                        background:
-                          "radial-gradient(circle at 35% 35%, #d9a57c 0%, #a86a44 60%, #5a3322 100%)",
-                        boxShadow: "0 0 40px rgba(228,180,140,0.25)",
-                      }}
-                    />
-                  )}
-                  <div className="relative p-4 w-full">
-                    <div className="flex items-end justify-between">
-                      <div className="font-serif italic text-[22px] text-text-primary leading-tight">
-                        {project.title}
-                      </div>
-                      <div className="text-right">
-                        <div className="font-serif text-[22px] text-text-primary leading-none">
-                          {formatCompact(totalWords)}
-                        </div>
-                        <div className="text-[9.5px] text-text-quaternary uppercase mt-0.5" style={{ letterSpacing: "0.14em" }}>
-                          mots au total
-                        </div>
+                  {!project.cover_image_url && <div className="rd-board-orb" />}
+                  <div className="rd-board-meta">
+                    <div className="rd-board-row">
+                      <div className="rd-board-name">{project.title}</div>
+                      <div className="rd-board-words">
+                        <div className="rd-board-words-num">{formatCompact(totalWords)}</div>
+                        <div className="rd-board-words-cap">mots · total</div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[10px] text-[var(--color-accent)] uppercase" style={{ letterSpacing: "0.16em" }}>
-                        ◆ {genreInfo?.label}
-                      </span>
-                      <span className="text-[10px] text-text-quaternary uppercase" style={{ letterSpacing: "0.16em" }}>
+                    <div className="rd-board-tags">
+                      <span className="rd-board-tag accent">◆ {genreInfo?.label ?? project.genre}</span>
+                      <span className="rd-board-tag">
                         · {project.novels.length} roman{project.novels.length > 1 ? "s" : ""}
                       </span>
-                      <div className="flex-1" />
                       <a
                         href={`/project/${project.id}`}
-                        title="Paramètres"
-                        className="text-text-quaternary hover:text-[var(--color-accent)] transition-colors"
+                        title="Paramètres du projet"
+                        className="rd-board-tag"
+                        style={{ marginLeft: "auto" }}
                       >
-                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                          <path d="M7 9a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" strokeWidth="1.2"/>
-                          <path d="M11.4 8.6a1 1 0 00.2 1.1l.04.04a1.2 1.2 0 11-1.7 1.7l-.04-.04a1 1 0 00-1.1-.2 1 1 0 00-.6.92v.11a1.2 1.2 0 11-2.4 0v-.06a1 1 0 00-.66-.92 1 1 0 00-1.1.2l-.04.04a1.2 1.2 0 11-1.7-1.7l.04-.04a1 1 0 00.2-1.1 1 1 0 00-.92-.6h-.11a1.2 1.2 0 110-2.4h.06a1 1 0 00.92-.66 1 1 0 00-.2-1.1l-.04-.04a1.2 1.2 0 111.7-1.7l.04.04a1 1 0 001.1.2h.05a1 1 0 00.6-.92v-.11a1.2 1.2 0 112.4 0v.06a1 1 0 00.6.92 1 1 0 001.1-.2l.04-.04a1.2 1.2 0 111.7 1.7l-.04.04a1 1 0 00-.2 1.1v.05a1 1 0 00.92.6h.11a1.2 1.2 0 110 2.4h-.06a1 1 0 00-.92.6z" stroke="currentColor" strokeWidth="1.2"/>
-                        </svg>
+                        Gérer
                       </a>
                     </div>
                   </div>
                 </div>
 
-                {/* Jauge de progression — variante selon le contexte :
-                    - Roman actif global présent : sa progression individuelle.
-                    - Sinon plusieurs romans avec un goal : jauge cumulée série.
-                    - Sinon roman unique avec goal : sa progression seule.
-                    - Sinon : pas de jauge. */}
-                {showActiveBar && activeNovel && (
-                  <div className="px-4 py-2.5 border-t border-white/[0.04] bg-white/[0.015]">
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="text-text-tertiary truncate mr-2">
-                        {activeNovel.title} · <span className="text-text-quaternary">en cours</span>
-                      </span>
-                      <span className="text-text-secondary shrink-0">
-                        {activeWords.toLocaleString("fr-FR")} / {activeGoal.toLocaleString("fr-FR")} ·{" "}
-                        <span className="text-[var(--color-accent)] font-medium">{Math.round(activeProgress)} %</span>
+                {/* Jauge de progression */}
+                {bar && (
+                  <div className="rd-board-progress">
+                    <div className="rd-board-progress-row">
+                      <span className="num">{bar.label}</span>
+                      <span>
+                        <span className="num">{bar.words.toLocaleString("fr-FR")}</span> /{" "}
+                        {bar.goal.toLocaleString("fr-FR")}{" "}
+                        <span className="pct">{bar.pct}%</span>
                       </span>
                     </div>
-                    <div className="h-[2px] rounded-full bg-white/[0.05] overflow-hidden">
-                      <div
-                        className="h-full bg-[var(--color-accent)] rounded-full"
-                        style={{ width: `${activeProgress}%` }}
-                      />
+                    <div className="rd-board-progress-bar">
+                      <div className="rd-board-progress-fill" style={{ width: `${bar.pct}%` }} />
                     </div>
                   </div>
                 )}
-                {showSeriesBar && (
-                  <div className="px-4 py-2.5 border-t border-white/[0.04] bg-white/[0.015]">
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="text-text-tertiary truncate mr-2">
-                        Série · <span className="text-text-quaternary">tous les romans</span>
-                      </span>
-                      <span className="text-text-secondary shrink-0">
-                        {seriesWords.toLocaleString("fr-FR")} / {seriesGoal.toLocaleString("fr-FR")} ·{" "}
-                        <span className="text-[var(--color-accent)] font-medium">{Math.round(seriesProgress)} %</span>
-                      </span>
-                    </div>
-                    <div className="h-[2px] rounded-full bg-white/[0.05] overflow-hidden">
-                      <div
-                        className="h-full bg-[var(--color-accent)]/70 rounded-full"
-                        style={{ width: `${seriesProgress}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-                {showSingleNoActiveBar && (() => {
-                  const only = project.novels[0];
-                  const g = only.word_goal ?? 0;
-                  const pct = g > 0 ? Math.min((only.current_words / g) * 100, 100) : 0;
-                  return (
-                    <div className="px-4 py-2.5 border-t border-white/[0.04] bg-white/[0.015]">
-                      <div className="flex items-center justify-between text-[11px] mb-1">
-                        <span className="text-text-tertiary truncate mr-2">
-                          {only.title} · <span className="text-text-quaternary">non actif</span>
-                        </span>
-                        <span className="text-text-secondary shrink-0">
-                          {only.current_words.toLocaleString("fr-FR")} / {g.toLocaleString("fr-FR")} ·{" "}
-                          <span className="text-[var(--color-accent)] font-medium">{Math.round(pct)} %</span>
-                        </span>
-                      </div>
-                      <div className="h-[2px] rounded-full bg-white/[0.05] overflow-hidden">
-                        <div
-                          className="h-full bg-[var(--color-accent)]/70 rounded-full"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })()}
 
-                {/* Novels list */}
-                <div className="px-2 py-2 bg-white/[0.01]">
+                {/* Liste des romans */}
+                <div className="rd-board-novels">
                   {project.novels.length > 0 ? (
-                    <div className="flex flex-col">
-                      {project.novels.map((novel) => {
-                        const status: NovelStatus = novel.status ?? "a_ecrire";
-                        const statusInfo = NOVEL_STATUS_LABELS[status];
-                        return (
-                          <div
-                            key={novel.id}
-                            className="group flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] hover:bg-white/[0.03] transition-colors"
+                    project.novels.map((novel) => {
+                      const status: NovelStatus = novel.status ?? "a_ecrire";
+                      const statusInfo = NOVEL_STATUS_LABELS[status];
+                      const statusClass =
+                        status === "termine" || status === "publie"
+                          ? "done"
+                          : status === "a_ecrire"
+                            ? ""
+                            : "writing";
+                      return (
+                        <div key={novel.id} className="rd-novel-card-row">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (novel.is_active) return;
+                              handleActivateNovel(novel.id, novel.current_words);
+                            }}
+                            title={
+                              novel.is_active
+                                ? "Roman actif — pilote le calendrier"
+                                : "Activer ce roman"
+                            }
+                            className={`rd-novel-card-marker${novel.is_active ? " active" : ""}`}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: novel.is_active ? "default" : "pointer",
+                              padding: 0,
+                              fontSize: 13,
+                            }}
                           >
-                            {/* ✦ activable : roman actif → accent rempli ;
-                                inactif → étoile creuse, hover invite à
-                                l'activer. Click change l'actif global. */}
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (novel.is_active) return; // déjà actif
-                                handleActivateNovel(novel.id, novel.current_words);
-                              }}
-                              title={
-                                novel.is_active
-                                  ? "Roman actif — pilote le calendrier"
-                                  : "Activer ce roman — pilotera le calendrier de l'accueil"
-                              }
-                              className={`text-[13px] leading-none w-5 h-5 flex items-center justify-center rounded transition-colors ${
-                                novel.is_active
-                                  ? "text-[var(--color-accent)] cursor-default"
-                                  : "text-text-quaternary hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-bg)]/40 cursor-pointer"
-                              }`}
-                            >
-                              {novel.is_active ? "✦" : "☆"}
-                            </button>
-                            <a
-                              href={`/project/${project.id}#novel-${novel.id}`}
-                              title="Paramètres du roman"
-                              className="flex-1 min-w-0 text-[12.5px] text-text-secondary hover:text-text-primary truncate no-underline"
-                            >
-                              {novel.title}
-                            </a>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleCycleNovelStatus(novel.id, status);
-                              }}
-                              title={`Statut : ${statusInfo.label} (clic pour changer)`}
-                              className={`text-[10px] px-2 py-0.5 rounded-full cursor-pointer transition-opacity hover:opacity-80 ${statusInfo.color}`}
-                            >
-                              {statusInfo.label}
-                            </button>
-                            <span className="text-[11px] text-text-tertiary tabular-nums w-[82px] text-right">
-                              {novel.current_words.toLocaleString("fr-FR")} mots
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                            {novel.is_active ? "✦" : "›"}
+                          </button>
+                          <a
+                            href={`/project/${project.id}#novel-${novel.id}`}
+                            className="rd-novel-card-title"
+                            title="Paramètres du roman"
+                          >
+                            {novel.title}
+                          </a>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCycleNovelStatus(novel.id, status);
+                            }}
+                            title={`Statut : ${statusInfo.label} (clic pour changer)`}
+                            className={`rd-novel-card-status${statusClass ? ` ${statusClass}` : ""}`}
+                            style={{ cursor: "pointer" }}
+                          >
+                            {statusInfo.label}
+                          </button>
+                          <span className="rd-novel-card-words">
+                            {novel.current_words.toLocaleString("fr-FR")}
+                          </span>
+                        </div>
+                      );
+                    })
                   ) : (
-                    <div className="px-2 py-1 text-[12px] text-text-quaternary italic">Aucun roman</div>
+                    <div
+                      className="rd-novel-card-title"
+                      style={{ padding: "6px 8px", fontStyle: "italic", color: "var(--text-4)" }}
+                    >
+                      Aucun roman
+                    </div>
                   )}
 
-                  {/* Ajouter un roman — formulaire inline */}
+                  {/* Ajouter un roman */}
                   {addNovelToProjectId === project.id ? (
-                    <div className="mt-1 px-2 py-2 border-t border-white/[0.05]">
-                      <div className="flex gap-1.5">
-                        <input
-                          type="text"
-                          value={newNovelTitle}
-                          onChange={(e) => setNewNovelTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleAddNovel(project.id);
-                            if (e.key === "Escape") {
-                              setAddNovelToProjectId(null);
-                              setNewNovelTitle("");
-                            }
-                          }}
-                          placeholder="Titre du roman"
-                          autoFocus
-                          className="flex-1 h-7 px-2 text-[12px] bg-bg-primary border border-white/[0.08] rounded-[var(--radius-sm)] text-text-primary focus:outline-none focus:border-[var(--color-accent-border)]"
-                        />
-                        <button
-                          onClick={() => handleAddNovel(project.id)}
-                          disabled={addingNovel || !newNovelTitle.trim()}
-                          className={`h-7 px-2.5 rounded-[var(--radius-sm)] text-[11px] font-medium transition-colors ${
-                            newNovelTitle.trim() && !addingNovel
-                              ? "bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] cursor-pointer"
-                              : "bg-white/[0.05] text-text-quaternary cursor-not-allowed"
-                          }`}
-                        >
-                          {addingNovel ? "…" : "Ajouter"}
-                        </button>
-                        <button
-                          onClick={() => {
+                    <div style={{ display: "flex", gap: 6, padding: "6px 8px" }}>
+                      <input
+                        type="text"
+                        value={newNovelTitle}
+                        onChange={(e) => setNewNovelTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAddNovel(project.id);
+                          if (e.key === "Escape") {
                             setAddNovelToProjectId(null);
                             setNewNovelTitle("");
-                          }}
-                          className="h-7 px-2 text-[11px] text-text-tertiary hover:text-text-primary cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
+                          }
+                        }}
+                        placeholder="Titre du roman"
+                        autoFocus
+                        className="rd-search"
+                        style={{
+                          flex: 1,
+                          height: 28,
+                          padding: "0 8px",
+                          fontSize: 12,
+                          background: "var(--bg-2)",
+                          border: "1px solid var(--border-soft)",
+                          borderRadius: "var(--r-sm)",
+                          color: "var(--text)",
+                        }}
+                      />
+                      <button
+                        onClick={() => handleAddNovel(project.id)}
+                        disabled={addingNovel || !newNovelTitle.trim()}
+                        className="rd-btn rd-btn-sm rd-btn-primary"
+                      >
+                        {addingNovel ? "…" : "Ajouter"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setAddNovelToProjectId(null);
+                          setNewNovelTitle("");
+                        }}
+                        className="rd-btn rd-btn-sm"
+                      >
+                        ✕
+                      </button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setAddNovelToProjectId(project.id)}
-                      className="mt-1 w-full px-2 py-1 text-[11.5px] text-text-quaternary hover:text-[var(--color-accent)] cursor-pointer transition-colors flex items-center gap-1.5"
+                      className="rd-novel-card-row"
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--text-4)",
+                        width: "100%",
+                        textAlign: "left",
+                      }}
                     >
-                      <span className="text-[12px]">+</span>
-                      <span>Ajouter un roman</span>
+                      <span className="rd-novel-card-marker">+</span>
+                      <span className="rd-novel-card-title">Ajouter un roman</span>
                     </button>
                   )}
 
-                  {/* Supprimer */}
+                  {/* Supprimer le projet */}
                   {deletingId === project.id ? (
-                    <div className="mt-1.5 px-2 pt-2 border-t border-white/[0.05]">
-                      <div className="text-[11px] text-red mb-1.5">Supprimer ce projet et tous ses romans ?</div>
-                      <div className="flex gap-1.5">
-                        <button onClick={() => handleDeleteProject(project.id)} className="text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] bg-red text-white cursor-pointer hover:bg-red/90 transition-colors">
-                          Supprimer
-                        </button>
-                        <button onClick={() => setDeletingId(null)} className="text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] text-text-tertiary hover:text-text-primary cursor-pointer transition-colors">
-                          Annuler
-                        </button>
-                      </div>
+                    <div style={{ padding: "6px 8px", display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ fontSize: 11, color: "var(--danger)", flex: 1 }}>
+                        Supprimer ce projet ?
+                      </span>
+                      <button
+                        onClick={() => handleDeleteProject(project.id)}
+                        className="rd-btn rd-btn-sm"
+                        style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
+                      >
+                        Supprimer
+                      </button>
+                      <button onClick={() => setDeletingId(null)} className="rd-btn rd-btn-sm">
+                        Annuler
+                      </button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setDeletingId(project.id)}
-                      className="mt-1 px-2 text-[10.5px] text-text-quaternary hover:text-red cursor-pointer transition-colors"
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--text-4)",
+                        fontSize: 10.5,
+                        padding: "4px 8px",
+                        textAlign: "left",
+                      }}
                     >
-                      Supprimer
+                      Supprimer le projet
                     </button>
                   )}
                 </div>
@@ -502,17 +461,34 @@ export function DashboardClient({
           })}
         </div>
       ) : (
-        <div className="rounded-[var(--radius-xl)] border border-white/[0.06] bg-bg-tertiary/40 p-6 text-center">
-          <div className="text-[20px] text-[var(--color-accent)] mb-2">◆</div>
-          <div className="text-[14px] text-text-primary mb-1" style={{ fontFamily: "var(--font-serif)" }}>
-            <span className="italic">La page est blanche.</span>
+        <div
+          style={{
+            borderRadius: "var(--r-xl)",
+            border: "1px solid var(--border-soft)",
+            background: "var(--bg-3)",
+            padding: 24,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 20, color: "var(--accent)", marginBottom: 8 }}>◆</div>
+          <div
+            style={{
+              fontSize: 15,
+              color: "var(--text)",
+              marginBottom: 4,
+              fontFamily: "var(--font-display)",
+              fontStyle: "italic",
+            }}
+          >
+            La page est blanche.
           </div>
-          <div className="text-[12px] text-text-tertiary mb-3">
+          <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 12 }}>
             Créez votre premier projet et commencez à écrire votre roman.
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-[var(--color-accent-border)] text-[var(--color-accent)] text-[12px] hover:bg-[var(--color-accent-bg)] transition-colors cursor-pointer"
+            className="rd-btn rd-btn-sm rd-btn-pill"
+            style={{ color: "var(--accent)", borderColor: "var(--accent-border)" }}
           >
             + Nouveau projet
           </button>

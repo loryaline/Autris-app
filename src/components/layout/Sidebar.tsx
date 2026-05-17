@@ -4,77 +4,66 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-/* ---- Icons ---- */
-function IconHome({ active }: { active?: boolean }) {
-  const c = active ? "var(--color-accent)" : "var(--color-text-tertiary)";
-  return (
-    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M2 6L7 2L12 6V11.5C12 11.78 11.78 12 11.5 12H8.5V8.5H5.5V12H2.5C2.22 12 2 11.78 2 11.5V6Z"
-        stroke={c}
-        strokeWidth="1.1"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function IconChevronDown({ open }: { open: boolean }) {
-  return (
-    <svg
-      width="8"
-      height="8"
-      viewBox="0 0 9 9"
-      fill="none"
-      className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`}
-    >
-      <path d="M2 3.5L4.5 6 7 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function NavItem({
-  href,
-  icon,
-  label,
-  active,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`relative flex items-center gap-2 pl-3 pr-3 py-[7px] text-[13px] cursor-pointer transition-colors duration-150 rounded-[var(--radius-sm)] ${
-        active
-          ? "text-[var(--color-accent)] bg-white/[0.03]"
-          : "text-text-secondary hover:bg-white/[0.03]"
-      }`}
-    >
-      {active && (
-        <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r bg-[var(--color-accent)]" />
-      )}
-      {icon}
-      <span>{label}</span>
-    </Link>
-  );
-}
+/* ---- Icônes (reprises du redesign) ---- */
+const IconHome = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <path d="M2 6L7 2L12 6V11.5C12 11.78 11.78 12 11.5 12H8.5V8.5H5.5V12H2.5C2.22 12 2 11.78 2 11.5V6Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+  </svg>
+);
+const IconGlobe = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M2 7H12M7 2C8.5 4 8.5 10 7 12M7 2C5.5 4 5.5 10 7 12" stroke="currentColor" strokeWidth="1.2" />
+  </svg>
+);
+const IconLayout = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M2 6H12M6 6V12" stroke="currentColor" strokeWidth="1.2" />
+  </svg>
+);
+const IconFeather = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <path d="M3 12L9 6M9 6L11.5 3.5C12.05 2.95 12.95 2.95 13.5 3.5C14.05 4.05 14.05 4.95 13.5 5.5L11 8M9 6L11 8M11 8L6 13H1V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+const IconChevron = () => (
+  <svg className="rd-project-chevron" viewBox="0 0 9 9" fill="none">
+    <path d="M2 3.5L4.5 6 7 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+  </svg>
+);
+const IconPlus = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <path d="M6 2V10M2 6H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+const IconSearch = () => (
+  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+    <circle cx="6.5" cy="6.5" r="3.5" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M9.5 9.5L12 12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+);
 
 /* ---- Types ---- */
 interface SidebarNovel {
   id: string;
   title: string;
+  status?: string | null;
+  is_active?: boolean | null;
 }
-
 interface SidebarProject {
   id: string;
   title: string;
   novels: SidebarNovel[];
 }
 
-/* ---- Sidebar ---- */
+/** Mappe le NovelStatus interne vers les 3 états visuels du marqueur. */
+function markerClass(status?: string | null): string {
+  if (status === "termine" || status === "publie") return "done";
+  if (status === "a_ecrire" || !status) return "todo";
+  return "writing"; // premier_jet / revision / reecriture / correction
+}
+
 export function Sidebar({
   projects,
   username,
@@ -85,175 +74,176 @@ export function Sidebar({
   const displayName = username ?? "Vous";
   const initial = (username ?? "A")[0].toUpperCase();
   const pathname = usePathname();
-  const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
-  const [openNovels, setOpenNovels] = useState<Record<string, boolean>>({});
 
-  function toggleProject(id: string) {
-    setOpenProjects((prev) => ({ ...prev, [id]: !prev[id] }));
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  // Roman dont les feuilles Planif/Rédaction sont visibles : celui de la
+  // route courante (/editor/X ou /planning/X), sinon le roman actif global.
+  const routeNovelId = (() => {
+    const m = pathname.match(/^\/(?:editor|planning)\/([^/]+)/);
+    return m ? m[1] : null;
+  })();
+  const allNovels = (projects ?? []).flatMap((p) => p.novels);
+  const activeNovelId =
+    routeNovelId ?? allNovels.find((n) => n.is_active)?.id ?? null;
+
+  function matchProject(p: SidebarProject): boolean {
+    if (!q) return true;
+    if (p.title.toLowerCase().includes(q)) return true;
+    return p.novels.some((n) => n.title.toLowerCase().includes(q));
   }
-
-  function toggleNovel(id: string) {
-    setOpenNovels((prev) => ({ ...prev, [id]: !prev[id] }));
+  function matchNovel(n: SidebarNovel): boolean {
+    return !q || n.title.toLowerCase().includes(q);
   }
+  // Projet ouvert : si filtre actif → tous les matchés ; sinon ouvert sauf
+  // si explicitement replié.
+  const isOpen = (p: SidebarProject) =>
+    q ? matchProject(p) : !collapsed[p.id];
 
-  // Default open for all projects/novels
-  const isProjectOpen = (id: string) => openProjects[id] !== false;
-  const isNovelOpen = (id: string) => openNovels[id] !== false;
+  const filtered = (projects ?? []).filter(matchProject);
 
   return (
-    <aside className="w-[220px] shrink-0 bg-bg-secondary flex flex-col h-full overflow-y-auto">
+    <aside className="rd-sidebar w-[240px] shrink-0">
       {/* Brand */}
-      <div className="h-14 flex items-center px-5">
-        <Link
-          href="/"
-          className="no-underline flex items-baseline gap-1.5"
-        >
-          <span
-            className="font-serif italic text-[22px] text-[var(--color-accent)] leading-none"
-            style={{ letterSpacing: "0.01em" }}
-          >
-            Autris
-          </span>
-          <span className="w-[5px] h-[5px] rounded-full bg-[var(--color-accent)] mb-1" />
+      <div className="rd-brand">
+        <Link href="/" className="rd-brand-mark" aria-label="Accueil Autris">
+          A
         </Link>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+          <span className="rd-brand-text">Autris</span>
+          <span className="rd-brand-dot" />
+        </div>
       </div>
 
       {/* Navigation */}
-      <div className="px-3 pt-3 pb-1.5">
-        <div className="px-2 text-[9.5px] font-medium text-text-quaternary uppercase mb-1.5"
-             style={{ letterSpacing: "0.18em" }}>
-          Navigation
-        </div>
-        <NavItem
-          href="/"
-          icon={<IconHome active={pathname === "/"} />}
-          label="Accueil"
-          active={pathname === "/"}
-        />
+      <div className="rd-nav-section">
+        <div className="rd-nav-title">Navigation</div>
+        <Link href="/" className={`rd-nav-item${pathname === "/" ? " active" : ""}`}>
+          <IconHome />
+          <span>Accueil</span>
+        </Link>
       </div>
 
-      {/* Projects */}
-      <div className="px-3 pt-3 flex-1">
-        <div className="px-2 text-[9.5px] font-medium text-text-quaternary uppercase mb-1.5"
-             style={{ letterSpacing: "0.18em" }}>
-          Mes projets
+      {/* Arbre projets */}
+      <div className="rd-tree">
+        <div className="rd-tree-head">
+          <span className="rd-nav-title" style={{ padding: 0 }}>
+            Mes projets
+          </span>
+          <Link href="/?new=project" className="rd-tree-add" title="Nouveau projet">
+            <IconPlus />
+          </Link>
         </div>
 
-        {projects && projects.length > 0 ? (
-          projects.map((project) => (
-            <div key={project.id} className="mt-0.5">
-              <div className="flex items-center gap-1.5 px-2 py-1">
-                <button
-                  onClick={() => toggleProject(project.id)}
-                  className="cursor-pointer shrink-0 text-text-tertiary"
-                >
-                  <IconChevronDown open={isProjectOpen(project.id)} />
-                </button>
+        <div className="rd-search">
+          <IconSearch />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filtrer…"
+          />
+          {query && (
+            <button
+              className="rd-search-clear"
+              onClick={() => setQuery("")}
+              title="Effacer"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {filtered.length === 0 && (
+          <div className="rd-empty">
+            {q ? `Aucun résultat pour « ${query} »` : "Aucun projet"}
+          </div>
+        )}
+
+        {filtered.map((p) => {
+          const opened = isOpen(p);
+          const wbActive = pathname === `/wb/${p.id}`;
+          const projectActive =
+            wbActive || p.novels.some((n) => n.id === routeNovelId);
+          return (
+            <div
+              key={p.id}
+              className={`rd-project${projectActive ? " active" : ""}${opened ? " open" : ""}`}
+            >
+              <div
+                className="rd-project-head"
+                onClick={() =>
+                  setCollapsed((s) => ({ ...s, [p.id]: !(!s[p.id]) }))
+                }
+              >
+                <IconChevron />
+                <span className="rd-project-title">{p.title}</span>
+                <span className="rd-project-count">{p.novels.length}</span>
                 <Link
-                  href={`/project/${project.id}`}
-                  className="text-[13px] text-text-primary truncate no-underline hover:text-[var(--color-accent)] transition-colors"
+                  href={`/wb/${p.id}`}
+                  className={`rd-project-wb${wbActive ? " active" : ""}`}
+                  title="World Building"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {project.title}
+                  <IconGlobe />
                 </Link>
               </div>
 
-              {isProjectOpen(project.id) && (
-                <div className="ml-3 border-l border-white/5 pl-2">
-                  <Link
-                    href={`/wb/${project.id}`}
-                    className={`flex items-center gap-1.5 px-2 py-[4px] text-[12px] rounded-[var(--radius-sm)] transition-colors duration-150 no-underline ${
-                      pathname === `/wb/${project.id}`
-                        ? "text-[var(--color-accent)]"
-                        : "text-text-tertiary hover:text-text-secondary"
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      pathname === `/wb/${project.id}` ? "bg-[var(--color-accent)]" : "bg-text-quaternary"
-                    }`} />
-                    World Building
-                  </Link>
-                  {project.novels.map((novel) => (
-                    <div key={novel.id} className="mt-0.5">
-                      <button
-                        onClick={() => toggleNovel(novel.id)}
-                        className="flex items-center gap-1.5 py-[3px] px-2 cursor-pointer w-full text-left text-text-tertiary"
-                      >
-                        <IconChevronDown open={isNovelOpen(novel.id)} />
-                        <span className="text-[12.5px] text-text-secondary truncate">
-                          {novel.title}
-                        </span>
-                      </button>
+              {opened && (
+                <div className="rd-novels">
+                  {p.novels.filter(matchNovel).map((n) => {
+                    const isSelected = n.id === activeNovelId;
+                    const novelRowActive =
+                      pathname === `/editor/${n.id}` ||
+                      pathname === `/planning/${n.id}`;
+                    return (
+                      <div key={n.id} className="rd-novel">
+                        <Link
+                          href={`/editor/${n.id}`}
+                          className={`rd-novel-row${novelRowActive ? " active" : ""}`}
+                        >
+                          <span className={`rd-novel-marker ${markerClass(n.status)}`} />
+                          <span className="rd-novel-title">{n.title}</span>
+                          {n.is_active && <span className="rd-novel-mark">✦</span>}
+                        </Link>
 
-                      {isNovelOpen(novel.id) && (
-                        <div className="ml-3 border-l border-white/5 pl-2">
-                          {(() => {
-                            const planActive = pathname === `/planning/${novel.id}`;
-                            const edActive = pathname === `/editor/${novel.id}`;
-                            return (
-                              <>
-                                <Link
-                                  href={`/planning/${novel.id}`}
-                                  className={`relative block px-2 py-[5px] text-[12px] rounded-[var(--radius-sm)] transition-colors duration-150 no-underline ${
-                                    planActive
-                                      ? "text-[var(--color-accent)] bg-white/[0.035] font-medium"
-                                      : "text-text-tertiary hover:text-text-secondary hover:bg-white/[0.02]"
-                                  }`}
-                                >
-                                  {planActive && (
-                                    <span
-                                      className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full"
-                                      style={{ background: "var(--color-accent)" }}
-                                    />
-                                  )}
-                                  Planification
-                                </Link>
-                                <Link
-                                  href={`/editor/${novel.id}`}
-                                  className={`relative block px-2 py-[5px] text-[12px] rounded-[var(--radius-sm)] transition-colors duration-150 no-underline ${
-                                    edActive
-                                      ? "text-[var(--color-accent)] bg-white/[0.035] font-medium"
-                                      : "text-text-tertiary hover:text-text-secondary hover:bg-white/[0.02]"
-                                  }`}
-                                >
-                                  {edActive && (
-                                    <span
-                                      className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full"
-                                      style={{ background: "var(--color-accent)" }}
-                                    />
-                                  )}
-                                  Rédaction
-                                </Link>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        {isSelected && (
+                          <div className="rd-novel-children">
+                            <Link
+                              href={`/planning/${n.id}`}
+                              className={`rd-leaf${pathname === `/planning/${n.id}` ? " active" : ""}`}
+                            >
+                              <IconLayout /> Planif.
+                            </Link>
+                            <Link
+                              href={`/editor/${n.id}`}
+                              className={`rd-leaf${pathname === `/editor/${n.id}` ? " active" : ""}`}
+                            >
+                              <IconFeather /> Rédaction
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
-          ))
-        ) : (
-          <div className="text-[12px] text-text-quaternary mt-2 italic px-2">
-            Aucun projet
-          </div>
-        )}
+          );
+        })}
       </div>
 
-      {/* User footer */}
-      <div className="mx-3 mb-3 mt-2 p-2 rounded-[var(--radius-md)] bg-white/[0.03] flex items-center gap-2">
-        <div className="w-7 h-7 rounded-full bg-[var(--color-accent-bg)] border border-[var(--color-accent-border)] flex items-center justify-center text-[12px] font-medium text-[var(--color-accent)]">
-          {initial}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[12px] text-text-primary truncate">{displayName}</div>
-          <div className="flex items-center gap-1 text-[10.5px] text-text-tertiary">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-dark" />
-            Sauvegardé
+      {/* Carte utilisateur */}
+      <Link href="/settings" className="rd-user">
+        <div className="rd-user-avatar">{initial}</div>
+        <div className="rd-user-meta">
+          <div className="rd-user-name">{displayName}</div>
+          <div className="rd-user-status">
+            <span className="rd-pulse-dot" /> Connectée
           </div>
         </div>
-      </div>
+      </Link>
     </aside>
   );
 }
