@@ -1494,3 +1494,14 @@ body {
   text-transform: uppercase; letter-spacing: 0.18em;
   color: var(--text-4); margin-bottom: 6px;
 }
+
+/* ============================================================
+   Phase 6 — Onboarding : halo thémé
+   ============================================================ */
+.onb-glow {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 620px 420px at 50% -4%,
+      color-mix(in oklab, var(--accent) 12%, transparent), transparent 72%);
+}
+[data-theme="corporate"] .onb-glow { display: none; }
