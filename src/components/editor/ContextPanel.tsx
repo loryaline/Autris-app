@@ -1698,6 +1698,9 @@ function WorldTabBody({
   setCreatingMenu: (v: boolean) => void;
   onCreate: (category: string) => void;
 }) {
+  // Repli par catégorie (déplié par défaut).
+  const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
+
   // Fiches liées au chapitre courant
   const linkedEntries = wbEntries.filter((e) => linkedEntryIds.has(e.id));
 
@@ -1719,121 +1722,110 @@ function WorldTabBody({
 
   return (
     <>
-      {/* Toggle scope + accès bibliothèque complète */}
-      <div className="flex items-center gap-1.5 mb-2">
-        <div className="inline-flex rounded-full border border-white/[0.08] bg-bg-tertiary/50 p-0.5 text-[11px]">
+      {/* Barre de filtres */}
+      <div className="world-filterbar">
+        <div className="world-pills">
           <button
+            className={`world-pill${wbScope === "linked" ? " active" : ""}`}
             onClick={() => setWbScope("linked")}
-            className={`px-2.5 py-[3px] rounded-full cursor-pointer transition-colors ${
-              wbScope === "linked"
-                ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)]"
-                : "text-text-tertiary hover:text-text-primary"
-            }`}
           >
-            Liées ({linkedEntries.length})
+            <span className="pill-dot accent" /> Liées
+            <span className="pill-count">{linkedEntries.length}</span>
           </button>
           <button
+            className={`world-pill${wbScope === "all" ? " active" : ""}`}
             onClick={() => setWbScope("all")}
-            className={`px-2.5 py-[3px] rounded-full cursor-pointer transition-colors ${
-              wbScope === "all"
-                ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)]"
-                : "text-text-tertiary hover:text-text-primary"
-            }`}
           >
-            Toutes ({wbEntries.length})
+            Toutes <span className="pill-count">{wbEntries.length}</span>
           </button>
-        </div>
-        <div className="ml-auto relative flex items-center gap-2">
+          <div className="relative" style={{ marginLeft: "auto" }}>
+            <button
+              className="world-pill"
+              onClick={() => setCreatingMenu(!creatingMenu)}
+              title="Créer une nouvelle fiche"
+            >
+              <span style={{ fontSize: 13, lineHeight: 1 }}>+</span> Fiche
+            </button>
+            {creatingMenu && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Fermer le menu"
+                  onClick={() => setCreatingMenu(false)}
+                  className="fixed inset-0 z-40 bg-transparent border-none cursor-default"
+                />
+                <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[220px] max-h-[60vh] overflow-y-auto rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary shadow-xl py-1">
+                  {(() => {
+                    const groups = new Map<string, typeof creatableCategories>();
+                    for (const c of creatableCategories) {
+                      const list = groups.get(c.group) ?? [];
+                      list.push(c);
+                      groups.set(c.group, list);
+                    }
+                    return Array.from(groups.entries()).map(([group, cats]) => (
+                      <div key={group} className="py-1">
+                        <div
+                          className="px-3 pb-1 text-[9.5px] font-medium uppercase text-text-quaternary"
+                          style={{ letterSpacing: "0.18em" }}
+                        >
+                          {group}
+                        </div>
+                        {cats.map((c) => (
+                          <button
+                            key={c.key}
+                            onClick={() => onCreate(c.key)}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-white/[0.04] hover:text-[var(--color-accent)] cursor-pointer bg-transparent border-none text-left transition-colors"
+                          >
+                            <span>{c.icon}</span>
+                            <span>{c.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </>
+            )}
+          </div>
           <button
-            onClick={() => setCreatingMenu(!creatingMenu)}
-            className="text-[10.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors inline-flex items-center gap-1"
-            title="Créer une nouvelle fiche"
-          >
-            <span className="text-[12px] leading-none">+</span>
-            Nouvelle fiche
-          </button>
-          <button
+            className="world-pill"
             onClick={onOpenAll}
-            className="text-[10.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors"
             title="Ouvrir la bibliothèque complète"
           >
-            Voir toutes les fiches ↗
+            Bibliothèque ↗
           </button>
-          {creatingMenu && (
-            <>
-              {/* Capteur de clic hors menu */}
-              <button
-                type="button"
-                aria-label="Fermer le menu"
-                onClick={() => setCreatingMenu(false)}
-                className="fixed inset-0 z-40 bg-transparent border-none cursor-default"
-              />
-              <div
-                className="absolute right-0 top-full mt-1.5 z-50 min-w-[220px] max-h-[60vh] overflow-y-auto rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary shadow-xl py-1"
-              >
-                {(() => {
-                  // Regroupe par famille (L'Univers / Le Vivant / …)
-                  const groups = new Map<string, typeof creatableCategories>();
-                  for (const c of creatableCategories) {
-                    const list = groups.get(c.group) ?? [];
-                    list.push(c);
-                    groups.set(c.group, list);
-                  }
-                  return Array.from(groups.entries()).map(([group, cats]) => (
-                    <div key={group} className="py-1">
-                      <div
-                        className="px-3 pb-1 text-[9.5px] font-medium uppercase text-text-quaternary"
-                        style={{ letterSpacing: "0.18em" }}
-                      >
-                        {group}
-                      </div>
-                      {cats.map((c) => (
-                        <button
-                          key={c.key}
-                          onClick={() => onCreate(c.key)}
-                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-white/[0.04] hover:text-[var(--color-accent)] cursor-pointer bg-transparent border-none text-left transition-colors"
-                        >
-                          <span>{c.icon}</span>
-                          <span>{c.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ));
-                })()}
-              </div>
-            </>
-          )}
         </div>
-      </div>
 
-      {wbScope === "all" && (
-        <div className="mb-2">
-          <input
-            value={wbQuery}
-            onChange={(e) => setWbQuery(e.target.value)}
-            placeholder="Rechercher dans toutes les fiches…"
-            className="w-full text-[11px] px-2 py-1.5 bg-bg-primary border border-border rounded focus:outline-none focus:border-primary"
-          />
-          {/* Filtre catégorie conservé mais discret (raccourci) */}
-          {wbCategoryOptions.length > 1 && (
-            <select
-              value={wbCategoryFilter}
-              onChange={(e) => setWbCategoryFilter(e.target.value)}
-              className="mt-1.5 w-full text-[11px] px-2 py-1 bg-bg-primary border border-border rounded cursor-pointer focus:outline-none focus:border-primary"
-            >
-              <option value="all">📂 Toutes les catégories ({wbEntries.length})</option>
-              {wbCategoryOptions.map((c) => {
-                const n = wbEntries.filter((e) => e.category === c.key).length;
-                return (
-                  <option key={c.key} value={c.key}>
-                    {c.icon} {c.label} ({n})
-                  </option>
-                );
-              })}
-            </select>
-          )}
-        </div>
-      )}
+        {wbScope === "all" && (
+          <div className="world-search">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <circle cx="6.5" cy="6.5" r="3.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M9.5 9.5L12 12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            <input
+              value={wbQuery}
+              onChange={(e) => setWbQuery(e.target.value)}
+              placeholder="Rechercher dans les fiches…"
+            />
+            {wbCategoryOptions.length > 1 && (
+              <select
+                value={wbCategoryFilter}
+                onChange={(e) => setWbCategoryFilter(e.target.value)}
+              >
+                <option value="all">Toutes catég.</option>
+                {wbCategoryOptions.map((c) => {
+                  const n = wbEntries.filter((e) => e.category === c.key).length;
+                  return (
+                    <option key={c.key} value={c.key}>
+                      {c.label} ({n})
+                    </option>
+                  );
+                })}
+              </select>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ---- Vue groupée par catégorie (partagée "Liées" / "Toutes") ---- */}
       {(() => {
@@ -1887,89 +1879,76 @@ function WorldTabBody({
               // En "Toutes", on cache les catégories vides dues au filtre de recherche
               if (wbScope === "all" && q && entries.length === 0) return null;
 
+              const isPerso = catKey === "personnages";
+              const collapsed = !!collapsedCats[catKey];
               return (
-                <section key={catKey}>
-                  <header className="flex items-center gap-2 mb-1.5">
-                    <span
-                      className="text-[9.5px] font-medium uppercase text-text-quaternary flex items-center gap-1"
-                      style={{ letterSpacing: "0.18em" }}
-                    >
-                      <span className="not-italic">{icon}</span>
-                      <span>{label}</span>
-                      {entries.length > 0 && (
-                        <span className="text-text-quaternary/60">· {entries.length}</span>
-                      )}
-                    </span>
+                <section key={catKey} className="world-section">
+                  <button
+                    className="world-section-head"
+                    onClick={() =>
+                      setCollapsedCats((s) => ({ ...s, [catKey]: !s[catKey] }))
+                    }
+                  >
+                    <span className="world-section-icon">{icon}</span>
+                    <span className="world-section-title">{label}</span>
+                    <span className="world-section-count">{entries.length}</span>
                     {wbScope === "linked" && hasChapter && (
-                      <button
-                        onClick={() => {
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="world-section-add"
+                        title={`Lier une fiche ${label}`}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
                           setPickerCategory(catKey);
                           setPickerQuery("");
                         }}
-                        className="ml-auto text-[10.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors inline-flex items-center gap-1"
-                        title={`Lier une fiche ${label}`}
+                        onKeyDown={(ev) => {
+                          if (ev.key === "Enter" || ev.key === " ") {
+                            ev.stopPropagation();
+                            setPickerCategory(catKey);
+                            setPickerQuery("");
+                          }
+                        }}
                       >
-                        <span className="text-[12px] leading-none">+</span>
-                        ajouter
-                      </button>
+                        <span style={{ fontSize: 12, lineHeight: 1 }}>+</span> ajouter
+                      </span>
                     )}
-                  </header>
+                    <span className={`world-section-chev${collapsed ? " collapsed" : ""}`}>
+                      ▾
+                    </span>
+                  </button>
 
-                  {entries.length === 0 ? (
-                    <div className="text-[10.5px] italic text-text-quaternary/80 py-1.5 px-2 rounded border border-dashed border-white/[0.05]">
-                      {wbScope === "linked"
-                        ? "Aucune fiche liée."
-                        : "Aucune fiche dans cette catégorie."}
-                    </div>
-                  ) : catKey === "personnages" ? (
-                    <div
-                      className="grid gap-2"
-                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(0, 120px))" }}
-                    >
-                      {entries.map((e) => {
-                        const isLinked = linkedEntryIds.has(e.id);
-                        return (
-                          <WbCard
-                            key={e.id}
-                            entry={e}
-                            linked={isLinked}
-                            onOpen={() => onOpen(e.id)}
-                            onToggleLink={
-                              wbScope === "linked"
-                                ? () => onUnlink(e.id)
-                                : hasChapter
-                                  ? () => (isLinked ? onUnlink(e.id) : onLink(e.id))
-                                  : undefined
-                            }
-                          />
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div
-                      className="grid gap-1"
-                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}
-                    >
-                      {entries.map((e) => {
-                        const isLinked = linkedEntryIds.has(e.id);
-                        return (
-                          <WbCardCompact
-                            key={e.id}
-                            entry={e}
-                            linked={isLinked}
-                            onOpen={() => onOpen(e.id)}
-                            onToggleLink={
-                              wbScope === "linked"
-                                ? () => onUnlink(e.id)
-                                : hasChapter
-                                  ? () => (isLinked ? onUnlink(e.id) : onLink(e.id))
-                                  : undefined
-                            }
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
+                  {!collapsed &&
+                    (entries.length === 0 ? (
+                      <div className="world-empty">
+                        {wbScope === "linked"
+                          ? "Aucune fiche liée."
+                          : "Aucune fiche dans cette catégorie."}
+                      </div>
+                    ) : (
+                      <div className={`world-card-grid${isPerso ? " portraits" : ""}`}>
+                        {entries.map((e) => {
+                          const isLinked = linkedEntryIds.has(e.id);
+                          return (
+                            <WbCard
+                              key={e.id}
+                              entry={e}
+                              linked={isLinked}
+                              portrait={isPerso}
+                              onOpen={() => onOpen(e.id)}
+                              onToggleLink={
+                                wbScope === "linked"
+                                  ? () => onUnlink(e.id)
+                                  : hasChapter
+                                    ? () => (isLinked ? onUnlink(e.id) : onLink(e.id))
+                                    : undefined
+                              }
+                            />
+                          );
+                        })}
+                      </div>
+                    ))}
                 </section>
               );
             })}
@@ -1995,15 +1974,17 @@ function WorldTabBody({
   );
 }
 
-/* ---- WbCard : carte fiche réutilisée (avec bouton ★ lier/délier) ---- */
+/* ---- WbCard : carte fiche de l'onglet Univers (redesign world-card) ---- */
 function WbCard({
   entry,
   linked,
+  portrait,
   onOpen,
   onToggleLink,
 }: {
   entry: WbEntryLite;
   linked: boolean;
+  portrait?: boolean;
   onOpen: () => void;
   onToggleLink?: () => void;
 }) {
@@ -2013,146 +1994,61 @@ function WbCard({
       ? UNIVERS_SUBTYPES.find((st) => st.key === entry.subcategory)
       : null;
   const hasTitle = (entry.title ?? "").trim().length > 0;
-  return (
-    <div className="relative">
-      <button
-        onClick={onOpen}
-        title={entry.title || "Sans titre"}
-        className="group relative text-left rounded-md overflow-hidden border border-border hover:border-primary transition-all cursor-pointer flex flex-col aspect-square bg-bg-primary shadow-sm w-full"
-      >
-        {entry.main_image_url ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={entry.main_image_url}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
-          </>
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-bg-secondary to-bg-primary" />
-        )}
-        <div className="relative z-10 flex flex-col h-full p-1.5">
-          <div className="text-[8px] uppercase tracking-wider text-white/80 flex items-center gap-0.5 drop-shadow">
-            <span>{sub?.icon ?? cat?.icon}</span>
-            <span className="truncate">{sub?.label ?? cat?.label}</span>
-          </div>
-          <div className="flex-1" />
-          <div
-            className={`text-[11px] font-semibold leading-tight drop-shadow-lg line-clamp-2 ${
-              hasTitle
-                ? entry.main_image_url
-                  ? "text-white"
-                  : "text-text-primary"
-                : "italic text-white/60"
-            }`}
-          >
-            {hasTitle ? entry.title : "Sans titre"}
-          </div>
-          {entry.subtitle && (
-            <div className="text-[9px] text-white/70 drop-shadow truncate">
-              {entry.subtitle}
-            </div>
-          )}
-        </div>
-      </button>
-      {onToggleLink && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleLink();
-          }}
-          title={linked ? "Retirer du chapitre" : "Ajouter au chapitre"}
-          className={`absolute top-1 right-1 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[11px] leading-none cursor-pointer transition-colors ${
-            linked
-              ? "bg-[var(--color-accent)] text-[#1a1410]"
-              : "bg-black/60 text-white/80 hover:bg-[var(--color-accent)] hover:text-[#1a1410]"
-          }`}
-        >
-          {linked ? "✓" : "+"}
-        </button>
-      )}
-    </div>
-  );
-}
+  const title = hasTitle ? (entry.title as string) : "Sans titre";
+  const catLabel = sub?.label ?? cat?.label ?? entry.category;
+  const catIcon = sub?.icon ?? cat?.icon ?? "✦";
+  // Glyphe central : initiale du titre pour un personnage, icône de
+  // catégorie sinon.
+  const glyph = portrait
+    ? hasTitle
+      ? title.trim()[0].toUpperCase()
+      : "?"
+    : catIcon;
+  const role = (entry.subtitle ?? "").trim() || catLabel;
 
-/* ---- WbCardCompact : carte dense (lignes horizontales) pour catégories hors personnages ---- */
-function WbCardCompact({
-  entry,
-  linked,
-  onOpen,
-  onToggleLink,
-}: {
-  entry: WbEntryLite;
-  linked: boolean;
-  onOpen: () => void;
-  onToggleLink?: () => void;
-}) {
-  const cat = getCategoryDef(entry.category);
-  const sub =
-    entry.category === "univers_monde" && entry.subcategory
-      ? UNIVERS_SUBTYPES.find((st) => st.key === entry.subcategory)
-      : null;
-  const hasTitle = (entry.title ?? "").trim().length > 0;
   return (
-    <div className="relative group">
-      <button
-        onClick={onOpen}
-        title={entry.title || "Sans titre"}
-        className="flex items-center gap-2 w-full text-left rounded-md border border-border hover:border-primary transition-all cursor-pointer bg-bg-primary overflow-hidden pr-7"
-      >
-        {/* Thumbnail carrée */}
-        <div className="relative shrink-0 w-9 h-9 bg-bg-secondary overflow-hidden">
-          {entry.main_image_url ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={entry.main_image_url}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-[13px] opacity-60">
-              {sub?.icon ?? cat?.icon ?? "📄"}
-            </div>
-          )}
-        </div>
-        {/* Texte */}
-        <div className="flex-1 min-w-0 py-1">
-          <div
-            className={`text-[11.5px] leading-tight truncate ${
-              hasTitle ? "text-text-primary font-medium" : "italic text-text-quaternary"
-            }`}
+    <div
+      role="button"
+      tabIndex={0}
+      title={title}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className={`world-card${linked ? " linked" : ""}`}
+    >
+      <div className="world-card-art">
+        {entry.main_image_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={entry.main_image_url} alt="" />
+        ) : (
+          <span className="world-card-glyph">{glyph}</span>
+        )}
+        <span className="world-card-cat">
+          <span aria-hidden>{catIcon}</span>
+          <span>{catLabel}</span>
+        </span>
+        {onToggleLink && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleLink();
+            }}
+            title={linked ? "Retirer du chapitre" : "Ajouter au chapitre"}
+            className={`world-card-toggle${linked ? " on" : ""}`}
           >
-            {hasTitle ? entry.title : "Sans titre"}
-          </div>
-          {entry.subtitle ? (
-            <div className="text-[9.5px] text-text-tertiary truncate leading-tight mt-0.5">
-              {entry.subtitle}
-            </div>
-          ) : sub?.label ? (
-            <div className="text-[9px] uppercase tracking-wider text-text-quaternary/70 truncate leading-tight mt-0.5">
-              {sub.label}
-            </div>
-          ) : null}
-        </div>
-      </button>
-      {onToggleLink && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleLink();
-          }}
-          title={linked ? "Retirer du chapitre" : "Ajouter au chapitre"}
-          className={`absolute top-1/2 -translate-y-1/2 right-1 w-5 h-5 rounded-full flex items-center justify-center text-[11px] leading-none cursor-pointer transition-colors ${
-            linked
-              ? "bg-[var(--color-accent)] text-[#1a1410]"
-              : "bg-white/[0.04] text-text-tertiary hover:bg-[var(--color-accent)] hover:text-[#1a1410]"
-          }`}
-        >
-          {linked ? "✓" : "+"}
-        </button>
-      )}
+            {linked ? "✓" : "+"}
+          </button>
+        )}
+      </div>
+      <div className="world-card-body">
+        <div className={`world-card-name${hasTitle ? "" : " untitled"}`}>{title}</div>
+        <div className="world-card-role">{role}</div>
+      </div>
     </div>
   );
 }

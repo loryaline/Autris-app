@@ -1505,3 +1505,165 @@ body {
       color-mix(in oklab, var(--accent) 12%, transparent), transparent 72%);
 }
 [data-theme="corporate"] .onb-glow { display: none; }
+
+/* ============================================================
+   Onglet Univers de l'éditeur — redesign
+   ============================================================ */
+.world-filterbar {
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;
+}
+.world-pills { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.world-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 10px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: 999px; color: var(--text-3);
+  font-size: 11px; cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.world-pill:hover { color: var(--text); border-color: var(--border); }
+.world-pill.active {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.world-pill .pill-count {
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 1px 6px; border-radius: 999px;
+  background: var(--surface-2); color: var(--text-4);
+}
+.world-pill.active .pill-count {
+  background: color-mix(in oklab, var(--accent) 22%, transparent); color: var(--accent);
+}
+.world-pill .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-4); }
+.world-pill .pill-dot.accent { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+.world-search {
+  display: flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 10px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: 999px; color: var(--text-4); transition: all .15s;
+}
+.world-search:focus-within {
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+  background: var(--bg-2);
+}
+.world-search input {
+  flex: 1; min-width: 0; background: transparent; border: none; outline: none;
+  color: var(--text); font-family: inherit; font-size: 12.5px;
+}
+.world-search input::placeholder { color: var(--text-4); }
+.world-search select {
+  background: transparent; border: none; outline: none;
+  color: var(--text-3); font-size: 11px; cursor: pointer;
+}
+
+.world-section { margin-bottom: 12px; }
+.world-section-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 4px 6px 2px; background: transparent; border: none;
+  cursor: pointer; color: var(--text-2); transition: color .15s; margin-bottom: 6px;
+}
+.world-section-head:hover { color: var(--text); }
+.world-section-icon {
+  display: inline-grid; place-items: center;
+  width: 18px; height: 18px; font-size: 13px; line-height: 1;
+}
+.world-section-title {
+  font-size: 11.5px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: inherit;
+}
+.world-section-count {
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 1px 7px; border-radius: 999px;
+  background: var(--surface-2); color: var(--text-4);
+}
+.world-section-add {
+  margin-left: auto; font-size: 10.5px; color: var(--text-4);
+  background: none; border: none; cursor: pointer; transition: color .15s;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.world-section-add:hover { color: var(--accent); }
+.world-section-chev {
+  font-size: 10px; color: var(--text-4); transition: transform .2s;
+}
+.world-section-chev.collapsed { transform: rotate(-90deg); }
+
+.world-card-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+}
+.world-card {
+  position: relative; display: flex; flex-direction: column;
+  background: var(--bg-2); border: 1px solid var(--border-soft);
+  border-radius: var(--r-md); overflow: hidden; cursor: pointer;
+  text-align: left; padding: 0; width: 100%;
+  transition: all .2s var(--ease-out);
+}
+.world-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--border));
+  box-shadow: var(--shadow-md);
+}
+.world-card.linked {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 25%, transparent),
+              0 4px 12px -4px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+.world-card-art {
+  position: relative; aspect-ratio: 16 / 9;
+  display: grid; place-items: center; overflow: hidden;
+}
+.world-card-grid.portraits .world-card-art { aspect-ratio: 1; }
+.world-card-art img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; transition: transform .3s;
+}
+.world-card:hover .world-card-art img { transform: scale(1.05); }
+.world-card-glyph {
+  position: relative; z-index: 1;
+  font-family: var(--font-display); font-style: italic;
+  font-size: 26px; font-weight: 600; color: var(--accent);
+  filter: drop-shadow(0 0 10px currentColor);
+}
+[data-theme="sf"] .world-card-glyph,
+[data-theme="corporate"] .world-card-glyph {
+  font-family: var(--font-mono); font-style: normal; font-size: 22px;
+}
+.world-card-cat {
+  position: absolute; top: 6px; left: 6px; z-index: 2;
+  padding: 1px 7px; font-size: 8.5px; text-transform: uppercase;
+  letter-spacing: .08em; border-radius: 999px;
+  background: rgba(0,0,0,.55); color: rgba(255,255,255,.85);
+  backdrop-filter: blur(4px);
+  display: inline-flex; align-items: center; gap: 3px;
+  max-width: calc(100% - 38px); overflow: hidden;
+}
+.world-card-cat span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world-card-body { padding: 8px 10px 10px; flex: 1; min-width: 0; }
+.world-card-name {
+  font-size: 12.5px; font-weight: 500; color: var(--text);
+  line-height: 1.25; margin-bottom: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.world-card-name.untitled { font-style: italic; color: var(--text-4); }
+.world-card-role {
+  font-size: 10.5px; color: var(--text-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.world-card-toggle {
+  position: absolute; top: 6px; right: 6px; z-index: 2;
+  width: 22px; height: 22px; display: grid; place-items: center;
+  border-radius: 50%; background: rgba(0,0,0,.6); color: rgba(255,255,255,.9);
+  font-size: 13px; font-weight: 600; backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.18); cursor: pointer; transition: all .15s;
+}
+.world-card-toggle.on {
+  background: var(--accent); color: var(--accent-ink);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.world-card:hover .world-card-toggle { transform: scale(1.1); }
+.world-empty {
+  font-size: 10.5px; font-style: italic; color: var(--text-4);
+  padding: 6px 8px; border: 1px dashed var(--border-soft);
+  border-radius: var(--r-sm);
+}
