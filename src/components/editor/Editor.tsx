@@ -683,7 +683,8 @@ export function NovelEditor({
             )}
           </button>
 
-          <div className="paper-sheet">
+          <div className="editor-scroll">
+            <div className="paper-sheet">
             {activeChapter ? (
               <div className="paper-prose">
                 <EditorContent editor={editor} />
@@ -708,6 +709,7 @@ export function NovelEditor({
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
 

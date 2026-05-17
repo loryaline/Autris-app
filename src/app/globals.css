@@ -1285,7 +1285,7 @@ body {
 .float-toolbar.vertical .ft-grip { transform: rotate(90deg); }
 .float-toolbar.vertical .ft-dock-row { flex-direction: column; }
 
-.float-toolbar.dock-top { position: sticky; top: 8px; margin: 0 auto 6px; align-self: center; }
+.float-toolbar.dock-top { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); }
 .float-toolbar.dock-bottom { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); }
 .float-toolbar.dock-left { position: absolute; top: 24px; left: 14px; }
 .float-toolbar.dock-right { position: absolute; top: 24px; right: 14px; }
@@ -1337,16 +1337,23 @@ body {
 .editor-paper {
   position: relative; flex: 1; min-height: 0;
   background: var(--bg-3);
-  overflow: auto;
-  display: flex; flex-direction: column; align-items: center;
-  padding: 30px 0;
+  overflow: hidden;
+  display: flex; flex-direction: column;
 }
 [data-theme="fantasy"] .editor-paper {
   background:
     radial-gradient(circle at 20% 0%, var(--rune-color) 0%, transparent 30%),
     var(--bg-3);
 }
-.editor-paper.focus { padding: 70px 0 110px; background: var(--bg); }
+.editor-paper.focus { background: var(--bg); }
+/* La barre flottante et le bouton focus restent ancrés à .editor-paper
+   (non scrollable) — seul .editor-scroll défile. */
+.editor-scroll {
+  flex: 1; width: 100%; overflow-y: auto;
+  display: flex; justify-content: center; align-items: flex-start;
+  padding: 30px 0;
+}
+.editor-paper.focus .editor-scroll { padding: 70px 0 110px; }
 
 .paper-sheet {
   width: min(680px, calc(100% - 64px));
