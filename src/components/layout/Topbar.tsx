@@ -4,23 +4,22 @@ import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 
-function crumbFromPath(pathname: string): { icon: React.ReactNode; label: string } {
-  const home = (
-    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M2 6L7 2L12 6V11.5C12 11.78 11.78 12 11.5 12H8.5V8.5H5.5V12H2.5C2.22 12 2 11.78 2 11.5V6Z"
-        stroke="currentColor"
-        strokeWidth="1.1"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-  if (pathname === "/") return { icon: home, label: "Accueil" };
-  if (pathname.startsWith("/project/")) return { icon: home, label: "Projet" };
-  if (pathname.startsWith("/wb/")) return { icon: home, label: "World Building" };
-  if (pathname.startsWith("/planning/")) return { icon: home, label: "Planification" };
-  if (pathname.startsWith("/editor/")) return { icon: home, label: "Rédaction" };
-  return { icon: home, label: "Accueil" };
+const IconCog = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M7 1.5V3M7 11V12.5M11.5 7H13M1 7H2.5M10.5 3.5L9.5 4.5M4.5 9.5L3.5 10.5M10.5 10.5L9.5 9.5M4.5 4.5L3.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+);
+
+/** Fil d'Ariane dérivé du pathname. Dernier segment = page courante. */
+function crumbsFromPath(pathname: string): string[] {
+  if (pathname === "/") return ["Accueil"];
+  if (pathname.startsWith("/project/")) return ["Projet"];
+  if (pathname.startsWith("/wb/")) return ["World Building"];
+  if (pathname.startsWith("/planning/")) return ["Planification"];
+  if (pathname.startsWith("/editor/")) return ["Rédaction"];
+  if (pathname.startsWith("/settings")) return ["Paramètres"];
+  return ["Accueil"];
 }
 
 export function Topbar({ username }: { username?: string | null }) {
@@ -35,26 +34,29 @@ export function Topbar({ username }: { username?: string | null }) {
     router.refresh();
   }
 
-  const initial = username ? username[0].toUpperCase() : "A";
-  const crumb = crumbFromPath(pathname);
+  const crumbs = crumbsFromPath(pathname);
 
   return (
-    <header className="h-14 shrink-0 bg-bg-primary flex items-center px-6 gap-3">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-text-secondary">
-        <span className="text-text-tertiary">{crumb.icon}</span>
-        <span className="text-[13px]">{crumb.label}</span>
+    <header className="rd-topbar shrink-0">
+      {/* Fil d'Ariane */}
+      <div className="rd-crumbs">
+        <span className="serif italic">Autris</span>
+        {crumbs.map((c, i) => (
+          <span key={i} className="row gap-2" style={{ display: "contents" }}>
+            <span className="sep">/</span>
+            <span className={i === crumbs.length - 1 ? "current" : ""}>{c}</span>
+          </span>
+        ))}
       </div>
 
-      <div className="flex-1" />
-
-      {/* User menu */}
-      <div className="relative">
+      {/* Menu utilisateur */}
+      <div style={{ position: "relative" }}>
         <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="w-8 h-8 rounded-full bg-[var(--color-accent-bg)] border border-[var(--color-accent-border)] flex items-center justify-center text-[13px] font-medium text-[var(--color-accent)] cursor-pointer"
+          className="rd-icon-btn"
+          onClick={() => setMenuOpen((o) => !o)}
+          title={username ?? "Compte"}
         >
-          {initial}
+          <IconCog />
         </button>
         {menuOpen && (
           <>
@@ -62,9 +64,23 @@ export function Topbar({ username }: { username?: string | null }) {
               className="fixed inset-0 z-10"
               onClick={() => setMenuOpen(false)}
             />
-            <div className="absolute right-0 top-10 z-20 bg-bg-tertiary border border-border rounded-[var(--radius-md)] shadow-lg py-1 min-w-[160px]">
+            <div
+              className="absolute right-0 top-10 z-20 py-1 min-w-[170px]"
+              style={{
+                background: "var(--bg-3)",
+                border: "1px solid var(--border-soft)",
+                borderRadius: "var(--r-md)",
+                boxShadow: "var(--shadow-lg)",
+              }}
+            >
               {username && (
-                <div className="px-3 py-1.5 text-[12px] text-text-tertiary border-b border-border">
+                <div
+                  className="px-3 py-1.5 text-[12px]"
+                  style={{
+                    color: "var(--text-3)",
+                    borderBottom: "1px solid var(--border-soft)",
+                  }}
+                >
                   {username}
                 </div>
               )}
@@ -73,13 +89,15 @@ export function Topbar({ username }: { username?: string | null }) {
                   setMenuOpen(false);
                   router.push("/settings");
                 }}
-                className="w-full text-left px-3 py-1.5 text-[13px] text-text-secondary hover:bg-bg-hover cursor-pointer"
+                className="w-full text-left px-3 py-1.5 text-[13px] cursor-pointer"
+                style={{ color: "var(--text-2)" }}
               >
                 Paramètres
               </button>
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-3 py-1.5 text-[13px] text-text-secondary hover:bg-bg-hover cursor-pointer"
+                className="w-full text-left px-3 py-1.5 text-[13px] cursor-pointer"
+                style={{ color: "var(--text-2)" }}
               >
                 Se déconnecter
               </button>
