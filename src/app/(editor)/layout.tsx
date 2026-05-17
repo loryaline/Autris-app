@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
+import { ThemeBar } from "@/components/theme/ThemeBar";
 
 export default async function EditorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -9,6 +10,7 @@ export default async function EditorLayout({ children }: { children: React.React
     <div className="h-full">
       {children}
       <FeedbackButton userEmail={user?.email ?? null} />
+      <ThemeBar />
     </div>
   );
 }

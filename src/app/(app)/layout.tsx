@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
+import { ThemeBar } from "@/components/theme/ThemeBar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -40,6 +41,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       {/* Bouton flottant de retour bêta — toutes pages app */}
       <FeedbackButton userEmail={user?.email ?? null} />
+      {/* Sélecteur de thème flottant — redesign phase 1 */}
+      <ThemeBar />
     </div>
   );
 }
