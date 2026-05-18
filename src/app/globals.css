@@ -227,6 +227,24 @@
 /* Utilities */
 .font-serif { font-family: var(--font-serif); }
 .font-serif-italic { font-family: var(--font-serif); font-style: italic; }
+.serif { font-family: var(--font-serif); }
+
+/* Cormorant Garamond (thème fantasy) a une hauteur d'x très basse :
+   à taille égale il paraît bien plus petit que le sans. On normalise
+   son rendu via font-size-adjust — uniquement sur le thème fantasy,
+   les autres thèmes (Space Grotesk / Inter) n'en ont pas besoin. */
+[data-theme="fantasy"] :is(
+  .font-serif, .font-serif-italic, .serif,
+  .rd-crumbs .current,
+  .rd-hero-title em,
+  .rd-goal-month, .rd-goal-month em,
+  .rd-cal-title, .rd-cal-grid-head > div, .rd-cal-detail-date,
+  .rd-boards-title em, .rd-board-name,
+  .tool-h, .tool-q,
+  .world-card-glyph
+) {
+  font-size-adjust: 0.52;
+}
 /* hero-glow / univers-glow : désormais theme-réactifs via les tokens. */
 .hero-glow { background-image: var(--hero-glow); }
 .univers-glow { background-image: var(--board-glow); }
