@@ -338,7 +338,7 @@ export function PlanningClient({
               <span className="text-text-quaternary/40">·</span>
               <span>Vue scènes</span>
             </div>
-            <h1 className="font-serif text-[38px] leading-[1.05] tracking-tight text-text-primary">
+            <h1 className="font-serif text-[38px] leading-[1.2] tracking-tight text-text-primary">
               L&apos;histoire,{" "}
               <span className="italic text-[var(--color-accent)]/95">
                 scène par scène
@@ -369,7 +369,7 @@ export function PlanningClient({
                   <span className="text-text-quaternary/40">·</span>
                   <span>{viewLabel}</span>
                 </div>
-                <h1 className="font-serif text-[34px] leading-[1.05] tracking-tight text-text-primary">
+                <h1 className="font-serif text-[34px] leading-[1.2] tracking-tight text-text-primary">
                   {renderSerifTitle(novelTitle)}
                 </h1>
                 <div className="mt-1.5 text-[12px] text-text-tertiary">
