@@ -1512,7 +1512,7 @@ body {
   color: var(--text-3); font-size: 11px; cursor: pointer;
 }
 
-.world-section { margin-bottom: 12px; }
+.world-section { margin-bottom: 12px; container-type: inline-size; }
 .world-section-head {
   display: flex; align-items: center; gap: 8px; width: 100%;
   padding: 6px 4px 6px 2px; background: transparent; border: none;
@@ -1545,6 +1545,11 @@ body {
 
 .world-card-grid {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+}
+/* Panneau Univers large (contexte de l'éditeur en pleine largeur) :
+   trois vignettes par ligne au lieu de deux. */
+@container (min-width: 480px) {
+  .world-card-grid { grid-template-columns: repeat(3, 1fr); }
 }
 .world-card {
   position: relative; display: flex; flex-direction: column;
