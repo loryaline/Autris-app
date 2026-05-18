@@ -39,20 +39,34 @@ const NARRATIVE_TEMPLATES: NarrativeOption[] = [
 ];
 
 type Step = "accueil" | "persona" | "projet" | "template" | "objectifs" | "final";
-const STEPS: Step[] = ["accueil", "persona", "projet", "template", "objectifs", "final"];
+const STEPS_FULL: Step[] = ["accueil", "persona", "projet", "template", "objectifs", "final"];
+// En mode « refaire la configuration » on saute les étapes qui créent
+// des données (projet, structure narrative).
+const STEPS_REDO: Step[] = ["accueil", "persona", "objectifs", "final"];
 
-export function OnboardingClient() {
+export function OnboardingClient({
+  redo = false,
+  initialPersona = null,
+  initialPomo = 25,
+}: {
+  redo?: boolean;
+  initialPersona?: string | null;
+  initialPomo?: number;
+} = {}) {
   const router = useRouter();
+  const STEPS = redo ? STEPS_REDO : STEPS_FULL;
   const [step, setStep] = useState<Step>("accueil");
   const [saving, setSaving] = useState(false);
 
   // Step data
-  const [persona, setPersona] = useState<Persona | null>(null);
+  const [persona, setPersona] = useState<Persona | null>(
+    (initialPersona as Persona | null) ?? null,
+  );
   const [projectTitle, setProjectTitle] = useState("");
   const [genre, setGenre] = useState<Genre>("contemporain");
   const [wordGoalPerSession, setWordGoalPerSession] = useState("500");
   const [frequency, setFrequency] = useState("flexible");
-  const [pomoDuration, setPomoDuration] = useState(25);
+  const [pomoDuration, setPomoDuration] = useState(initialPomo);
   const [narrativeTemplate, setNarrativeTemplate] = useState<NarrativeTemplate>("libre");
 
   const stepIndex = STEPS.indexOf(step);
@@ -66,6 +80,10 @@ export function OnboardingClient() {
   }
 
   async function skipToApp() {
+    if (redo) {
+      router.push("/");
+      return;
+    }
     setSaving(true);
     const supabase = createClient();
     await supabase
@@ -73,6 +91,27 @@ export function OnboardingClient() {
       .update({ onboarding_done: true, persona: "avance" })
       .eq("id", (await supabase.auth.getUser()).data.user!.id);
     router.push("/");
+  }
+
+  // Mode redo : on enregistre persona + pomodoro, sans toucher aux projets.
+  async function redoFinish() {
+    setSaving(true);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({
+          persona: persona ?? "debutant",
+          pomo_duration: pomoDuration,
+          onboarding_done: true,
+        })
+        .eq("id", user.id);
+    }
+    setSaving(false);
+    setStep("final");
   }
 
   const [createdIds, setCreatedIds] = useState<{ projectId: string; novelId: string } | null>(null);
@@ -180,14 +219,16 @@ export function OnboardingClient() {
               L&apos;espace d&apos;écriture des romanciers francophones.
             </p>
             <p className="text-[14px] text-text-secondary mb-8 leading-relaxed">
-              Quelques minutes pour configurer votre univers — vous pourrez tout modifier ensuite.
+              {redo
+                ? "Réajustez votre profil d'auteur et votre rythme. Vos projets et votre travail ne sont pas touchés."
+                : "Quelques minutes pour configurer votre univers — vous pourrez tout modifier ensuite."}
             </p>
 
             <button
               onClick={next}
               className="w-full h-11 bg-primary text-[var(--accent-ink)] rounded-[var(--radius-md)] text-[15px] font-medium cursor-pointer hover:bg-primary-dark transition-colors border-none mb-4"
             >
-              Commencer la configuration
+              {redo ? "Reprendre la configuration" : "Commencer la configuration"}
             </button>
 
             <button
@@ -195,23 +236,27 @@ export function OnboardingClient() {
               disabled={saving}
               className="text-[13px] text-text-tertiary hover:text-text-secondary cursor-pointer border-none bg-transparent transition-colors"
             >
-              Je connais deja &rarr; aller directement a l&apos;editeur
+              {redo
+                ? "Annuler et revenir à l'accueil"
+                : "Je connais deja → aller directement a l'editeur"}
             </button>
 
-            <div className="flex justify-center gap-8 mt-10 pt-6 border-t border-border">
-              <div className="text-center">
-                <div className="text-[18px] font-bold text-text-primary">5 min</div>
-                <div className="text-[11px] text-text-quaternary">pour configurer</div>
+            {!redo && (
+              <div className="flex justify-center gap-8 mt-10 pt-6 border-t border-border">
+                <div className="text-center">
+                  <div className="text-[18px] font-bold text-text-primary">5 min</div>
+                  <div className="text-[11px] text-text-quaternary">pour configurer</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[18px] font-bold text-text-primary">3 mois</div>
+                  <div className="text-[11px] text-text-quaternary">d&apos;essai gratuit</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[18px] font-bold text-text-primary">0 &euro;</div>
+                  <div className="text-[11px] text-text-quaternary">sans carte requise</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-[18px] font-bold text-text-primary">3 mois</div>
-                <div className="text-[11px] text-text-quaternary">d&apos;essai gratuit</div>
-              </div>
-              <div className="text-center">
-                <div className="text-[18px] font-bold text-text-primary">0 &euro;</div>
-                <div className="text-[11px] text-text-quaternary">sans carte requise</div>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -484,18 +529,47 @@ export function OnboardingClient() {
                 Retour
               </button>
               <button
-                onClick={createProjectAndGoFinal}
+                onClick={redo ? redoFinish : createProjectAndGoFinal}
                 disabled={saving}
                 className="flex-1 h-10 text-[14px] font-medium rounded-[var(--radius-md)] border-none cursor-pointer transition-colors bg-primary text-[var(--accent-ink)] hover:bg-primary-dark disabled:opacity-60"
               >
-                {saving ? "Création…" : "Terminer"}
+                {saving
+                  ? "Enregistrement…"
+                  : redo
+                    ? "Enregistrer"
+                    : "Terminer"}
               </button>
             </div>
           </div>
         )}
 
         {/* ===== STEP: FINAL ===== */}
-        {step === "final" && (
+        {step === "final" && redo && (
+          <div className="text-center">
+            <div className="inline-block bg-primary-bg text-primary text-[12px] font-medium px-3 py-1 rounded-full mb-4">
+              ◆ Configuration enregistrée
+            </div>
+            <h2 className="text-[24px] text-text-primary mb-2" style={{ fontFamily: "var(--font-serif)" }}>
+              Tout est{" "}
+              <span className="font-serif italic text-[var(--color-accent)] pr-[0.1em]">
+                à jour
+              </span>
+              .
+            </h2>
+            <p className="text-[14px] text-text-secondary mb-8 leading-relaxed">
+              Votre profil d&apos;auteur et votre rythme ont été enregistrés.
+              Vos projets n&apos;ont pas bougé.
+            </p>
+            <button
+              onClick={() => router.push("/")}
+              className="h-11 px-6 bg-primary text-[var(--accent-ink)] rounded-[var(--radius-md)] text-[14px] font-medium cursor-pointer hover:bg-primary-dark transition-colors border-none"
+            >
+              Retour à l&apos;accueil
+            </button>
+          </div>
+        )}
+
+        {step === "final" && !redo && (
           <div className="text-center">
             <div className="inline-block bg-primary-bg text-primary text-[12px] font-medium px-3 py-1 rounded-full mb-4">
               ◆ Première ligne

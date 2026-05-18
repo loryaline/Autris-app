@@ -174,6 +174,23 @@ export function SettingsClient({
         </div>
       </Section>
 
+      {/* Configuration initiale */}
+      <Section
+        title="Configuration"
+        subtitle="Revoir le parcours de configuration (profil d'auteur, objectifs d'écriture)."
+      >
+        <a
+          href="/onboarding?redo=1"
+          className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--radius-sm)] border border-white/[0.08] bg-bg-primary text-[13px] text-text-secondary hover:bg-bg-hover hover:text-text-primary cursor-pointer transition-colors no-underline self-start"
+        >
+          <span className="text-[14px] leading-none">↻</span>
+          Refaire la configuration
+        </a>
+        <p className="text-[11px] text-text-quaternary">
+          Aucun nouveau projet ne sera créé — vos romans et tout votre travail restent intacts.
+        </p>
+      </Section>
+
       {/* Abonnement */}
       <Section title="Abonnement">
         <div className="rounded-[var(--radius-md)] border border-white/[0.06] bg-bg-primary p-4">
