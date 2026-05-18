@@ -5,6 +5,7 @@ import {
   getCategoryDef,
   type WbCategory,
 } from "@/lib/wb-constants";
+import { buildWbMarkdown, downloadTextFile, slugify } from "@/lib/wb-export";
 import type { Genre, WbEntry } from "@/types/database";
 
 /**
@@ -45,35 +46,64 @@ export function WbHome({
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, 6);
 
+  function handleExport() {
+    const md = buildWbMarkdown(
+      entries as unknown as Parameters<typeof buildWbMarkdown>[0],
+      projectTitle,
+    );
+    downloadTextFile(`univers-${slugify(projectTitle)}.md`, md);
+  }
+
   return (
     <div className="flex-1 overflow-y-auto bg-bg-primary">
       <div className="max-w-[1280px] mx-auto px-8 py-8">
         {/* ========== Header ========== */}
-        <header className="mb-8">
-          <div
-            className="text-[10px] font-medium text-text-quaternary uppercase flex items-center gap-1.5"
-            style={{ letterSpacing: "0.18em" }}
-          >
-            <span>World Building</span>
-            <span className="opacity-50">·</span>
-            <span>Accueil</span>
-          </div>
-          <h1 className="mt-2 flex items-baseline gap-3 text-[34px] leading-none text-text-primary">
-            <span className="font-light">Le monde de</span>
-            <span
-              className="font-serif italic"
-              style={{ color: "var(--color-accent)" }}
+        <header className="mb-8 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div
+              className="text-[10px] font-medium text-text-quaternary uppercase flex items-center gap-1.5"
+              style={{ letterSpacing: "0.18em" }}
             >
-              {projectTitle}
-            </span>
-          </h1>
-          <div className="mt-2.5 text-[12.5px] text-text-tertiary font-serif italic">
-            {totalFiches === 0
-              ? "Aucune fiche pour l'instant. Choisis une catégorie pour commencer à bâtir ton univers."
-              : totalFiches === 1
-                ? "1 fiche esquissée — c'est un début."
-                : `${totalFiches} fiches esquissées. Plonge dans une catégorie pour continuer.`}
+              <span>World Building</span>
+              <span className="opacity-50">·</span>
+              <span>Accueil</span>
+            </div>
+            <h1 className="mt-2 flex items-baseline gap-3 text-[34px] leading-none text-text-primary">
+              <span className="font-light">Le monde de</span>
+              <span
+                className="font-serif italic"
+                style={{ color: "var(--color-accent)" }}
+              >
+                {projectTitle}
+              </span>
+            </h1>
+            <div className="mt-2.5 text-[12.5px] text-text-tertiary font-serif italic">
+              {totalFiches === 0
+                ? "Aucune fiche pour l'instant. Choisis une catégorie pour commencer à bâtir ton univers."
+                : totalFiches === 1
+                  ? "1 fiche esquissée — c'est un début."
+                  : `${totalFiches} fiches esquissées. Plonge dans une catégorie pour continuer.`}
+            </div>
           </div>
+
+          {totalFiches > 0 && (
+            <button
+              onClick={handleExport}
+              title="Exporter tout l'univers en Markdown (importable dans Notion)"
+              className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary text-[12.5px] text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <path
+                  d="M7 2V9M7 9L4 6M7 9L10 6M2.5 11H11.5"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Exporter l&apos;univers
+            </button>
+          )}
         </header>
 
         {/* ========== Sections par groupe ========== */}
