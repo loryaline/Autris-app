@@ -386,6 +386,13 @@ export default async function DashboardPage() {
     ? etaDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
     : null;
 
+  // Hero alternatif pour le persona « Explorateur » : tant qu'aucune
+  // fiche d'univers n'existe, on invite à esquisser le worldbuilding
+  // plutôt qu'à reprendre l'écriture.
+  const wbHeroProjectId = lastProject?.id ?? projects?.[0]?.id ?? null;
+  const showWbHero =
+    prefs.helpLevel === "high" && (wbCount ?? 0) === 0 && !!wbHeroProjectId;
+
   return (
     <div className="rd-page">
       {/* Nudges — masqués pour le persona « Autonome » (prefs.showNudges). */}
@@ -398,47 +405,77 @@ export default async function DashboardPage() {
       {prefs.helpLevel === "high" && <FirstStepsBanner hasProjects={!!projects && projects.length > 0} />}
 
       {/* === Hero === */}
-      <div className="rd-hero rd-fade-in">
-        <div className="rd-hero-mark">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M4 20L14 10M14 10L18 6C19 5 20.5 5 21.5 6C22.5 7 22.5 8.5 21.5 9.5L17.5 13.5M14 10L17.5 13.5M17.5 13.5L10 21H4V15"
-              stroke="var(--accent)"
-              strokeWidth="1.3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-        <div className="rd-hero-body">
-          <div className="rd-hero-title">
-            Reprenez votre histoire <em>là où votre plume s&apos;est posée.</em>
+      {showWbHero ? (
+        <div className="rd-hero rd-fade-in">
+          <div className="rd-hero-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="var(--accent)" strokeWidth="1.4" />
+              <path
+                d="M3 12H21M12 3C14.5 6 14.5 18 12 21M12 3C9.5 6 9.5 18 12 21"
+                stroke="var(--accent)"
+                strokeWidth="1.4"
+              />
+            </svg>
           </div>
-          {lastChapter && lastNovel ? (
-            <div className="rd-hero-sub">
-              {lastChapter.title} ·{" "}
-              <span className="serif italic" style={{ color: "var(--text-2)" }}>
-                {lastNovel.title}
-              </span>{" "}
-              · modifié {relativeTime(lastChapter.updated_at)}
+          <div className="rd-hero-body">
+            <div className="rd-hero-title">
+              Esquissez votre univers <em>donnez chair à votre monde.</em>
             </div>
-          ) : (
             <div className="rd-hero-sub">
-              {projects && projects.length > 0
-                ? "Continuez votre histoire là où vous l'avez laissée."
-                : "Créez votre premier projet pour commencer à écrire."}
+              Personnages, lieux, magie, factions — posez les fondations de
+              votre histoire avant de la raconter.
             </div>
-          )}
-        </div>
-        {lastNovel && (
-          <a href={`/editor/${lastNovel.id}`} className="rd-btn rd-btn-primary">
-            Reprendre l&apos;écriture
+          </div>
+          <a href={`/wb/${wbHeroProjectId}`} className="rd-btn rd-btn-primary">
+            Ouvrir le World Building
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
               <path d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </a>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="rd-hero rd-fade-in">
+          <div className="rd-hero-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M4 20L14 10M14 10L18 6C19 5 20.5 5 21.5 6C22.5 7 22.5 8.5 21.5 9.5L17.5 13.5M14 10L17.5 13.5M17.5 13.5L10 21H4V15"
+                stroke="var(--accent)"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div className="rd-hero-body">
+            <div className="rd-hero-title">
+              Reprenez votre histoire <em>là où votre plume s&apos;est posée.</em>
+            </div>
+            {lastChapter && lastNovel ? (
+              <div className="rd-hero-sub">
+                {lastChapter.title} ·{" "}
+                <span className="serif italic" style={{ color: "var(--text-2)" }}>
+                  {lastNovel.title}
+                </span>{" "}
+                · modifié {relativeTime(lastChapter.updated_at)}
+              </div>
+            ) : (
+              <div className="rd-hero-sub">
+                {projects && projects.length > 0
+                  ? "Continuez votre histoire là où vous l'avez laissée."
+                  : "Créez votre premier projet pour commencer à écrire."}
+              </div>
+            )}
+          </div>
+          {lastNovel && (
+            <a href={`/editor/${lastNovel.id}`} className="rd-btn rd-btn-primary">
+              Reprendre l&apos;écriture
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <path d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+          )}
+        </div>
+      )}
 
       {/* === Statistiques === */}
       <div className="rd-stat-grid">
