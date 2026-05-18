@@ -15,6 +15,34 @@ export interface SynopsisDoc {
   position: number;
 }
 
+/** HTML TipTap → texte brut (sauts de ligne entre blocs). */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6]|blockquote)\s*>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function slugify(s: string): string {
+  return (
+    s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "synopsis"
+  );
+}
+
 /**
  * Onglet « Synopsis » de la planification.
  *
@@ -164,6 +192,22 @@ export function SynopsisView({
     await supabaseRef.current.from("synopses").delete().eq("id", removedId);
   }
 
+  /** Exporte le synopsis actif en fichier texte. */
+  function exportActive() {
+    if (!editor || !active) return;
+    const text = htmlToText(editor.getHTML());
+    const body = `${active.title}\n\n${text}\n`;
+    const blob = new Blob([body], { type: "text/plain;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${slugify(active.title)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   async function commitRename() {
     const title = renameValue.trim();
     setRenaming(false);
@@ -226,6 +270,14 @@ export function SynopsisView({
         </button>
 
         <div className="ml-auto flex items-center gap-1 pl-2">
+          <button
+            onClick={exportActive}
+            disabled={!active}
+            title="Exporter ce synopsis en fichier texte"
+            className="h-6 px-2 rounded-[var(--radius-sm)] text-[11px] text-text-tertiary hover:text-[var(--color-accent)] hover:bg-white/[0.04] cursor-pointer transition-colors disabled:opacity-50"
+          >
+            Exporter
+          </button>
           <button
             onClick={() => addSynopsis(true)}
             disabled={busy || !active}
