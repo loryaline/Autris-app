@@ -220,6 +220,7 @@ export function PlanningClient({
   narrativeTemplate,
   beats: initialBeats,
   showTips,
+  initialView,
 }: {
   novelId: string;
   projectId: string;
@@ -237,8 +238,24 @@ export function PlanningClient({
   narrativeTemplate: string;
   beats: PlanningBeat[];
   showTips: boolean;
+  initialView: string;
 }) {
-  const [activeView, setActiveView] = useState<PlanningView>("tableau");
+  const [activeView, setActiveView] = useState<PlanningView>(
+    initialView as PlanningView,
+  );
+
+  // Persiste l'onglet courant dans l'URL (?view=…) — sans rechargement —
+  // pour qu'un refresh reste sur le même onglet.
+  function changeView(v: PlanningView) {
+    setActiveView(v);
+    if (typeof window !== "undefined") {
+      const url =
+        v === "tableau"
+          ? window.location.pathname
+          : `${window.location.pathname}?view=${v}`;
+      window.history.replaceState(null, "", url);
+    }
+  }
   const [chapters, setChapters] = useState<ChapterData[]>(initialChapters);
   const [scenes, setScenes] = useState<SceneData[]>(initialScenes);
   const [method, setMethod] = useState<string>(narrativeTemplate);
@@ -285,7 +302,7 @@ export function PlanningClient({
       {/* Sub-sidebar */}
       <PlanningSubSidebar
         activeView={activeView}
-        onViewChange={setActiveView}
+        onViewChange={changeView}
         milestones={milestones}
         novelId={novelId}
       />
@@ -449,7 +466,7 @@ export function PlanningClient({
                 }))}
                 onBeatsChange={setBeats}
                 onMethodChange={setMethod}
-                onNavigate={setActiveView}
+                onNavigate={changeView}
                 projectId={projectId}
                 layout={isProcess ? "panel" : "band"}
               />

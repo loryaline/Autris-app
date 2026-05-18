@@ -247,25 +247,25 @@ export function DashboardClient({
                 >
                   {!project.cover_image_url && <div className="rd-board-orb" />}
                   <div className="rd-board-meta">
-                    <div className="rd-board-row">
-                      <div className="rd-board-name">{project.title}</div>
-                      <div className="rd-board-words">
-                        <div className="rd-board-words-num">{formatCompact(totalWords)}</div>
-                        <div className="rd-board-words-cap">mots · total</div>
-                      </div>
+                    {/* Titre seul sur sa ligne — padding droit pour ne pas
+                        passer sous l'orbe décorative du coin haut-droit. */}
+                    <div className="rd-board-name" style={{ paddingRight: 56 }}>
+                      {project.title}
                     </div>
                     <div className="rd-board-tags">
                       <span className="rd-board-tag accent">◆ {genreInfo?.label ?? project.genre}</span>
                       <span className="rd-board-tag">
                         · {project.novels.length} roman{project.novels.length > 1 ? "s" : ""}
                       </span>
+                      <span className="rd-board-tag" style={{ marginLeft: "auto" }}>
+                        {formatCompact(totalWords)} mots
+                      </span>
                       <a
                         href={`/project/${project.id}`}
                         title="Paramètres du projet"
                         className="rd-board-tag"
-                        style={{ marginLeft: "auto" }}
                       >
-                        Gérer
+                        · Gérer
                       </a>
                     </div>
                   </div>

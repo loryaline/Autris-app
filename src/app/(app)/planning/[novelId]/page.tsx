@@ -4,12 +4,20 @@ import { PlanningClient } from "./planning-client";
 import { getNarrativeMethod } from "@/lib/narrative-methods";
 import { personaPrefs } from "@/lib/persona";
 
+const PLANNING_VIEWS = ["tableau", "outline", "synopsis", "postits", "gantt"];
+
 export default async function PlanningPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ novelId: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
   const { novelId } = await params;
+  const { view } = await searchParams;
+  // Onglet initial : depuis l'URL (?view=…) pour survivre à un refresh.
+  const initialView =
+    view && PLANNING_VIEWS.includes(view) ? view : "tableau";
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -165,6 +173,7 @@ export default async function PlanningPage({
       narrativeTemplate={narrativeTemplate}
       beats={beats}
       showTips={showTips}
+      initialView={initialView}
     />
   );
 }
