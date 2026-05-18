@@ -29,6 +29,8 @@ export function StructureBand({
   chapters,
   onBeatsChange,
   onMethodChange,
+  onNavigate,
+  projectId,
   layout = "band",
 }: {
   novelId: string;
@@ -37,6 +39,9 @@ export function StructureBand({
   chapters: ChapterLite[];
   onBeatsChange: (beats: PlanningBeat[]) => void;
   onMethodChange: (method: string) => void;
+  /** Navigation vers une vue de la planification (étapes Snowflake). */
+  onNavigate?: (view: "tableau" | "outline" | "synopsis") => void;
+  projectId: string;
   /** "band" = bande horizontale au-dessus du tableau ; "panel" = colonne latérale. */
   layout?: "band" | "panel";
 }) {
@@ -47,6 +52,8 @@ export function StructureBand({
   const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const def = getNarrativeMethod(method);
+  // Action de chaque étape (méthode « process »), indexée par clé de beat.
+  const actionByKey = new Map(def.beats.map((d) => [d.key, d.action]));
   const sortedChapters = [...chapters].sort((a, b) => a.position - b.position);
 
   // Le bouton « Changer de méthode » vit dans la barre d'actions de la
@@ -253,13 +260,40 @@ export function StructureBand({
                           {b.description}
                         </div>
                       )}
-                      <textarea
-                        defaultValue={b.note ?? ""}
-                        onChange={(e) => saveNote(b.id, e.target.value)}
-                        placeholder="Vos notes pour cette étape…"
-                        rows={2}
-                        className="mt-1.5 w-full text-[11.5px] px-2 py-1.5 bg-bg-primary border border-white/[0.07] rounded-[var(--radius-sm)] text-text-secondary placeholder:text-text-quaternary focus:outline-none focus:border-[var(--color-accent-border)] resize-y"
-                      />
+                      {(() => {
+                        const action = actionByKey.get(b.beat_key) ?? {
+                          type: "note" as const,
+                        };
+                        if (action.type === "wb") {
+                          return (
+                            <a
+                              href={`/wb/${projectId}`}
+                              className="mt-1.5 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] bg-[var(--color-accent-bg)] border border-[var(--color-accent-border)] text-[11px] text-[var(--color-accent)] no-underline hover:opacity-85 transition-opacity"
+                            >
+                              {action.label} →
+                            </a>
+                          );
+                        }
+                        if (action.type === "view") {
+                          return (
+                            <button
+                              onClick={() => onNavigate?.(action.view)}
+                              className="mt-1.5 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] bg-[var(--color-accent-bg)] border border-[var(--color-accent-border)] text-[11px] text-[var(--color-accent)] cursor-pointer hover:opacity-85 transition-opacity"
+                            >
+                              {action.label} →
+                            </button>
+                          );
+                        }
+                        return (
+                          <textarea
+                            defaultValue={b.note ?? ""}
+                            onChange={(e) => saveNote(b.id, e.target.value)}
+                            placeholder="Vos notes pour cette étape…"
+                            rows={2}
+                            className="mt-1.5 w-full text-[11.5px] px-2 py-1.5 bg-bg-primary border border-white/[0.07] rounded-[var(--radius-sm)] text-text-secondary placeholder:text-text-quaternary focus:outline-none focus:border-[var(--color-accent-border)] resize-y"
+                          />
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}

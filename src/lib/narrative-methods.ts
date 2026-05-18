@@ -16,12 +16,25 @@ export type NarrativeMethodId =
   | "savethecat"
   | "snowflake";
 
+/**
+ * Action proposée pour une étape (méthode « process »).
+ * - "note" : zone de texte libre (par défaut).
+ * - "wb" : bouton vers le World Building du projet.
+ * - "view" : bouton vers une vue de la planification.
+ */
+export type BeatAction =
+  | { type: "note" }
+  | { type: "wb"; label: string }
+  | { type: "view"; view: "tableau" | "outline" | "synopsis"; label: string };
+
 export interface BeatDef {
   key: string;
   label: string;
   description: string;
   /** Regroupement optionnel (ex. « Acte I »). */
   act?: string;
+  /** Action de l'étape (méthodes « process » uniquement). Défaut : note. */
+  action?: BeatAction;
 }
 
 export interface NarrativeMethodDef {
@@ -78,14 +91,14 @@ const SAVE_THE_CAT: BeatDef[] = [
 ];
 
 const SNOWFLAKE: BeatDef[] = [
-  { key: "phrase", label: "1 · La phrase", description: "Résumez le roman en une seule phrase (≈ 15 mots)." },
-  { key: "paragraphe", label: "2 · Le paragraphe", description: "Étendez la phrase en un paragraphe : mise en place, trois crises, dénouement." },
-  { key: "personnages", label: "3 · Les personnages", description: "Une fiche-résumé pour chaque personnage principal." },
-  { key: "page", label: "4 · La page", description: "Développez chaque phrase du paragraphe en un paragraphe complet." },
-  { key: "fiches_perso", label: "5 · Les fiches détaillées", description: "Approfondissez chaque personnage : histoire, motivations, arc." },
-  { key: "synopsis", label: "6 · Le synopsis", description: "Étendez la page en un synopsis de plusieurs pages." },
-  { key: "scenes", label: "7 · La liste des scènes", description: "Listez toutes les scènes du roman dans un tableau." },
-  { key: "plan_scenes", label: "8 · Le plan des scènes", description: "Détaillez chaque scène avant de commencer à écrire." },
+  { key: "phrase", label: "1 · La phrase", description: "Résumez le roman en une seule phrase (≈ 15 mots).", action: { type: "note" } },
+  { key: "paragraphe", label: "2 · Le paragraphe", description: "Étendez la phrase en un paragraphe : mise en place, trois crises, dénouement.", action: { type: "note" } },
+  { key: "personnages", label: "3 · Les personnages", description: "Créez une fiche-résumé pour chaque personnage principal dans l'univers.", action: { type: "wb", label: "Créer une fiche personnage" } },
+  { key: "page", label: "4 · La page", description: "Développez chaque phrase du paragraphe en un paragraphe complet, dans le synopsis.", action: { type: "view", view: "synopsis", label: "Ouvrir le synopsis" } },
+  { key: "fiches_perso", label: "5 · Les fiches détaillées", description: "Approfondissez chaque personnage : histoire, motivations, arc.", action: { type: "wb", label: "Ouvrir l'univers" } },
+  { key: "synopsis", label: "6 · Le synopsis", description: "Étendez la page en un synopsis de plusieurs pages.", action: { type: "view", view: "synopsis", label: "Ouvrir le synopsis" } },
+  { key: "scenes", label: "7 · La liste des chapitres", description: "Posez la liste de vos chapitres dans le tableau de chapitrage.", action: { type: "view", view: "tableau", label: "Ouvrir le chapitrage" } },
+  { key: "plan_scenes", label: "8 · Le plan des scènes", description: "Détaillez chaque scène, chapitre par chapitre, dans l'outline.", action: { type: "view", view: "outline", label: "Ouvrir l'outline" } },
 ];
 
 export const NARRATIVE_METHODS: Record<NarrativeMethodId, NarrativeMethodDef> = {

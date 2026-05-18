@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 const VIEWS = [
   { key: "tableau", label: "Chapitrage", icon: "▦" },
   { key: "outline", label: "Outline", icon: "☰" },
+  { key: "synopsis", label: "Synopsis", icon: "✒" },
   { key: "postits", label: "Post-its", icon: "▪" },
   { key: "gantt", label: "Gantt", icon: "▬" },
 ] as const;

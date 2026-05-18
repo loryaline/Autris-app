@@ -5,6 +5,7 @@ import { PlanningSubSidebar, type PlanningView } from "@/components/planning/Pla
 import { ChapterTable } from "@/components/planning/ChapterTable";
 import { OutlineView } from "@/components/planning/OutlineView";
 import { StructureBand } from "@/components/planning/StructureBand";
+import { SynopsisView } from "@/components/planning/SynopsisView";
 import { getNarrativeMethod } from "@/lib/narrative-methods";
 import type { ChapterStatus } from "@/types/database";
 
@@ -204,8 +205,10 @@ interface Milestone {
 
 export function PlanningClient({
   novelId,
+  projectId,
   novelTitle,
   projectTitle,
+  synopsis,
   chapters: initialChapters,
   customColumns: initialCustomColumns,
   cellValues: initialCellValues,
@@ -219,8 +222,10 @@ export function PlanningClient({
   showTips,
 }: {
   novelId: string;
+  projectId: string;
   novelTitle: string;
   projectTitle: string;
+  synopsis: string;
   chapters: ChapterData[];
   customColumns: CustomColumn[];
   cellValues: CellValue[];
@@ -269,9 +274,11 @@ export function PlanningClient({
       ? "Chapitrage"
       : activeView === "outline"
         ? "Outline"
-        : activeView === "postits"
-          ? "Post-its"
-          : "Gantt";
+        : activeView === "synopsis"
+          ? "Synopsis"
+          : activeView === "postits"
+            ? "Post-its"
+            : "Gantt";
 
   return (
     <div className="flex h-full">
@@ -442,6 +449,8 @@ export function PlanningClient({
                 }))}
                 onBeatsChange={setBeats}
                 onMethodChange={setMethod}
+                onNavigate={setActiveView}
+                projectId={projectId}
                 layout={isProcess ? "panel" : "band"}
               />
             );
@@ -487,6 +496,10 @@ export function PlanningClient({
             scenes={scenes}
             setScenes={setScenes}
           />
+        )}
+
+        {activeView === "synopsis" && (
+          <SynopsisView novelId={novelId} initialSynopsis={synopsis} />
         )}
 
         {activeView === "postits" && (

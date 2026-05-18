@@ -20,7 +20,7 @@ export default async function PlanningPage({
   const [novelRes, chaptersRes, customColumnsRes, milestonesRes, beatsRes, profileRes] = await Promise.all([
     supabase
       .from("novels")
-      .select("id, title, project_id, narrative_template, column_order, column_colors, column_widths, projects(title)")
+      .select("id, title, project_id, narrative_template, synopsis, column_order, column_colors, column_widths, projects(title)")
       .eq("id", novelId)
       .eq("user_id", user.id)
       .single(),
@@ -130,11 +130,16 @@ export default async function PlanningPage({
   const columnColors = (novel as unknown as { column_colors: Record<string, string> | null }).column_colors ?? {};
   const columnWidths = (novel as unknown as { column_widths: Record<string, number> | null }).column_widths ?? {};
 
+  const synopsis =
+    (novel as unknown as { synopsis: string | null }).synopsis ?? "";
+
   return (
     <PlanningClient
       novelId={novelId}
+      projectId={novel.project_id}
       novelTitle={novel.title}
       projectTitle={projectTitle}
+      synopsis={synopsis}
       chapters={chapters ?? []}
       customColumns={customColumns ?? []}
       cellValues={cellValues ?? []}
