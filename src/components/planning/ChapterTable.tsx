@@ -145,6 +145,7 @@ export function ChapterTable({
   setColumnColors: setColumnColorsProp,
   columnWidths: columnWidthsProp,
   setColumnWidths: setColumnWidthsProp,
+  beatBadges,
 }: {
   novelId: string;
   chapters: ChapterRow[];
@@ -159,6 +160,8 @@ export function ChapterTable({
   setColumnColors: Dispatch<SetStateAction<Record<string, string>>>;
   columnWidths: Record<string, number>;
   setColumnWidths: Dispatch<SetStateAction<Record<string, number>>>;
+  /** Beats de structure rattachés, indexés par id de chapitre. */
+  beatBadges?: Record<string, { label: string; act: string | null }[]>;
 }) {
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
@@ -859,6 +862,20 @@ export function ChapterTable({
               onSave={(val) => saveChapterField(chapter.id, "title", val)}
               className="text-text-primary font-medium"
             />
+            {(beatBadges?.[chapter.id]?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap gap-1 px-2 pb-1">
+                {beatBadges![chapter.id].map((bb, i) => (
+                  <span
+                    key={i}
+                    title={bb.act ? `${bb.act} · ${bb.label}` : bb.label}
+                    className="inline-flex items-center gap-1 max-w-full text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent-border)]"
+                  >
+                    <span className="leading-none">◆</span>
+                    <span className="truncate">{bb.label}</span>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       );

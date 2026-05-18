@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PlanningClient } from "./planning-client";
+import { getNarrativeMethod } from "@/lib/narrative-methods";
 
 export default async function PlanningPage({
   params,
@@ -15,10 +16,10 @@ export default async function PlanningPage({
   // Phase 1 : tout ce qui ne dépend pas de chapters/customColumns en parallèle.
   // Avant : 6 awaits séquentiels, ~600 ms-1.5 s sur Supabase. Maintenant
   // 2 phases parallèles → ~250-500 ms.
-  const [novelRes, chaptersRes, customColumnsRes, milestonesRes] = await Promise.all([
+  const [novelRes, chaptersRes, customColumnsRes, milestonesRes, beatsRes] = await Promise.all([
     supabase
       .from("novels")
-      .select("id, title, project_id, column_order, column_colors, column_widths, projects(title)")
+      .select("id, title, project_id, narrative_template, column_order, column_colors, column_widths, projects(title)")
       .eq("id", novelId)
       .eq("user_id", user.id)
       .single(),
@@ -42,6 +43,12 @@ export default async function PlanningPage({
       .eq("novel_id", novelId)
       .eq("user_id", user.id)
       .order("position", { ascending: true }),
+    supabase
+      .from("planning_beats")
+      .select("id, method, beat_key, label, description, act, position, chapter_id, done, note")
+      .eq("novel_id", novelId)
+      .eq("user_id", user.id)
+      .order("position", { ascending: true }),
   ]);
 
   const novel = novelRes.data;
@@ -56,6 +63,32 @@ export default async function PlanningPage({
   const chapters = chaptersRes.data;
   const customColumns = customColumnsRes.data;
   const milestones = milestonesRes.data;
+
+  // Méthode narrative + beats de structure. Si le roman a une méthode
+  // (choisie à l'onboarding) mais aucun beat en base, on seede une fois.
+  const narrativeTemplate =
+    (novel as unknown as { narrative_template: string | null }).narrative_template ?? "libre";
+  let beats = beatsRes.data ?? [];
+  if (narrativeTemplate !== "libre" && beats.length === 0) {
+    const method = getNarrativeMethod(narrativeTemplate);
+    if (method.beats.length > 0) {
+      const rows = method.beats.map((b, i) => ({
+        novel_id: novelId,
+        user_id: user.id,
+        method: method.id,
+        beat_key: b.key,
+        label: b.label,
+        description: b.description,
+        act: b.act ?? null,
+        position: i,
+      }));
+      const { data: inserted } = await supabase
+        .from("planning_beats")
+        .insert(rows)
+        .select("id, method, beat_key, label, description, act, position, chapter_id, done, note");
+      beats = inserted ?? [];
+    }
+  }
 
   // Phase 2 : cellValues + scenes (dépendent des IDs de phase 1)
   const columnIds = (customColumns ?? []).map((c) => c.id);
@@ -100,6 +133,8 @@ export default async function PlanningPage({
       columnOrder={columnOrder}
       columnColors={columnColors}
       columnWidths={columnWidths}
+      narrativeTemplate={narrativeTemplate}
+      beats={beats}
     />
   );
 }

@@ -1,10 +1,25 @@
 "use client";
 
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { useState } from "react";
 import { PlanningSubSidebar, type PlanningView } from "@/components/planning/PlanningSubSidebar";
 import { ChapterTable } from "@/components/planning/ChapterTable";
 import { OutlineView } from "@/components/planning/OutlineView";
+import { StructureBand } from "@/components/planning/StructureBand";
 import type { ChapterStatus } from "@/types/database";
+
+/** Beat de structure narrative (table planning_beats). */
+export interface PlanningBeat {
+  id: string;
+  method: string;
+  beat_key: string;
+  label: string;
+  description: string | null;
+  act: string | null;
+  position: number;
+  chapter_id: string | null;
+  done: boolean;
+  note: string | null;
+}
 
 /* ---- Export CSV ---- */
 // Mapping clé de colonne → libellé + extraction depuis ChapterData.
@@ -198,6 +213,8 @@ export function PlanningClient({
   columnOrder,
   columnColors: initialColumnColors,
   columnWidths: initialColumnWidths,
+  narrativeTemplate,
+  beats: initialBeats,
 }: {
   novelId: string;
   novelTitle: string;
@@ -210,10 +227,14 @@ export function PlanningClient({
   columnOrder?: string[] | null;
   columnColors?: Record<string, string>;
   columnWidths?: Record<string, number>;
+  narrativeTemplate: string;
+  beats: PlanningBeat[];
 }) {
   const [activeView, setActiveView] = useState<PlanningView>("tableau");
   const [chapters, setChapters] = useState<ChapterData[]>(initialChapters);
   const [scenes, setScenes] = useState<SceneData[]>(initialScenes);
+  const [method, setMethod] = useState<string>(narrativeTemplate);
+  const [beats, setBeats] = useState<PlanningBeat[]>(initialBeats);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>(initialCustomColumns);
   const [cellValues, setCellValues] = useState<CellValue[]>(initialCellValues);
 
@@ -233,6 +254,13 @@ export function PlanningClient({
 
   const chapterCount = chapters.length;
   const sceneCount = scenes.length;
+
+  // Beats rattachés, indexés par chapitre — pour les badges du Chapitrage.
+  const beatBadges: Record<string, { label: string; act: string | null }[]> = {};
+  for (const b of beats) {
+    if (!b.chapter_id) continue;
+    (beatBadges[b.chapter_id] ??= []).push({ label: b.label, act: b.act });
+  }
   const viewLabel =
     activeView === "tableau"
       ? "Chapitrage"
@@ -380,21 +408,32 @@ export function PlanningClient({
 
         {/* Active view */}
         {activeView === "tableau" && (
-          <ChapterTable
-            novelId={novelId}
-            chapters={chapters}
-            setChapters={setChapters}
-            customColumns={customColumns}
-            setCustomColumns={setCustomColumns}
-            cellValues={cellValues}
-            setCellValues={setCellValues}
-            columnOrder={tableColumnOrder}
-            setColumnOrder={setTableColumnOrder}
-            columnColors={tableColumnColors}
-            setColumnColors={setTableColumnColors}
-            columnWidths={tableColumnWidths}
-            setColumnWidths={setTableColumnWidths}
-          />
+          <>
+            <StructureBand
+              novelId={novelId}
+              method={method}
+              beats={beats}
+              chapters={chapters.map((c) => ({ id: c.id, title: c.title, position: c.position }))}
+              onBeatsChange={setBeats}
+              onMethodChange={setMethod}
+            />
+            <ChapterTable
+              novelId={novelId}
+              chapters={chapters}
+              setChapters={setChapters}
+              customColumns={customColumns}
+              setCustomColumns={setCustomColumns}
+              cellValues={cellValues}
+              setCellValues={setCellValues}
+              columnOrder={tableColumnOrder}
+              setColumnOrder={setTableColumnOrder}
+              columnColors={tableColumnColors}
+              setColumnColors={setTableColumnColors}
+              columnWidths={tableColumnWidths}
+              setColumnWidths={setTableColumnWidths}
+              beatBadges={beatBadges}
+            />
+          </>
         )}
 
         {activeView === "outline" && (
