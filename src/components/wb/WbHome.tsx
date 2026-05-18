@@ -5,7 +5,7 @@ import {
   getCategoryDef,
   type WbCategory,
 } from "@/lib/wb-constants";
-import { buildWbMarkdown, downloadTextFile, slugify } from "@/lib/wb-export";
+import { buildWbZip, downloadBlob, slugify } from "@/lib/wb-export";
 import type { Genre, WbEntry } from "@/types/database";
 
 /**
@@ -46,12 +46,12 @@ export function WbHome({
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, 6);
 
-  function handleExport() {
-    const md = buildWbMarkdown(
-      entries as unknown as Parameters<typeof buildWbMarkdown>[0],
+  async function handleExport() {
+    const blob = await buildWbZip(
+      entries as unknown as Parameters<typeof buildWbZip>[0],
       projectTitle,
     );
-    downloadTextFile(`univers-${slugify(projectTitle)}.md`, md);
+    downloadBlob(`univers-${slugify(projectTitle)}.zip`, blob);
   }
 
   return (
@@ -89,7 +89,7 @@ export function WbHome({
           {totalFiches > 0 && (
             <button
               onClick={handleExport}
-              title="Exporter tout l'univers en Markdown (importable dans Notion)"
+              title="Exporter tout l'univers en .zip (une fiche par page — importable dans Notion)"
               className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary text-[12.5px] text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
