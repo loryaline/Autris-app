@@ -24,8 +24,13 @@ const IconList = () => (
 export function FloatingToolbar({ editor }: { editor: Editor | null }) {
   const [dock, setDock] = useState<Dock>("left");
   const [pos, setPos] = useState({ x: 80, y: 80 });
+  // Orientation conservée lors du glisser-déposer : déplacer la barre
+  // ne change plus sa direction (une barre verticale reste verticale).
+  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
+    "vertical",
+  );
 
-  const horizontal = dock === "top" || dock === "bottom" || dock === "free";
+  const horizontal = orientation === "horizontal";
 
   function onPointerDown(e: React.PointerEvent) {
     e.preventDefault();
@@ -183,7 +188,12 @@ export function FloatingToolbar({ editor }: { editor: Editor | null }) {
             key={d.id}
             type="button"
             className={`ft-dockbtn${dock === d.id ? " active" : ""}`}
-            onClick={() => setDock(d.id)}
+            onClick={() => {
+              setDock(d.id);
+              setOrientation(
+                d.id === "top" || d.id === "bottom" ? "horizontal" : "vertical",
+              );
+            }}
             title={`Ancrer : ${d.id}`}
           >
             {d.label}
