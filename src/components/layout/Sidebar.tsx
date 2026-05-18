@@ -199,14 +199,31 @@ export function Sidebar({
                       pathname === `/planning/${n.id}`;
                     return (
                       <div key={n.id} className="rd-novel">
-                        <Link
-                          href={`/editor/${n.id}`}
-                          className={`rd-novel-row${novelRowActive ? " active" : ""}`}
-                        >
-                          <span className={`rd-novel-marker ${markerClass(n.status)}`} />
-                          <span className="rd-novel-title">{n.title}</span>
-                          {n.is_active && <span className="rd-novel-mark">✦</span>}
-                        </Link>
+                        <div className={`rd-novel-row${novelRowActive ? " active" : ""}`}>
+                          <Link href={`/editor/${n.id}`} className="rd-novel-rowmain">
+                            <span className={`rd-novel-marker ${markerClass(n.status)}`} />
+                            <span className="rd-novel-title">{n.title}</span>
+                            {n.is_active && <span className="rd-novel-mark">✦</span>}
+                          </Link>
+                          {/* Accès Planif / Rédaction au survol — vaut pour
+                              tout roman, y compris inactif. */}
+                          <span className="rd-novel-actions">
+                            <Link
+                              href={`/planning/${n.id}`}
+                              className={`rd-novel-act${pathname === `/planning/${n.id}` ? " active" : ""}`}
+                              title="Planification"
+                            >
+                              <IconLayout />
+                            </Link>
+                            <Link
+                              href={`/editor/${n.id}`}
+                              className={`rd-novel-act${pathname === `/editor/${n.id}` ? " active" : ""}`}
+                              title="Rédaction"
+                            >
+                              <IconFeather />
+                            </Link>
+                          </span>
+                        </div>
 
                         {isSelected && (
                           <div className="rd-novel-children">

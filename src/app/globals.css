@@ -769,14 +769,35 @@ body {
 }
 .rd-novel { display: flex; flex-direction: column; }
 .rd-novel-row {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 4px;
   padding: 5px 8px; background: transparent; border: none;
   border-radius: var(--r-sm); color: var(--text-2);
-  cursor: pointer; text-align: left; font-family: inherit;
-  font-size: 12px; transition: all .15s; text-decoration: none;
+  text-align: left; font-family: inherit;
+  font-size: 12px; transition: all .15s;
 }
 .rd-novel-row:hover { background: var(--surface); color: var(--text); }
 .rd-novel-row.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+/* Zone cliquable principale du roman (→ rédaction) */
+.rd-novel-rowmain {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 8px;
+  color: inherit; text-decoration: none; cursor: pointer;
+}
+/* Actions Planif / Rédaction — révélées au survol de la ligne */
+.rd-novel-actions {
+  display: flex; gap: 2px; flex-shrink: 0;
+  opacity: 0; transition: opacity .15s;
+}
+.rd-novel-row:hover .rd-novel-actions { opacity: 1; }
+.rd-novel-act {
+  width: 20px; height: 20px; flex-shrink: 0;
+  display: grid; place-items: center;
+  border-radius: 5px; color: var(--text-4);
+  text-decoration: none; transition: all .15s;
+}
+.rd-novel-act svg { width: 12px; height: 12px; }
+.rd-novel-act:hover { background: var(--accent-bg); color: var(--accent); }
+.rd-novel-act.active { color: var(--accent); }
 .rd-novel-marker {
   width: 5px; height: 5px; border-radius: 50%;
   background: var(--text-4); flex-shrink: 0;
