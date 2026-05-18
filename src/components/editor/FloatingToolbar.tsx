@@ -24,6 +24,7 @@ const IconList = () => (
 export function FloatingToolbar({ editor }: { editor: Editor | null }) {
   const [dock, setDock] = useState<Dock>("left");
   const [pos, setPos] = useState({ x: 80, y: 80 });
+  const [minimized, setMinimized] = useState(false);
   // Orientation conservée lors du glisser-déposer : déplacer la barre
   // ne change plus sa direction (une barre verticale reste verticale).
   const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
@@ -51,6 +52,26 @@ export function FloatingToolbar({ editor }: { editor: Editor | null }) {
   }
 
   if (!editor) return null;
+
+  // Réduite : une pastille flottante près du bouton de feedback (bug).
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="ft-mini"
+        title="Afficher la barre d'outils"
+        aria-label="Afficher la barre d'outils"
+        onClick={() => setMinimized(false)}
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <rect x="2" y="6" width="14" height="6" rx="3" stroke="currentColor" strokeWidth="1.3" />
+          <circle cx="5.5" cy="9" r="1" fill="currentColor" />
+          <circle cx="9" cy="9" r="1" fill="currentColor" />
+          <circle cx="12.5" cy="9" r="1" fill="currentColor" />
+        </svg>
+      </button>
+    );
+  }
 
   const run = (fn: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -200,6 +221,16 @@ export function FloatingToolbar({ editor }: { editor: Editor | null }) {
           </button>
         ))}
       </div>
+      <span className="ft-sep" />
+      <button
+        type="button"
+        className="ft-dockbtn"
+        title="Réduire la barre d'outils"
+        aria-label="Réduire la barre d'outils"
+        onClick={() => setMinimized(true)}
+      >
+        −
+      </button>
     </div>
   );
 }
