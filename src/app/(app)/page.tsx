@@ -539,7 +539,6 @@ function FirstStepsBanner({ hasProjects }: { hasProjects: boolean }) {
     <div
       className="rd-fade-in"
       style={{
-        marginBottom: 16,
         padding: "14px 18px",
         borderRadius: "var(--r-lg)",
         border: "1px solid var(--accent-border)",

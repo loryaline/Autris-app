@@ -822,7 +822,10 @@ body {
 /* ============================================================
    Redesign phase 3 — Dashboard
    ============================================================ */
-.rd-page { padding: 24px; max-width: 1280px; margin: 0 auto; }
+.rd-page {
+  padding: 24px; max-width: 1280px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 16px;
+}
 @media (max-width: 720px) { .rd-page { padding: 16px; } }
 
 @keyframes rd-fadeUp {
