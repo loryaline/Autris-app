@@ -172,7 +172,8 @@ export function OnboardingClient() {
         {step === "accueil" && (
           <div className="text-center">
             <h1 className="text-[28px] text-text-primary mb-3" style={{ fontFamily: "var(--font-serif)" }}>
-              Bienvenue sur <span className="italic text-[var(--color-accent)]">Autris</span>
+              Bienvenue sur{" "}
+              <span className="font-serif italic text-[var(--color-accent)]">Autris</span>
             </h1>
             <p className="text-[14px] text-text-secondary mb-1 leading-relaxed">
               L&apos;espace d&apos;écriture des romanciers francophones.
@@ -338,7 +339,11 @@ export function OnboardingClient() {
         {step === "template" && (
           <div>
             <h2 className="text-[20px] font-bold text-text-primary mb-1">
-              Une <span className="font-serif italic text-[var(--color-accent)]">structure</span> pour vous guider&nbsp;?
+              Une{" "}
+              <span className="font-serif italic text-[var(--color-accent)] pr-[0.12em]">
+                structure
+              </span>{" "}
+              pour vous guider&nbsp;?
             </h2>
             <p className="text-[13px] text-text-tertiary mb-6">
               Choisissez un cadre narratif. Il préremplira votre planification — vous pourrez tout réécrire ou changer plus tard.
@@ -495,7 +500,11 @@ export function OnboardingClient() {
               ◆ Première ligne
             </div>
             <h2 className="text-[24px] text-text-primary mb-2" style={{ fontFamily: "var(--font-serif)" }}>
-              Votre espace est <span className="italic text-[var(--color-accent)]">prêt</span>.
+              Votre espace est{" "}
+              <span className="font-serif italic text-[var(--color-accent)] pr-[0.1em]">
+                prêt
+              </span>
+              .
             </h2>
             <p className="text-[14px] text-text-secondary mb-8 leading-relaxed">
               Par où commencez-vous ?
