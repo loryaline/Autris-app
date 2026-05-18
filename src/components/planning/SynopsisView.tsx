@@ -251,12 +251,16 @@ export function SynopsisView({
         </div>
       </div>
 
-      <FloatingToolbar editor={editor} />
+      {/* Conteneur positionné SOUS la barre d'onglets : la barre
+          flottante s'y ancre et ne chevauche plus les sous-onglets. */}
+      <div className="relative flex flex-col flex-1 min-h-0">
+        <FloatingToolbar editor={editor} />
 
-      <div className="editor-scroll">
-        <div className="paper-sheet">
-          <div className="paper-prose">
-            <EditorContent editor={editor} />
+        <div className="editor-scroll">
+          <div className="paper-sheet">
+            <div className="paper-prose">
+              <EditorContent editor={editor} />
+            </div>
           </div>
         </div>
       </div>
