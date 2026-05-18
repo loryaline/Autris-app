@@ -80,8 +80,11 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // If onboarding done but still on /onboarding, redirect to dashboard
-  if (user && isOnboarding) {
+  // If onboarding done but still on /onboarding, redirect to dashboard.
+  // Exception : ?redo=1 (« Refaire la configuration » depuis les
+  // Paramètres) — on laisse passer même si l'onboarding est terminé.
+  const isRedo = request.nextUrl.searchParams.get("redo") === "1";
+  if (user && isOnboarding && !isRedo) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("onboarding_done")
