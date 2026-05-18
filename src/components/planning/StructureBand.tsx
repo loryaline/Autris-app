@@ -41,7 +41,6 @@ export function StructureBand({
   const [collapsed, setCollapsed] = useState(false);
   const [showMethodModal, setShowMethodModal] = useState(false);
   const [switching, setSwitching] = useState(false);
-  const [assignMenuFor, setAssignMenuFor] = useState<string | null>(null);
   const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const def = getNarrativeMethod(method);
@@ -57,7 +56,6 @@ export function StructureBand({
 
   /* ---- Mutations beats ---- */
   async function assignBeat(beatId: string, chapterId: string | null) {
-    setAssignMenuFor(null);
     onBeatsChange(
       beats.map((b) => (b.id === beatId ? { ...b, chapter_id: chapterId } : b)),
     );
@@ -287,61 +285,27 @@ export function StructureBand({
                               </div>
                             )}
 
-                            {/* Rattachement */}
-                            <div className="mt-2 relative">
-                              {linked ? (
-                                <div className="flex items-center gap-1">
-                                  <span className="flex-1 text-[10.5px] text-[var(--color-accent)] truncate">
-                                    → {linked}
-                                  </span>
-                                  <button
-                                    onClick={() => assignBeat(b.id, null)}
-                                    title="Détacher"
-                                    className="text-text-quaternary hover:text-text-primary cursor-pointer text-[12px] leading-none"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() =>
-                                    setAssignMenuFor(
-                                      assignMenuFor === b.id ? null : b.id,
-                                    )
-                                  }
-                                  className="text-[10.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors"
-                                >
-                                  Rattacher à un chapitre ▾
-                                </button>
-                              )}
-
-                              {assignMenuFor === b.id && (
-                                <>
-                                  <button
-                                    type="button"
-                                    aria-label="Fermer"
-                                    onClick={() => setAssignMenuFor(null)}
-                                    className="fixed inset-0 z-40 bg-transparent border-none cursor-default"
-                                  />
-                                  <div className="absolute left-0 top-full mt-1 z-50 w-[200px] max-h-[240px] overflow-y-auto rounded-[var(--radius-md)] border border-white/[0.1] bg-bg-secondary shadow-xl py-1">
-                                    {sortedChapters.length === 0 ? (
-                                      <div className="px-3 py-1.5 text-[11px] text-text-quaternary italic">
-                                        Aucun chapitre.
-                                      </div>
-                                    ) : (
-                                      sortedChapters.map((c, i) => (
-                                        <button
-                                          key={c.id}
-                                          onClick={() => assignBeat(b.id, c.id)}
-                                          className="w-full text-left px-3 py-1.5 text-[11.5px] text-text-secondary hover:bg-white/[0.05] hover:text-[var(--color-accent)] cursor-pointer transition-colors truncate"
-                                        >
-                                          Ch. {i + 1} · {c.title || "Sans titre"}
-                                        </button>
-                                      ))
-                                    )}
-                                  </div>
-                                </>
-                              )}
+                            {/* Rattachement — select natif : jamais masqué
+                                par le tableau (rendu hors flux du navigateur). */}
+                            <div className="mt-2">
+                              <select
+                                value={b.chapter_id ?? ""}
+                                onChange={(e) =>
+                                  assignBeat(b.id, e.target.value || null)
+                                }
+                                className={`w-full text-[10.5px] px-1.5 py-1 rounded-[var(--radius-sm)] bg-bg-primary border cursor-pointer focus:outline-none ${
+                                  linked
+                                    ? "border-[var(--color-accent-border)] text-[var(--color-accent)]"
+                                    : "border-white/[0.12] text-text-tertiary"
+                                }`}
+                              >
+                                <option value="">— Rattacher à un chapitre —</option>
+                                {sortedChapters.map((c, i) => (
+                                  <option key={c.id} value={c.id}>
+                                    Ch. {i + 1} · {c.title || "Sans titre"}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                           </div>
                         );
