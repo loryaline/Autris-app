@@ -5,7 +5,7 @@ import { PlanningSubSidebar, type PlanningView } from "@/components/planning/Pla
 import { ChapterTable } from "@/components/planning/ChapterTable";
 import { OutlineView } from "@/components/planning/OutlineView";
 import { StructureBand } from "@/components/planning/StructureBand";
-import { SynopsisView } from "@/components/planning/SynopsisView";
+import { SynopsisView, type SynopsisDoc } from "@/components/planning/SynopsisView";
 import { getNarrativeMethod } from "@/lib/narrative-methods";
 import type { ChapterStatus } from "@/types/database";
 
@@ -208,7 +208,7 @@ export function PlanningClient({
   projectId,
   novelTitle,
   projectTitle,
-  synopsis,
+  synopses,
   chapters: initialChapters,
   customColumns: initialCustomColumns,
   cellValues: initialCellValues,
@@ -225,7 +225,7 @@ export function PlanningClient({
   projectId: string;
   novelTitle: string;
   projectTitle: string;
-  synopsis: string;
+  synopses: SynopsisDoc[];
   chapters: ChapterData[];
   customColumns: CustomColumn[];
   cellValues: CellValue[];
@@ -499,7 +499,7 @@ export function PlanningClient({
         )}
 
         {activeView === "synopsis" && (
-          <SynopsisView novelId={novelId} initialSynopsis={synopsis} />
+          <SynopsisView novelId={novelId} initialSynopses={synopses} />
         )}
 
         {activeView === "postits" && (
