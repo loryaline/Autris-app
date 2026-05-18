@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   NARRATIVE_METHOD_LIST,
@@ -48,6 +48,15 @@ export function StructureBand({
 
   const def = getNarrativeMethod(method);
   const sortedChapters = [...chapters].sort((a, b) => a.position - b.position);
+
+  // Le bouton « Changer de méthode » vit dans la barre d'actions de la
+  // planification (planning-client) ; il déclenche l'ouverture du modal
+  // via un événement, comme le bouton « + Nouveau chapitre ».
+  useEffect(() => {
+    const open = () => setShowMethodModal(true);
+    window.addEventListener("autris:change-method", open);
+    return () => window.removeEventListener("autris:change-method", open);
+  }, []);
 
   function chapterLabel(id: string | null): string | null {
     if (!id) return null;
@@ -200,13 +209,6 @@ export function StructureBand({
               {completionLabel}
             </span>
           )}
-
-          <button
-            onClick={() => setShowMethodModal(true)}
-            className="ml-auto inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-white/[0.08] text-[11px] text-text-tertiary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors"
-          >
-            {method === "libre" ? "Choisir une méthode" : "Changer de méthode"}
-          </button>
         </div>
 
         {/* Corps */}

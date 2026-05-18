@@ -370,43 +370,55 @@ export function PlanningClient({
               </div>
 
               {activeView === "tableau" && (
-                <div className="flex items-center gap-2 pt-1 shrink-0">
-                  <button
-                    onClick={() => {
-                      const csv = buildChapterCsv(
-                        chapters,
-                        customColumns,
-                        cellValues,
-                        columnOrder,
-                      );
-                      downloadCsv(`${slugify(novelTitle)}-chapitrage.csv`, csv);
-                    }}
-                    title="Télécharger le tableau au format CSV (Excel, Numbers, LibreOffice)"
-                    className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12.5px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
-                  >
-                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                      <path
-                        d="M7 2V9M7 9L4 6M7 9L10 6M2.5 11H11.5"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Exporter
-                  </button>
+                <div className="flex flex-col items-end gap-2 pt-1 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const csv = buildChapterCsv(
+                          chapters,
+                          customColumns,
+                          cellValues,
+                          columnOrder,
+                        );
+                        downloadCsv(`${slugify(novelTitle)}-chapitrage.csv`, csv);
+                      }}
+                      title="Télécharger le tableau au format CSV (Excel, Numbers, LibreOffice)"
+                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12.5px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                        <path
+                          d="M7 2V9M7 9L4 6M7 9L10 6M2.5 11H11.5"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      Exporter
+                    </button>
+                    <button
+                      onClick={() =>
+                        window.dispatchEvent(new CustomEvent("autris:add-chapter"))
+                      }
+                      className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] font-medium cursor-pointer transition-colors"
+                      style={{
+                        background: "var(--color-accent)",
+                        color: "#1a1410",
+                      }}
+                    >
+                      <span className="text-[14px] leading-none">+</span>
+                      Nouveau chapitre
+                    </button>
+                  </div>
                   <button
                     onClick={() =>
-                      window.dispatchEvent(new CustomEvent("autris:add-chapter"))
+                      window.dispatchEvent(new CustomEvent("autris:change-method"))
                     }
-                    className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] font-medium cursor-pointer transition-colors"
-                    style={{
-                      background: "var(--color-accent)",
-                      color: "#1a1410",
-                    }}
+                    title="Changer la méthode narrative (3 actes, voyage du héros…)"
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12px] text-text-tertiary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors"
                   >
-                    <span className="text-[14px] leading-none">+</span>
-                    Nouveau chapitre
+                    <span className="text-[11px] leading-none">◆</span>
+                    Méthode narrative
                   </button>
                 </div>
               )}
