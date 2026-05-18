@@ -7,28 +7,13 @@ import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { createClient } from "@/lib/supabase/client";
 import { FloatingToolbar } from "@/components/editor/FloatingToolbar";
+import { htmlToDocxBlob, downloadBlob } from "@/lib/docx-export";
 
 export interface SynopsisDoc {
   id: string;
   title: string;
   content: string;
   position: number;
-}
-
-/** HTML TipTap → texte brut (sauts de ligne entre blocs). */
-function htmlToText(html: string): string {
-  return html
-    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
-    .replace(/<\/(p|div|li|h[1-6]|blockquote)\s*>/gi, "\n\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
 }
 
 function slugify(s: string): string {
@@ -192,20 +177,11 @@ export function SynopsisView({
     await supabaseRef.current.from("synopses").delete().eq("id", removedId);
   }
 
-  /** Exporte le synopsis actif en fichier texte. */
-  function exportActive() {
+  /** Exporte le synopsis actif en document Word (.docx). */
+  async function exportActive() {
     if (!editor || !active) return;
-    const text = htmlToText(editor.getHTML());
-    const body = `${active.title}\n\n${text}\n`;
-    const blob = new Blob([body], { type: "text/plain;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${slugify(active.title)}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const blob = await htmlToDocxBlob(editor.getHTML(), active.title || "Synopsis");
+    downloadBlob(`${slugify(active.title || "synopsis")}.docx`, blob);
   }
 
   async function commitRename() {
