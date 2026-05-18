@@ -1,10 +1,39 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import {
+  Inter,
+  Cormorant_Garamond,
+  Space_Grotesk,
+  JetBrains_Mono,
+} from "next/font/google";
 import "./globals.css";
 
+// Polices auto-hébergées via next/font : aucune requête externe, pas de
+// décalage de mise en page. Exposées en variables CSS, consommées par les
+// tokens de thème (--font-display / --font-sans / --font-mono).
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
+  display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
+  display: "swap",
 });
 
 const SITE_URL = "https://autris.app";
@@ -98,29 +127,13 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${inter.variable} h-full`}
+      className={`${inter.variable} ${cormorant.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full`}
       // Défauts SSR — surchargés avant paint par THEME_INIT_SCRIPT
       data-theme="fantasy"
       data-mode="dark"
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        {/* Polices des thèmes : Cormorant (fantasy), Space Grotesk (SF),
-            JetBrains Mono. Inter est déjà chargé via next/font.
-            Le lint no-page-custom-font vise le Pages Router : ici on est
-            dans le <head> du RootLayout App Router, chargé pour toutes
-            les pages — règle non applicable. */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-          rel="stylesheet"
-        />
       </head>
       <body className="h-full antialiased">{children}</body>
     </html>

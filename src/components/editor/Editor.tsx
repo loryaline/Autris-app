@@ -10,7 +10,6 @@ import CharacterCount from "@tiptap/extension-character-count";
 import { createClient } from "@/lib/supabase/client";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { StatusBar } from "./StatusBar";
-import { novelToDocxBlob, downloadBlob } from "@/lib/docx-export";
 import { StructurePanel } from "./StructurePanel";
 import { ContextPanel } from "./ContextPanel";
 import { Pomodoro } from "./Pomodoro";
@@ -46,6 +45,7 @@ interface EditorProps {
   wbEntries: WbEntryLite[];
   pomoDuration: number;
   showTips: boolean;
+  authorName: string;
 }
 
 function countWords(text: string): number {
@@ -65,6 +65,7 @@ export function NovelEditor({
   wbEntries,
   pomoDuration,
   showTips,
+  authorName,
 }: EditorProps) {
   const [activeChapterId, setActiveChapterId] = useState<string | null>(initialChapterId);
   const activeChapterIdRef = useRef<string | null>(initialChapterId);
@@ -452,26 +453,20 @@ export function NovelEditor({
     };
   }, []);
 
-  // Export du roman complet en .docx (un chapitre par section).
+  // Export du roman complet en .docx — délègue au module manuscrit
+  // (page de titre, mise en page éditoriale). Import dynamique : `docx`
+  // n'est chargé qu'au déclenchement de l'export.
   async function handleExportNovel() {
-    const sorted = [...localChapters].sort((a, b) => a.position - b.position);
-    const chaptersForDoc = sorted.map((c) => ({
+    const { downloadNovelDocx } = await import("@/lib/export/exportNovelDocx");
+    const chapters = localChapters.map((c) => ({
       title: c.title,
       // Le chapitre actif vit dans l'éditeur (sauvegarde différée) :
       // on prend son HTML courant pour un export à jour.
-      content:
+      contentHtml:
         c.id === activeChapterId && editor ? editor.getHTML() : c.content,
+      position: c.position,
     }));
-    const blob = await novelToDocxBlob(chaptersForDoc, novelTitle);
-    const slug =
-      novelTitle
-        .normalize("NFD")
-        .replace(/[̀-ͯ]/g, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 60) || "roman";
-    downloadBlob(`${slug}.docx`, blob);
+    await downloadNovelDocx({ novelTitle, authorName, chapters });
   }
 
   // Échap quitte le mode focus.

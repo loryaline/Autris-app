@@ -18,7 +18,7 @@ export default async function EditorPage({
     user
       ? supabase
           .from("profiles")
-          .select("pomo_duration, persona")
+          .select("pomo_duration, persona, username")
           .eq("id", user.id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -42,6 +42,9 @@ export default async function EditorPage({
   const showTips = personaPrefs(
     (profileRes.data as { persona?: string | null } | null)?.persona,
   ).showTips;
+  const authorName =
+    (profileRes.data as { username?: string | null } | null)?.username ||
+    "Auteur";
   const novel = novelRes.data;
 
   if (!novel) {
@@ -99,6 +102,7 @@ export default async function EditorPage({
       wbEntries={wbEntries ?? []}
       pomoDuration={pomoDuration}
       showTips={showTips}
+      authorName={authorName}
     />
   );
 }

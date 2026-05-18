@@ -8,7 +8,6 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ImportManuscriptDialog } from "@/components/import/ImportManuscriptDialog";
-import { downloadNovelDocx } from "@/lib/export/exportNovelDocx";
 import { GENRES } from "@/lib/constants";
 import type { Genre } from "@/types/database";
 
@@ -656,6 +655,11 @@ function NovelSettings({
                     .eq("id", user.id)
                     .maybeSingle()
                 : { data: null };
+              // Import dynamique : `docx` reste hors du bundle de la page,
+              // chargé seulement au déclenchement de l'export.
+              const { downloadNovelDocx } = await import(
+                "@/lib/export/exportNovelDocx"
+              );
               await downloadNovelDocx({
                 novelTitle: novel.title,
                 authorName: profile?.username ?? "Auteur",

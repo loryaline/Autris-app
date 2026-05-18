@@ -1,8 +1,7 @@
 /**
- * Conversion HTML (TipTap) → document Word .docx.
- *
- * Sert à l'export du synopsis (un seul document) comme à l'export du
- * roman complet (un chapitre par section, saut de page entre chapitres).
+ * Conversion HTML (TipTap) → document Word .docx — pour l'export du
+ * synopsis (un seul document). L'export du roman complet (avec page de
+ * titre, mise en page manuscrit) vit dans lib/export/exportNovelDocx.ts.
  * Le paquet `docx` est chargé dynamiquement : il n'alourdit le bundle
  * que lorsqu'un export est réellement déclenché.
  */
@@ -123,36 +122,6 @@ export async function htmlToDocxBlob(html: string, title: string): Promise<Blob>
     new Paragraph({ text: title, heading: HeadingLevel.TITLE }),
     ...htmlToParagraphs(docx, html),
   ];
-  return Packer.toBlob(
-    new Document({ sections: [{ properties: {}, children }] }),
-  );
-}
-
-/** Exporte un roman complet : un chapitre par section, saut de page entre eux. */
-export async function novelToDocxBlob(
-  chapters: { title: string; content: string }[],
-  novelTitle: string,
-): Promise<Blob> {
-  const docx = await import("docx");
-  const { Document, Packer, Paragraph, HeadingLevel } = docx;
-  type ParagraphInstance = InstanceType<typeof Paragraph>;
-
-  const children: ParagraphInstance[] = [
-    new Paragraph({ text: novelTitle, heading: HeadingLevel.TITLE }),
-  ];
-
-  chapters.forEach((ch, i) => {
-    children.push(
-      new Paragraph({
-        text: ch.title?.trim() || `Chapitre ${i + 1}`,
-        heading: HeadingLevel.HEADING_1,
-        pageBreakBefore: i > 0,
-        spacing: { after: 240 },
-      }),
-    );
-    children.push(...htmlToParagraphs(docx, ch.content));
-  });
-
   return Packer.toBlob(
     new Document({ sections: [{ properties: {}, children }] }),
   );
