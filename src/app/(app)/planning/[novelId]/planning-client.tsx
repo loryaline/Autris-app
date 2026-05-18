@@ -5,6 +5,7 @@ import { PlanningSubSidebar, type PlanningView } from "@/components/planning/Pla
 import { ChapterTable } from "@/components/planning/ChapterTable";
 import { OutlineView } from "@/components/planning/OutlineView";
 import { StructureBand } from "@/components/planning/StructureBand";
+import { getNarrativeMethod } from "@/lib/narrative-methods";
 import type { ChapterStatus } from "@/types/database";
 
 /** Beat de structure narrative (table planning_beats). */
@@ -414,34 +415,57 @@ export function PlanningClient({
         )}
 
         {/* Active view */}
-        {activeView === "tableau" && (
-          <>
-            <StructureBand
-              novelId={novelId}
-              method={method}
-              beats={beats}
-              chapters={chapters.map((c) => ({ id: c.id, title: c.title, position: c.position }))}
-              onBeatsChange={setBeats}
-              onMethodChange={setMethod}
-            />
-            <ChapterTable
-              novelId={novelId}
-              chapters={chapters}
-              setChapters={setChapters}
-              customColumns={customColumns}
-              setCustomColumns={setCustomColumns}
-              cellValues={cellValues}
-              setCellValues={setCellValues}
-              columnOrder={tableColumnOrder}
-              setColumnOrder={setTableColumnOrder}
-              columnColors={tableColumnColors}
-              setColumnColors={setTableColumnColors}
-              columnWidths={tableColumnWidths}
-              setColumnWidths={setTableColumnWidths}
-              beatBadges={beatBadges}
-            />
-          </>
-        )}
+        {activeView === "tableau" &&
+          (() => {
+            const isProcess = getNarrativeMethod(method).kind === "process";
+            const band = (
+              <StructureBand
+                novelId={novelId}
+                method={method}
+                beats={beats}
+                chapters={chapters.map((c) => ({
+                  id: c.id,
+                  title: c.title,
+                  position: c.position,
+                }))}
+                onBeatsChange={setBeats}
+                onMethodChange={setMethod}
+                layout={isProcess ? "panel" : "band"}
+              />
+            );
+            const table = (
+              <ChapterTable
+                novelId={novelId}
+                chapters={chapters}
+                setChapters={setChapters}
+                customColumns={customColumns}
+                setCustomColumns={setCustomColumns}
+                cellValues={cellValues}
+                setCellValues={setCellValues}
+                columnOrder={tableColumnOrder}
+                setColumnOrder={setTableColumnOrder}
+                columnColors={tableColumnColors}
+                setColumnColors={setTableColumnColors}
+                columnWidths={tableColumnWidths}
+                setColumnWidths={setTableColumnWidths}
+                beatBadges={beatBadges}
+              />
+            );
+            // Méthode « process » (Snowflake) : la checklist est haute, on la
+            // place en panneau latéral entre la sous-sidebar et le tableau.
+            // Méthodes « beats » : bande compacte au-dessus du tableau.
+            return isProcess ? (
+              <div className="flex flex-1 min-h-0">
+                {band}
+                {table}
+              </div>
+            ) : (
+              <>
+                {band}
+                {table}
+              </>
+            );
+          })()}
 
         {activeView === "outline" && (
           <OutlineView

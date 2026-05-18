@@ -29,6 +29,7 @@ export function StructureBand({
   chapters,
   onBeatsChange,
   onMethodChange,
+  layout = "band",
 }: {
   novelId: string;
   method: string;
@@ -36,6 +37,8 @@ export function StructureBand({
   chapters: ChapterLite[];
   onBeatsChange: (beats: PlanningBeat[]) => void;
   onMethodChange: (method: string) => void;
+  /** "band" = bande horizontale au-dessus du tableau ; "panel" = colonne latérale. */
+  layout?: "band" | "panel";
 }) {
   const supabase = useRef(createClient()).current;
   const [collapsed, setCollapsed] = useState(false);
@@ -154,9 +157,17 @@ export function StructureBand({
     }
   }
 
+  const isPanel = layout === "panel";
+
   return (
-    <div className="shrink-0 border-b border-white/[0.05] bg-bg-secondary/40">
-      <div className="px-6 py-2.5">
+    <div
+      className={
+        isPanel
+          ? "w-[300px] shrink-0 border-r border-white/[0.05] bg-bg-secondary/40 overflow-y-auto"
+          : "shrink-0 border-b border-white/[0.05] bg-bg-secondary/40"
+      }
+    >
+      <div className={isPanel ? "px-4 py-3" : "px-6 py-2.5"}>
         {/* En-tête de la bande */}
         <div className="flex items-center gap-2.5">
           <button
