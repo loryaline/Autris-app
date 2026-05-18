@@ -10,13 +10,7 @@ export default function ConfidentialitePage() {
         Comment vos données personnelles sont collectées, utilisées et
         protégées. Conforme à la nLPD (Suisse) et au RGPD (UE).
       </p>
-
-      <p className="placeholder-banner">
-        ⚠️ <strong>Document en cours de rédaction.</strong> Ce texte est un
-        canevas non-définitif. La version définitive sera validée avant
-        l&apos;ouverture des abonnements payants.
-      </p>
-
+      
       <h2>1. Responsable du traitement</h2>
       <p>
         Le responsable du traitement de vos données est{" "}

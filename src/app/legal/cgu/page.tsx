@@ -11,12 +11,6 @@ export default function CguPage() {
         attentivement.
       </p>
 
-      <p className="placeholder-banner">
-        ⚠️ <strong>Document en cours de rédaction.</strong> Le texte ci-dessous
-        est un canevas non-définitif qui sera remplacé par une version validée
-        avant l&apos;ouverture des abonnements payants.
-      </p>
-
       <h2>1. Présentation du service</h2>
       <p>
         Autris est un logiciel d&apos;écriture en ligne destiné aux romanciers
@@ -67,7 +61,9 @@ export default function CguPage() {
         Nous faisons de notre mieux pour assurer la disponibilité d&apos;Autris,
         mais ne pouvons garantir un service ininterrompu. Des opérations de
         maintenance, mises à jour ou incidents tiers peuvent occasionner des
-        indisponibilités temporaires.
+        indisponibilités temporaires, c'est pourquoi le site est doté de plusieurs 
+        fonctionnalités d'exports à toutes les étapes. Ne vous contentez pas 
+        uniquement d'Autris.app pour stocker votre travail.
       </p>
 
       <h2>7. Suppression de compte</h2>
@@ -88,10 +84,10 @@ export default function CguPage() {
 
       <h2>9. Droit applicable</h2>
       <p>
-        Les présentes CGU sont soumises au droit suisse. Tout litige sera
-        porté devant les tribunaux compétents du canton de domicile de
-        Chênerêve Éditions, sous réserve des règles impératives applicables
-        aux consommateurs européens (RGPD).
+        Les présentes CGU sont soumises au droit suisse. Tout litige ne pouvant
+        se reglé à l'amiable sera porté devant les tribunaux compétents du canton 
+        de domicile de Chênerêve Éditions, sous réserve des règles impératives 
+        applicables aux consommateurs européens (RGPD).
       </p>
 
       <h2>10. Contact</h2>

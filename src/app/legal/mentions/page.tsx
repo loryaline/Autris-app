@@ -24,8 +24,8 @@ export default function MentionsPage() {
           Email :{" "}
           <a href="mailto:aline@autris.app">aline@autris.app</a>
         </li>
-        <li>Adresse postale : <em>(à compléter)</em></li>
-        <li>N° AVS / IDE : <em>(à compléter)</em></li>
+        <li>Adresse postale : Rue de la Poterie 6, 1202 Genève</li>
+      
       </ul>
 
       <h2>Hébergement</h2>
@@ -69,7 +69,7 @@ export default function MentionsPage() {
         <a href="mailto:aline@autris.app">aline@autris.app</a>.
       </p>
 
-      <p className="meta">Dernière mise à jour : <em>(à compléter)</em></p>
+      <p className="meta">Dernière mise à jour : <em>18.05.2026</em></p>
     </>
   );
 }
