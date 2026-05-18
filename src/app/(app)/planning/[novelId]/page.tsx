@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PlanningClient } from "./planning-client";
 import { getNarrativeMethod } from "@/lib/narrative-methods";
+import { personaPrefs } from "@/lib/persona";
 
 export default async function PlanningPage({
   params,
@@ -16,7 +17,7 @@ export default async function PlanningPage({
   // Phase 1 : tout ce qui ne dépend pas de chapters/customColumns en parallèle.
   // Avant : 6 awaits séquentiels, ~600 ms-1.5 s sur Supabase. Maintenant
   // 2 phases parallèles → ~250-500 ms.
-  const [novelRes, chaptersRes, customColumnsRes, milestonesRes, beatsRes] = await Promise.all([
+  const [novelRes, chaptersRes, customColumnsRes, milestonesRes, beatsRes, profileRes] = await Promise.all([
     supabase
       .from("novels")
       .select("id, title, project_id, narrative_template, column_order, column_colors, column_widths, projects(title)")
@@ -49,7 +50,16 @@ export default async function PlanningPage({
       .eq("novel_id", novelId)
       .eq("user_id", user.id)
       .order("position", { ascending: true }),
+    supabase
+      .from("profiles")
+      .select("persona")
+      .eq("id", user.id)
+      .single(),
   ]);
+
+  const showTips = personaPrefs(
+    (profileRes.data as { persona: string | null } | null)?.persona,
+  ).showTips;
 
   const novel = novelRes.data;
   if (!novel) {
@@ -135,6 +145,7 @@ export default async function PlanningPage({
       columnWidths={columnWidths}
       narrativeTemplate={narrativeTemplate}
       beats={beats}
+      showTips={showTips}
     />
   );
 }

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NovelEditor } from "@/components/editor/Editor";
+import { personaPrefs } from "@/lib/persona";
 
 export default async function EditorPage({
   params,
@@ -17,7 +18,7 @@ export default async function EditorPage({
     user
       ? supabase
           .from("profiles")
-          .select("pomo_duration")
+          .select("pomo_duration, persona")
           .eq("id", user.id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -38,6 +39,9 @@ export default async function EditorPage({
 
   const pomoDuration =
     (profileRes.data as { pomo_duration?: number } | null)?.pomo_duration ?? 25;
+  const showTips = personaPrefs(
+    (profileRes.data as { persona?: string | null } | null)?.persona,
+  ).showTips;
   const novel = novelRes.data;
 
   if (!novel) {
@@ -94,6 +98,7 @@ export default async function EditorPage({
       wordGoal={novel.word_goal}
       wbEntries={wbEntries ?? []}
       pomoDuration={pomoDuration}
+      showTips={showTips}
     />
   );
 }

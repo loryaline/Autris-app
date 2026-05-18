@@ -44,6 +44,7 @@ interface EditorProps {
   wordGoal: number | null;
   wbEntries: WbEntryLite[];
   pomoDuration: number;
+  showTips: boolean;
 }
 
 function countWords(text: string): number {
@@ -62,6 +63,7 @@ export function NovelEditor({
   wordGoal,
   wbEntries,
   pomoDuration,
+  showTips,
 }: EditorProps) {
   const [activeChapterId, setActiveChapterId] = useState<string | null>(initialChapterId);
   const activeChapterIdRef = useRef<string | null>(initialChapterId);
@@ -636,6 +638,13 @@ export function NovelEditor({
               ↙ Quitter
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Conseil contextuel — persona « Explorateur » uniquement */}
+      {!focusMode && showTips && (
+        <div className="shrink-0 px-4 py-1.5 bg-bg-primary border-b border-white/[0.04] text-[11.5px] text-text-quaternary italic">
+          Astuce : la barre d&apos;outils flotte — glissez-la où vous voulez, ou ancrez-la sur un bord.
         </div>
       )}
 

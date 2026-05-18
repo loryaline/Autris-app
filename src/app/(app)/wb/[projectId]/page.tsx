@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { WbClient } from "./wb-client";
+import { personaPrefs } from "@/lib/persona";
 import type { Genre } from "@/types/database";
 
 export default async function WorldBuildingPage({
@@ -13,12 +14,18 @@ export default async function WorldBuildingPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, title, genre")
-    .eq("id", projectId)
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: project }, { data: profile }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, title, genre")
+      .eq("id", projectId)
+      .eq("user_id", user.id)
+      .single(),
+    supabase.from("profiles").select("persona").eq("id", user.id).single(),
+  ]);
+  const showTips = personaPrefs(
+    (profile as { persona: string | null } | null)?.persona,
+  ).showTips;
 
   if (!project) {
     return (
@@ -62,6 +69,7 @@ export default async function WorldBuildingPage({
       initialEntries={entries ?? []}
       initialLinks={links as never}
       novels={(novels ?? []) as { id: string; title: string }[]}
+      showTips={showTips}
     />
   );
 }

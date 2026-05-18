@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { GENRES } from "@/lib/constants";
+import { personaPrefs } from "@/lib/persona";
 import type { Genre, NarrativeTemplate, Persona } from "@/types/database";
 
 /* ---- Constants ---- */
@@ -511,33 +512,41 @@ export function OnboardingClient() {
             </p>
 
             <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => finishOnboarding("editor")}
-                disabled={saving}
-                className="flex flex-col items-center gap-2 p-4 bg-primary-bg border border-primary-border rounded-[var(--radius-md)] cursor-pointer hover:bg-primary/10 transition-colors disabled:opacity-60"
-              >
-                <span className="text-[28px]">✎</span>
-                <span className="text-[13px] font-medium text-primary">Écrire</span>
-                <span className="text-[11px] text-text-tertiary leading-tight">Démarrer le chapitre 1</span>
-              </button>
-              <button
-                onClick={() => finishOnboarding("characters")}
-                disabled={saving}
-                className="flex flex-col items-center gap-2 p-4 bg-bg-secondary border border-border rounded-[var(--radius-md)] cursor-pointer hover:bg-bg-hover transition-colors disabled:opacity-60"
-              >
-                <span className="text-[28px]">◐</span>
-                <span className="text-[13px] font-medium text-teal">Personnages</span>
-                <span className="text-[11px] text-text-tertiary leading-tight">Bâtir votre univers</span>
-              </button>
-              <button
-                onClick={() => finishOnboarding("planning")}
-                disabled={saving}
-                className="flex flex-col items-center gap-2 p-4 bg-bg-secondary border border-border rounded-[var(--radius-md)] cursor-pointer hover:bg-bg-hover transition-colors disabled:opacity-60"
-              >
-                <span className="text-[28px]">▦</span>
-                <span className="text-[13px] font-medium text-amber">Planifier</span>
-                <span className="text-[11px] text-text-tertiary leading-tight">Poser la structure</span>
-              </button>
+              {(() => {
+                // Carte recommandée selon le persona choisi.
+                const emphasis = personaPrefs(persona).emphasis;
+                const recommended =
+                  emphasis === "planning" ? "planning" : "editor";
+                const cards = [
+                  { dest: "editor" as const, icon: "✎", label: "Écrire", labelColor: "text-primary", desc: "Démarrer le chapitre 1" },
+                  { dest: "characters" as const, icon: "◐", label: "Personnages", labelColor: "text-teal", desc: "Bâtir votre univers" },
+                  { dest: "planning" as const, icon: "▦", label: "Planifier", labelColor: "text-amber", desc: "Poser la structure" },
+                ];
+                return cards.map((c) => {
+                  const isReco = c.dest === recommended;
+                  return (
+                    <button
+                      key={c.dest}
+                      onClick={() => finishOnboarding(c.dest)}
+                      disabled={saving}
+                      className={`relative flex flex-col items-center gap-2 p-4 rounded-[var(--radius-md)] border cursor-pointer transition-colors disabled:opacity-60 ${
+                        isReco
+                          ? "bg-primary-bg border-primary-border"
+                          : "bg-bg-secondary border-border hover:bg-bg-hover"
+                      }`}
+                    >
+                      {isReco && (
+                        <span className="absolute top-1.5 right-1.5 text-[8.5px] font-medium uppercase tracking-wider text-primary bg-primary-bg border border-primary-border rounded-full px-1.5 py-0.5">
+                          Recommandé
+                        </span>
+                      )}
+                      <span className="text-[28px]">{c.icon}</span>
+                      <span className={`text-[13px] font-medium ${c.labelColor}`}>{c.label}</span>
+                      <span className="text-[11px] text-text-tertiary leading-tight">{c.desc}</span>
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </div>
         )}

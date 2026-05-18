@@ -215,6 +215,7 @@ export function PlanningClient({
   columnWidths: initialColumnWidths,
   narrativeTemplate,
   beats: initialBeats,
+  showTips,
 }: {
   novelId: string;
   novelTitle: string;
@@ -229,6 +230,7 @@ export function PlanningClient({
   columnWidths?: Record<string, number>;
   narrativeTemplate: string;
   beats: PlanningBeat[];
+  showTips: boolean;
 }) {
   const [activeView, setActiveView] = useState<PlanningView>("tableau");
   const [chapters, setChapters] = useState<ChapterData[]>(initialChapters);
@@ -359,6 +361,11 @@ export function PlanningClient({
                     </>
                   )}
                 </div>
+                {showTips && (
+                  <div className="mt-1.5 text-[11.5px] text-text-quaternary italic">
+                    Astuce : cliquez sur la pastille de statut d&apos;un chapitre pour le faire évoluer.
+                  </div>
+                )}
               </div>
 
               {activeView === "tableau" && (

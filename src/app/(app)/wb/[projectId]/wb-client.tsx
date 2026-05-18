@@ -53,6 +53,7 @@ export function WbClient({
   initialEntries,
   initialLinks,
   novels,
+  showTips,
 }: {
   projectId: string;
   projectTitle: string;
@@ -60,6 +61,7 @@ export function WbClient({
   initialEntries: WbEntry[];
   initialLinks: WbLink[];
   novels: { id: string; title: string }[];
+  showTips: boolean;
 }) {
   const [entries, setEntries] = useState<WbEntry[]>(initialEntries);
   const [links, setLinks] = useState<WbLink[]>(initialLinks);
@@ -332,6 +334,11 @@ export function WbClient({
                 {catDef?.label && (
                   <div className="mt-2 text-[12px] text-text-tertiary font-serif italic">
                     {universDescriptionFor(activeCategory, projectTitle)}
+                  </div>
+                )}
+                {showTips && (
+                  <div className="mt-1.5 text-[11.5px] text-text-quaternary italic">
+                    Astuce : créez quelques fiches dans une catégorie, puis liez-les entre elles depuis chaque fiche.
                   </div>
                 )}
               </div>
