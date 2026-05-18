@@ -10,6 +10,7 @@ import CharacterCount from "@tiptap/extension-character-count";
 import { createClient } from "@/lib/supabase/client";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { StatusBar } from "./StatusBar";
+import { novelToDocxBlob, downloadBlob } from "@/lib/docx-export";
 import { StructurePanel } from "./StructurePanel";
 import { ContextPanel } from "./ContextPanel";
 import { Pomodoro } from "./Pomodoro";
@@ -451,6 +452,28 @@ export function NovelEditor({
     };
   }, []);
 
+  // Export du roman complet en .docx (un chapitre par section).
+  async function handleExportNovel() {
+    const sorted = [...localChapters].sort((a, b) => a.position - b.position);
+    const chaptersForDoc = sorted.map((c) => ({
+      title: c.title,
+      // Le chapitre actif vit dans l'éditeur (sauvegarde différée) :
+      // on prend son HTML courant pour un export à jour.
+      content:
+        c.id === activeChapterId && editor ? editor.getHTML() : c.content,
+    }));
+    const blob = await novelToDocxBlob(chaptersForDoc, novelTitle);
+    const slug =
+      novelTitle
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60) || "roman";
+    downloadBlob(`${slug}.docx`, blob);
+  }
+
   // Échap quitte le mode focus.
   useEffect(() => {
     if (!focusMode) return;
@@ -589,6 +612,21 @@ export function NovelEditor({
             {syncStatus === "saving" && (
               <span className="text-[11px] font-medium text-primary bg-primary-bg px-1.5 py-0.5 rounded">sauvegarde…</span>
             )}
+            <button
+              onClick={handleExportNovel}
+              title="Exporter le roman en Word (.docx)"
+              className="rd-icon-btn"
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <path
+                  d="M7 2V9M7 9L4 6M7 9L10 6M2.5 11H11.5"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
             <button
               onClick={() => setShowLeftPanel((v) => !v)}
               title={showLeftPanel ? "Masquer la structure" : "Afficher la structure"}

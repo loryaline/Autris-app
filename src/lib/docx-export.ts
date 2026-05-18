@@ -1,10 +1,13 @@
 /**
  * Conversion HTML (TipTap) → document Word .docx.
  *
- * Réutilisable pour l'export du synopsis et, plus tard, du roman.
+ * Sert à l'export du synopsis (un seul document) comme à l'export du
+ * roman complet (un chapitre par section, saut de page entre chapitres).
  * Le paquet `docx` est chargé dynamiquement : il n'alourdit le bundle
  * que lorsqu'un export est réellement déclenché.
  */
+
+type DocxModule = typeof import("docx");
 
 /** Style inline accumulé en descendant l'arbre HTML. */
 interface RunStyle {
@@ -14,16 +17,13 @@ interface RunStyle {
   strike?: boolean;
 }
 
-export async function htmlToDocxBlob(html: string, title: string): Promise<Blob> {
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } =
-    await import("docx");
+/** Convertit un fragment HTML en tableau de Paragraph docx. */
+function htmlToParagraphs(docx: DocxModule, html: string) {
+  const { Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
+  type ParagraphInstance = InstanceType<typeof Paragraph>;
+  type TextRunInstance = InstanceType<typeof TextRun>;
 
-  /** Construit les TextRun d'un bloc en parcourant ses nœuds inline. */
-  function collectRuns(
-    node: Node,
-    style: RunStyle,
-    out: InstanceType<typeof TextRun>[],
-  ) {
+  function collectRuns(node: Node, style: RunStyle, out: TextRunInstance[]) {
     node.childNodes.forEach((child) => {
       if (child.nodeType === 3) {
         const text = child.textContent ?? "";
@@ -56,17 +56,13 @@ export async function htmlToDocxBlob(html: string, title: string): Promise<Blob>
     });
   }
 
-  function runsOf(el: Element): InstanceType<typeof TextRun>[] {
-    const out: InstanceType<typeof TextRun>[] = [];
+  function runsOf(el: Element): TextRunInstance[] {
+    const out: TextRunInstance[] = [];
     collectRuns(el, {}, out);
     return out;
   }
 
-  const paragraphs: InstanceType<typeof Paragraph>[] = [];
-
-  // Titre du document.
-  paragraphs.push(new Paragraph({ text: title, heading: HeadingLevel.TITLE }));
-
+  const paragraphs: ParagraphInstance[] = [];
   const doc = new DOMParser().parseFromString(html || "<p></p>", "text/html");
 
   doc.body.childNodes.forEach((node) => {
@@ -75,11 +71,11 @@ export async function htmlToDocxBlob(html: string, title: string): Promise<Blob>
     const tag = el.tagName.toLowerCase();
 
     if (tag === "h1") {
-      paragraphs.push(new Paragraph({ children: runsOf(el), heading: HeadingLevel.HEADING_1 }));
-    } else if (tag === "h2") {
       paragraphs.push(new Paragraph({ children: runsOf(el), heading: HeadingLevel.HEADING_2 }));
-    } else if (tag === "h3") {
+    } else if (tag === "h2") {
       paragraphs.push(new Paragraph({ children: runsOf(el), heading: HeadingLevel.HEADING_3 }));
+    } else if (tag === "h3") {
+      paragraphs.push(new Paragraph({ children: runsOf(el), heading: HeadingLevel.HEADING_4 }));
     } else if (tag === "blockquote") {
       paragraphs.push(
         new Paragraph({
@@ -104,8 +100,6 @@ export async function htmlToDocxBlob(html: string, title: string): Promise<Blob>
         if (tag === "ul") {
           paragraphs.push(new Paragraph({ children: runsOf(li), bullet: { level: 0 } }));
         } else {
-          // Liste ordonnée : préfixe numérique explicite (pas de config
-          // de numérotation Word à maintenir).
           paragraphs.push(
             new Paragraph({
               children: [new TextRun({ text: `${i + 1}. ` }), ...runsOf(li)],
@@ -114,15 +108,54 @@ export async function htmlToDocxBlob(html: string, title: string): Promise<Blob>
         }
       });
     } else {
-      // p, div, et tout le reste → paragraphe normal.
       paragraphs.push(new Paragraph({ children: runsOf(el) }));
     }
   });
 
-  const out = new Document({
-    sections: [{ properties: {}, children: paragraphs }],
+  return paragraphs;
+}
+
+/** Exporte un seul document HTML (ex. un synopsis) en .docx. */
+export async function htmlToDocxBlob(html: string, title: string): Promise<Blob> {
+  const docx = await import("docx");
+  const { Document, Packer, Paragraph, HeadingLevel } = docx;
+  const children = [
+    new Paragraph({ text: title, heading: HeadingLevel.TITLE }),
+    ...htmlToParagraphs(docx, html),
+  ];
+  return Packer.toBlob(
+    new Document({ sections: [{ properties: {}, children }] }),
+  );
+}
+
+/** Exporte un roman complet : un chapitre par section, saut de page entre eux. */
+export async function novelToDocxBlob(
+  chapters: { title: string; content: string }[],
+  novelTitle: string,
+): Promise<Blob> {
+  const docx = await import("docx");
+  const { Document, Packer, Paragraph, HeadingLevel } = docx;
+  type ParagraphInstance = InstanceType<typeof Paragraph>;
+
+  const children: ParagraphInstance[] = [
+    new Paragraph({ text: novelTitle, heading: HeadingLevel.TITLE }),
+  ];
+
+  chapters.forEach((ch, i) => {
+    children.push(
+      new Paragraph({
+        text: ch.title?.trim() || `Chapitre ${i + 1}`,
+        heading: HeadingLevel.HEADING_1,
+        pageBreakBefore: i > 0,
+        spacing: { after: 240 },
+      }),
+    );
+    children.push(...htmlToParagraphs(docx, ch.content));
   });
-  return Packer.toBlob(out);
+
+  return Packer.toBlob(
+    new Document({ sections: [{ properties: {}, children }] }),
+  );
 }
 
 /** Télécharge un Blob sous un nom de fichier donné. */
