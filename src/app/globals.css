@@ -604,6 +604,29 @@ body {
   background: var(--border-soft);
   margin: 4px 4px;
 }
+.theme-min-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  align-self: center;
+  width: 28px; height: 28px;
+  border-radius: 999px;
+  color: var(--text-3); font-size: 15px; line-height: 1;
+  cursor: pointer; transition: all 0.18s var(--ease-out);
+}
+.theme-min-btn:hover { color: var(--text); background: var(--surface); }
+
+/* Sélecteur de thème réduit — pastille flottante à gauche du bouton bug */
+.theme-bar-mini {
+  position: fixed; bottom: 16px; right: 68px; z-index: 100;
+  width: 44px; height: 44px; border-radius: 999px;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--bg-3) 92%, transparent);
+  border: 1px solid var(--border-soft);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-2); cursor: pointer;
+  transition: all 0.18s var(--ease-out);
+}
+.theme-bar-mini:hover { color: var(--accent); border-color: var(--accent-border); }
 
 /* ============================================================
    Redesign phase 2 — Sidebar + Topbar
@@ -1354,9 +1377,9 @@ body {
   border-color: color-mix(in oklab, var(--accent) 30%, transparent);
 }
 
-/* Barre d'outils réduite — pastille flottante à gauche du bouton bug */
+/* Barre d'outils réduite — pastille flottante (après la pastille thème) */
 .ft-mini {
-  position: fixed; bottom: 16px; right: 68px; z-index: 30;
+  position: fixed; bottom: 16px; right: 120px; z-index: 30;
   width: 44px; height: 44px; border-radius: 999px;
   display: grid; place-items: center;
   background: color-mix(in oklab, var(--bg-2) 82%, transparent);

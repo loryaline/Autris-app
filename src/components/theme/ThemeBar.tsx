@@ -10,8 +10,8 @@ import { useEffect, useState } from "react";
  * choix est persisté dans localStorage et ré-appliqué avant le premier
  * paint par le script inline du RootLayout (anti-flash).
  *
- * Phase 1 : on ne touche à aucun composant — la couche d'alias CSS
- * (--color-* → tokens de thème) rend toute l'app theme-réactive.
+ * La barre peut être réduite en une pastille flottante près du bouton
+ * de feedback (état persisté dans localStorage).
  */
 
 type ThemeId = "fantasy" | "sf" | "corporate";
@@ -33,10 +33,10 @@ export function ThemeBar() {
   // éviter un mismatch (le vrai état vit sur <html>, pas dans React).
   const [theme, setTheme] = useState<ThemeId | null>(null);
   const [mode, setMode] = useState<ModeId | null>(null);
+  const [minimized, setMinimized] = useState<boolean | null>(null);
 
   // Hydratation : on lit l'état réel posé sur <html> (par le script
-  // anti-flash du RootLayout) une seule fois au montage. setState
-  // différé hors de la phase synchrone de l'effet.
+  // anti-flash du RootLayout) + l'état réduit/déplié depuis localStorage.
   useEffect(() => {
     let cancelled = false;
     Promise.resolve().then(() => {
@@ -47,15 +47,20 @@ export function ThemeBar() {
         t === "fantasy" || t === "sf" || t === "corporate" ? t : "fantasy",
       );
       setMode(m === "light" || m === "dark" ? m : "dark");
+      let min = false;
+      try {
+        min = localStorage.getItem("autris.themebar") === "min";
+      } catch {
+        /* localStorage indisponible */
+      }
+      setMinimized(min);
     });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Synchronisation état React → DOM + localStorage. Effet séparé des
-  // handlers de clic pour rester conforme aux règles de pureté React
-  // (pas de mutation du DOM hors effet).
+  // Synchronisation état React → DOM + localStorage.
   useEffect(() => {
     if (theme === null) return;
     document.documentElement.dataset.theme = theme;
@@ -76,7 +81,34 @@ export function ThemeBar() {
     }
   }, [mode]);
 
-  if (theme === null || mode === null) return null;
+  useEffect(() => {
+    if (minimized === null) return;
+    try {
+      localStorage.setItem("autris.themebar", minimized ? "min" : "open");
+    } catch {
+      /* idem */
+    }
+  }, [minimized]);
+
+  if (theme === null || mode === null || minimized === null) return null;
+
+  // Réduite : pastille flottante près du bouton de feedback.
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="theme-bar-mini"
+        title="Choix du thème"
+        aria-label="Afficher le sélecteur de thème"
+        onClick={() => setMinimized(false)}
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.4" />
+          <path d="M9 2a7 7 0 000 14z" fill="currentColor" />
+        </svg>
+      </button>
+    );
+  }
 
   return (
     <div className="theme-bar" role="group" aria-label="Choix du thème">
@@ -109,6 +141,16 @@ export function ThemeBar() {
         aria-label="Mode sombre"
       >
         ☾
+      </button>
+      <div className="theme-divider" />
+      <button
+        type="button"
+        className="theme-min-btn"
+        onClick={() => setMinimized(true)}
+        title="Réduire"
+        aria-label="Réduire le sélecteur de thème"
+      >
+        −
       </button>
     </div>
   );
