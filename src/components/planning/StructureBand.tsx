@@ -52,8 +52,10 @@ export function StructureBand({
   const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const def = getNarrativeMethod(method);
-  // Action de chaque étape (méthode « process »), indexée par clé de beat.
-  const actionByKey = new Map(def.beats.map((d) => [d.key, d.action]));
+  // Définition de chaque beat, indexée par clé. Les libellés/descriptions
+  // affichés viennent de la définition à jour (pas de la copie figée en
+  // base au moment du seeding) — un renommage se propage sans re-seed.
+  const defByKey = new Map(def.beats.map((d) => [d.key, d]));
   const sortedChapters = [...chapters].sort((a, b) => a.position - b.position);
 
   // Le bouton « Changer de méthode » vit dans la barre d'actions de la
@@ -229,7 +231,12 @@ export function StructureBand({
             ) : isProcess ? (
               /* ---- Snowflake : checklist d'étapes ---- */
               <div className="flex flex-col gap-1.5 max-w-[760px]">
-                {beats.map((b) => (
+                {beats.map((b) => {
+                  const d = defByKey.get(b.beat_key);
+                  const label = d?.label ?? b.label;
+                  const description = d?.description ?? b.description;
+                  const action = d?.action ?? { type: "note" as const };
+                  return (
                   <div
                     key={b.id}
                     className="flex items-start gap-2.5 p-2.5 rounded-[var(--radius-md)] border border-white/[0.06] bg-white/[0.015]"
@@ -253,17 +260,14 @@ export function StructureBand({
                             : "text-text-primary"
                         }`}
                       >
-                        {b.label}
+                        {label}
                       </div>
-                      {b.description && (
+                      {description && (
                         <div className="text-[11px] text-text-tertiary mt-0.5">
-                          {b.description}
+                          {description}
                         </div>
                       )}
                       {(() => {
-                        const action = actionByKey.get(b.beat_key) ?? {
-                          type: "note" as const,
-                        };
                         if (action.type === "wb") {
                           return (
                             <a
@@ -296,7 +300,8 @@ export function StructureBand({
                       })()}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               /* ---- Méthodes « beats » : cartes ordonnées par acte ---- */
@@ -314,6 +319,9 @@ export function StructureBand({
                     <div className="flex gap-2">
                       {group.items.map((b) => {
                         const linked = chapterLabel(b.chapter_id);
+                        const d = defByKey.get(b.beat_key);
+                        const label = d?.label ?? b.label;
+                        const description = d?.description ?? b.description;
                         return (
                           <div
                             key={b.id}
@@ -324,11 +332,11 @@ export function StructureBand({
                             }`}
                           >
                             <div className="text-[12px] text-text-primary font-medium leading-tight">
-                              {b.label}
+                              {label}
                             </div>
-                            {b.description && (
+                            {description && (
                               <div className="text-[10.5px] text-text-tertiary mt-1 leading-snug">
-                                {b.description}
+                                {description}
                               </div>
                             )}
 
