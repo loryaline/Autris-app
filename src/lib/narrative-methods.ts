@@ -73,21 +73,21 @@ const VOYAGE_HEROS: BeatDef[] = [
 ];
 
 const SAVE_THE_CAT: BeatDef[] = [
-  { key: "opening_image", label: "Opening Image", description: "L'image d'ouverture : ton et univers du roman." },
-  { key: "theme_stated", label: "Theme Stated", description: "Le thème du roman est énoncé, souvent en passant." },
-  { key: "setup", label: "Set-Up", description: "Présentation du héros, de son monde et de ses manques." },
-  { key: "catalyst", label: "Catalyst", description: "L'événement déclencheur qui rompt le quotidien." },
-  { key: "debate", label: "Debate", description: "Le héros hésite face au changement." },
-  { key: "break_two", label: "Break into Two", description: "Le héros choisit d'agir : entrée dans l'acte 2." },
-  { key: "b_story", label: "B Story", description: "L'intrigue secondaire, souvent relationnelle." },
-  { key: "fun_games", label: "Fun and Games", description: "La promesse du pitch : le cœur du récit." },
-  { key: "midpoint", label: "Midpoint", description: "Fausse victoire ou fausse défaite : les enjeux montent." },
-  { key: "bad_guys", label: "Bad Guys Close In", description: "La pression et les antagonistes resserrent l'étau." },
-  { key: "all_lost", label: "All Is Lost", description: "Le point le plus bas de l'histoire." },
-  { key: "dark_night", label: "Dark Night of the Soul", description: "Le héros au fond du gouffre, avant le sursaut." },
-  { key: "break_three", label: "Break into Three", description: "La solution émerge : entrée dans l'acte 3." },
-  { key: "finale", label: "Finale", description: "Le héros applique sa leçon et résout l'intrigue." },
-  { key: "final_image", label: "Final Image", description: "L'image de clôture, miroir de l'ouverture." },
+  { key: "opening_image", label: "Image d'ouverture", description: "L'image d'ouverture : ton et univers du roman." },
+  { key: "theme_stated", label: "Thème énoncé", description: "Le thème du roman est énoncé, souvent en passant." },
+  { key: "setup", label: "Mise en place", description: "Présentation du héros, de son monde et de ses manques." },
+  { key: "catalyst", label: "Élément déclencheur", description: "L'événement qui rompt le quotidien." },
+  { key: "debate", label: "Le débat", description: "Le héros hésite face au changement." },
+  { key: "break_two", label: "Bascule vers l'acte 2", description: "Le héros choisit d'agir : entrée dans l'acte 2." },
+  { key: "b_story", label: "Intrigue secondaire", description: "L'intrigue secondaire, souvent relationnelle." },
+  { key: "fun_games", label: "Le cœur de l'intrigue", description: "La promesse du récit : sa partie la plus savoureuse." },
+  { key: "midpoint", label: "Point médian", description: "Fausse victoire ou fausse défaite : les enjeux montent." },
+  { key: "bad_guys", label: "L'étau se resserre", description: "La pression et les antagonistes se rapprochent." },
+  { key: "all_lost", label: "Tout est perdu", description: "Le point le plus bas de l'histoire." },
+  { key: "dark_night", label: "La nuit noire de l'âme", description: "Le héros au fond du gouffre, avant le sursaut." },
+  { key: "break_three", label: "Bascule vers l'acte 3", description: "La solution émerge : entrée dans l'acte 3." },
+  { key: "finale", label: "Le dénouement", description: "Le héros applique sa leçon et résout l'intrigue." },
+  { key: "final_image", label: "Image finale", description: "L'image de clôture, miroir de l'ouverture." },
 ];
 
 const SNOWFLAKE: BeatDef[] = [
