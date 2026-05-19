@@ -98,7 +98,7 @@ const SNOWFLAKE: BeatDef[] = [
   { key: "fiches_perso", label: "5 · Les fiches détaillées", description: "Approfondissez chaque personnage : histoire, motivations, arc.", action: { type: "wb", label: "Ouvrir l'univers" } },
   { key: "synopsis", label: "6 · Le synopsis", description: "Étendez la page en un synopsis de plusieurs pages.", action: { type: "view", view: "synopsis", label: "Ouvrir le synopsis" } },
   { key: "scenes", label: "7 · La liste des chapitres", description: "Posez la liste de vos chapitres dans le tableau de chapitrage.", action: { type: "view", view: "tableau", label: "Ouvrir le chapitrage" } },
-  { key: "plan_scenes", label: "8 · Le plan des scènes", description: "Détaillez chaque scène, chapitre par chapitre, dans l'outline.", action: { type: "view", view: "outline", label: "Ouvrir l'outline" } },
+  { key: "plan_scenes", label: "8 · Le plan des scènes", description: "Détaillez chaque scène, chapitre par chapitre, dans la vue Scènes.", action: { type: "view", view: "outline", label: "Ouvrir les scènes" } },
 ];
 
 export const NARRATIVE_METHODS: Record<NarrativeMethodId, NarrativeMethodDef> = {

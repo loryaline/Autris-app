@@ -290,7 +290,7 @@ export function PlanningClient({
     activeView === "tableau"
       ? "Chapitrage"
       : activeView === "outline"
-        ? "Outline"
+        ? "Scènes"
         : activeView === "synopsis"
           ? "Synopsis"
           : activeView === "postits"

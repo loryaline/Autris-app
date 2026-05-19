@@ -435,7 +435,7 @@ export function StructureBand({
                 ⚠ Les beats de structure seront remplacés.
               </div>
               <div className="text-text-tertiary mt-0.5">
-                ✓ Vos chapitres, colonnes, cellules, résumés, scènes et l&apos;outline
+                ✓ Vos chapitres, colonnes, cellules, résumés et scènes
                 restent intacts.
               </div>
             </div>
