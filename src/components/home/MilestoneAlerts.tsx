@@ -33,7 +33,7 @@ const TYPE_LABEL: Record<string, string> = {
   beta: "Bêta",
   salon: "Salon",
   soumission: "Soumission",
-  custom: "Jalon",
+  custom: "Date butoir",
 };
 
 function milestoneColor(type: string, color: string | null): string {
@@ -103,10 +103,10 @@ export function MilestoneAlerts({ items }: { items: MilestoneAlertItem[] }) {
     ? "bg-amber/10 border-amber/30"
     : "bg-[var(--color-accent-bg)]/60 border-[var(--color-accent-border)]";
   const titleText = hasOverdue
-    ? "Jalons à rattraper"
+    ? "Dates butoirs à rattraper"
     : today.length > 0
-      ? "Un jalon, aujourd'hui"
-      : "Jalon en approche";
+      ? "Une date butoir, aujourd'hui"
+      : "Date butoir en approche";
 
   const summaryParts = [
     overdue.length > 0 && `${overdue.length} en retard`,
@@ -134,7 +134,7 @@ export function MilestoneAlerts({ items }: { items: MilestoneAlertItem[] }) {
             {[...overdue, ...today, ...soon].slice(0, 6).map((m) => {
               const color = milestoneColor(m.type, m.color);
               const icon = TYPE_ICON[m.type] ?? "◆";
-              const typeLabel = TYPE_LABEL[m.type] ?? "Jalon";
+              const typeLabel = TYPE_LABEL[m.type] ?? "Date butoir";
               const isOverdue = m.daysDelta < 0;
               const isToday = m.daysDelta === 0;
               const href = m.novelId ? `/planning/${m.novelId}` : null;

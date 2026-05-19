@@ -380,7 +380,8 @@ export function PlanningClient({
                     <>
                       <span className="mx-2 text-text-quaternary/50">·</span>
                       <span>
-                        {milestones.length} jalon
+                        {milestones.length} date
+                        {milestones.length > 1 ? "s" : ""} butoir
                         {milestones.length > 1 ? "s" : ""}
                       </span>
                     </>

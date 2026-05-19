@@ -119,7 +119,7 @@ export function PlanningSubSidebar({
   }
 
   async function deleteMilestone(id: string) {
-    if (!confirm("Supprimer ce milestone ?")) return;
+    if (!confirm("Supprimer cette date butoir ?")) return;
     await supabase.from("planning_milestones").delete().eq("id", id);
     router.refresh();
   }
@@ -186,12 +186,12 @@ export function PlanningSubSidebar({
             className="text-[10px] font-medium text-text-quaternary uppercase"
             style={{ letterSpacing: "0.18em" }}
           >
-            Milestones
+            Dates butoirs
           </div>
           <button
             onClick={() => setAdding((a) => !a)}
             className="text-[14px] text-text-quaternary hover:text-[var(--color-accent)] cursor-pointer leading-none w-5 h-5 flex items-center justify-center rounded transition-colors"
-            title="Ajouter un milestone"
+            title="Ajouter une date butoir"
           >
             {adding ? "×" : "+"}
           </button>
@@ -361,7 +361,7 @@ export function PlanningSubSidebar({
         ) : (
           !adding && (
             <div className="text-[11px] text-text-quaternary italic font-serif">
-              Aucun jalon pour l&apos;instant.
+              Aucune date butoir pour l&apos;instant.
             </div>
           )
         )}
