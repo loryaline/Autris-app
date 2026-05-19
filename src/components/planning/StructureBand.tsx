@@ -194,27 +194,27 @@ export function StructureBand({
             title={collapsed ? "Déplier" : "Replier"}
           >
             <span
-              className="text-[10px] text-text-quaternary transition-transform"
+              className="text-[11px] text-text-quaternary transition-transform"
               style={{ transform: collapsed ? "rotate(-90deg)" : "none" }}
             >
               ▾
             </span>
             <span
-              className="text-[10px] font-medium text-text-quaternary uppercase"
-              style={{ letterSpacing: "0.18em" }}
+              className="text-[11px] font-medium text-text-tertiary uppercase"
+              style={{ letterSpacing: "0.16em" }}
             >
               Structure narrative
             </span>
           </button>
 
           {method !== "libre" && (
-            <span className="text-[11px] text-text-tertiary font-serif italic">
+            <span className="text-[13.5px] text-text-secondary font-serif italic">
               {def.label}
             </span>
           )}
 
           {method !== "libre" && total > 0 && (
-            <span className="text-[10.5px] text-text-quaternary font-mono">
+            <span className="text-[12px] text-text-tertiary font-mono">
               {completionLabel}
             </span>
           )}
