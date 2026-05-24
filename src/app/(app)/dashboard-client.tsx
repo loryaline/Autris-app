@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { GENRES } from "@/lib/constants";
@@ -47,6 +47,25 @@ export function DashboardClient({
   // Ajout inline d'un roman dans une carte projet
   const [addNovelToProjectId, setAddNovelToProjectId] = useState<string | null>(null);
   const [newNovelTitle, setNewNovelTitle] = useState("");
+
+  // Ouvre le modal « Nouveau projet » si l'URL contient ?new=project
+  // (lien du bouton « + » de la sidebar et du bandeau Premiers pas).
+  // Nettoie ensuite l'URL pour ne pas ré-ouvrir au refresh.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("new") === "project") {
+        setShowModal(true);
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [addingNovel, setAddingNovel] = useState(false);
 
   async function handleCycleNovelStatus(novelId: string, current: NovelStatus) {
