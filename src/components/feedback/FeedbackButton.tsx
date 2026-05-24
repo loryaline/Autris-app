@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 /**
@@ -41,6 +41,14 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Pièces jointes — captures d'écran ajoutées via DnD, Ctrl+V ou parcourir.
+  type Attachment = { id: string; name: string; dataUrl: string; size: number };
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const MAX_FILES = 5;
+  const MAX_TOTAL_BYTES = 3 * 1024 * 1024; // 3 Mo (limite body serverless)
+
   // Reset à l'ouverture — différé pour éviter le set-state-in-effect.
   useEffect(() => {
     if (!open) return;
@@ -54,6 +62,81 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
       cancelled = true;
     };
   }, [open]);
+
+  function readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function addFiles(files: FileList | File[] | null) {
+    if (!files) return;
+    setError(null);
+    const incoming = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (incoming.length === 0) return;
+
+    let count = attachments.length;
+    let total = attachments.reduce((s, a) => s + a.size, 0);
+    const toAdd: Attachment[] = [];
+    for (const f of incoming) {
+      if (count >= MAX_FILES) {
+        setError(`Maximum ${MAX_FILES} images.`);
+        break;
+      }
+      if (total + f.size > MAX_TOTAL_BYTES) {
+        setError(
+          `Pièces jointes trop lourdes (${Math.round(MAX_TOTAL_BYTES / 1024 / 1024)} Mo max au total).`,
+        );
+        break;
+      }
+      try {
+        const dataUrl = await readFileAsDataUrl(f);
+        toAdd.push({
+          id:
+            (typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+          name: f.name || `capture-${Date.now()}.png`,
+          dataUrl,
+          size: f.size,
+        });
+        count++;
+        total += f.size;
+      } catch {
+        /* lecture impossible — on saute ce fichier */
+      }
+    }
+    if (toAdd.length > 0) setAttachments((prev) => [...prev, ...toAdd]);
+  }
+
+  function removeAttachment(id: string) {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const pasted: File[] = [];
+    for (const it of items) {
+      if (it.kind === "file" && it.type.startsWith("image/")) {
+        const f = it.getAsFile();
+        if (f) pasted.push(f);
+      }
+    }
+    if (pasted.length > 0) {
+      e.preventDefault();
+      addFiles(pasted);
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    addFiles(e.dataTransfer.files);
+  }
 
   function buildContext() {
     if (!includeContext) return null;
@@ -89,6 +172,10 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
           message: message.trim(),
           replyEmail: replyEmail.trim() || undefined,
           context: buildContext(),
+          attachments: attachments.map((a) => ({
+            filename: a.name,
+            contentBase64: a.dataUrl.split(",", 2)[1] ?? "",
+          })),
         }),
       });
 
@@ -106,6 +193,7 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
         setOpen(false);
         setMessage("");
         setReplyEmail("");
+        setAttachments([]);
       }, 3000);
     } catch {
       setError("Erreur réseau. Vérifiez votre connexion.");
@@ -139,7 +227,23 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => !submitting && setOpen(false)}
           />
-          <div className="relative bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-lg)] w-full max-w-[460px] shadow-2xl">
+          <div
+            className={`relative bg-bg-tertiary border rounded-[var(--radius-lg)] w-full max-w-[460px] shadow-2xl transition-colors ${
+              dragOver
+                ? "border-[var(--color-accent)] ring-2 ring-[var(--color-accent-border)]"
+                : "border-white/[0.08]"
+            }`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!dragOver) setDragOver(true);
+            }}
+            onDragLeave={(e) => {
+              // Évite le flicker quand on survole un enfant.
+              if (e.currentTarget === e.target) setDragOver(false);
+            }}
+            onDrop={handleDrop}
+            onPaste={handlePaste}
+          >
             <div className="p-4 border-b border-white/[0.06]">
               <h3 className="text-[15px] text-text-primary" style={{ fontFamily: "var(--font-serif)" }}>
                 Votre <span className="italic text-[var(--color-accent)]">retour</span> compte
@@ -194,6 +298,64 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
                     maxLength={5000}
                     className="w-full text-[13px] leading-relaxed px-3 py-2 bg-bg-primary border border-white/[0.08] rounded-[var(--radius-sm)] resize-none focus:outline-none focus:border-[var(--color-accent-border)] text-text-primary placeholder:text-text-quaternary"
                   />
+                </div>
+
+                {/* Captures d'écran — DnD, Ctrl+V, ou parcourir */}
+                <div>
+                  <div className="text-[10px] uppercase text-text-quaternary tracking-wider mb-1.5 flex items-center gap-2">
+                    <span>Captures d&apos;écran</span>
+                    <span className="text-text-quaternary normal-case tracking-normal">
+                      (facultatif — glissez-déposez, collez Ctrl+V, ou cliquez ci-dessous)
+                    </span>
+                  </div>
+
+                  {attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {attachments.map((a) => (
+                        <div
+                          key={a.id}
+                          className="relative group w-16 h-16 rounded-[var(--radius-sm)] overflow-hidden border border-white/[0.08]"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={a.dataUrl}
+                            alt={a.name}
+                            title={`${a.name} · ${Math.round(a.size / 1024)} Ko`}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(a.id)}
+                            title="Retirer"
+                            className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white text-[11px] leading-none cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    onChange={(e) => {
+                      addFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={attachments.length >= MAX_FILES}
+                    className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-sm)] border border-dashed border-white/[0.12] text-[11.5px] text-text-tertiary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="text-[13px] leading-none">＋</span>
+                    {attachments.length === 0 ? "Joindre une image" : "Ajouter"}
+                  </button>
                 </div>
 
                 {/* Reply email facultatif */}

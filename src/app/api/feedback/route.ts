@@ -34,6 +34,20 @@ interface FeedbackBody {
     accountEmail?: string | null;
     timestamp?: string;
   } | null;
+  attachments?: { filename?: string; contentBase64?: string }[];
+}
+
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACH_BYTES_TOTAL = 4 * 1024 * 1024; // 4 Mo cumulés (raw)
+
+function sanitizeFilename(name: string): string {
+  return (
+    (name || "capture")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80) || "capture"
+  );
 }
 
 function escapeHtml(s: string): string {
@@ -56,6 +70,36 @@ export async function POST(req: Request) {
   const message = (body.message ?? "").trim();
   const replyEmail = (body.replyEmail ?? "").trim();
   const context = body.context ?? null;
+
+  // Pièces jointes : validation (nombre, taille cumulée, format).
+  const rawAttachments = Array.isArray(body.attachments) ? body.attachments : [];
+  if (rawAttachments.length > MAX_ATTACHMENTS) {
+    return NextResponse.json(
+      { error: `Trop de pièces jointes (max ${MAX_ATTACHMENTS}).` },
+      { status: 400 },
+    );
+  }
+  const attachments: { filename: string; content: string }[] = [];
+  let totalBytes = 0;
+  for (const a of rawAttachments) {
+    const content = (a.contentBase64 ?? "").trim();
+    if (!content) continue;
+    // Taille décodée approx : base64 length × 3 / 4.
+    const decodedBytes = Math.floor((content.length * 3) / 4);
+    totalBytes += decodedBytes;
+    if (totalBytes > MAX_ATTACH_BYTES_TOTAL) {
+      return NextResponse.json(
+        {
+          error: `Pièces jointes trop lourdes (${Math.round(MAX_ATTACH_BYTES_TOTAL / 1024 / 1024)} Mo max au total).`,
+        },
+        { status: 400 },
+      );
+    }
+    attachments.push({
+      filename: sanitizeFilename(a.filename ?? "capture.png"),
+      content,
+    });
+  }
 
   if (!message || message.length < 3) {
     return NextResponse.json(
@@ -145,6 +189,7 @@ export async function POST(req: Request) {
       subject,
       html: htmlBody,
       text: textLines.join("\n"),
+      attachments: attachments.length > 0 ? attachments : undefined,
     });
 
     if (error) {
