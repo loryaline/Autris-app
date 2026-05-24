@@ -115,6 +115,26 @@ function EditableCell(props: {
   return <RichEditableCell {...props} />;
 }
 
+/**
+ * Nettoie le HTML produit par la cellule riche pour les champs qui
+ * doivent être stockés en texte brut (titre de chapitre notamment —
+ * affiché tel quel dans la sidebar, le fil d'Ariane, l'éditeur).
+ */
+function htmlToPlainTitle(html: string): string {
+  return html
+    .replace(/<\s*br\s*\/?\s*>/gi, " ")
+    .replace(/<\/(p|div|li|h[1-6])\s*>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /* ---- Main Table ---- */
 /* ---- Palette de couleurs ----
  * On utilise des rgba semi-transparents pour rester lisibles sur le fond
@@ -859,7 +879,7 @@ export function ChapterTable({
           <div className="flex-1 min-w-0">
             <EditableCell
               value={chapter.title}
-              onSave={(val) => saveChapterField(chapter.id, "title", val)}
+              onSave={(val) => saveChapterField(chapter.id, "title", htmlToPlainTitle(val))}
               className="text-text-primary font-medium"
             />
             {(beatBadges?.[chapter.id]?.length ?? 0) > 0 && (
