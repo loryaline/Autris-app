@@ -21,6 +21,16 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ### Corrections
 
+
+### Retraits
+
+
+---
+
+## [0.2.0] — 2026-06-23
+
+### Corrections
+
 - Sidebar : le bouton « + » à côté de « Mes projets » ouvre désormais le modal « Nouveau projet » (il ne faisait rien avant — la route `?new=project` n'était pas traitée).
 
 ### Retraits
