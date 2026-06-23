@@ -3,18 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Persona, Plan } from "@/types/database";
+import type { Persona } from "@/types/database";
 
 interface ProfileData {
   id: string;
   username: string | null;
   persona: Persona | null;
-  plan: Plan;
   pomo_duration: number;
-  trial_started_at: string;
-  plan_expires_at: string;
-  onboarding_done: boolean;
-  created_at: string;
 }
 
 const PERSONAS: { value: Persona; label: string; desc: string }[] = [
@@ -25,25 +20,6 @@ const PERSONAS: { value: Persona; label: string; desc: string }[] = [
 ];
 
 const POMO_DURATIONS = [15, 20, 25, 30, 45, 60];
-
-const PLAN_LABEL: Record<Plan, string> = {
-  free:        "Essai gratuit",
-  pro_monthly: "Pro · mensuel",
-  pro_annual:  "Pro · annuel",
-};
-
-function daysUntil(iso: string): number {
-  const ms = new Date(iso).getTime() - Date.now();
-  return Math.ceil(ms / 86_400_000);
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
 
 export function SettingsClient({
   email,
@@ -59,10 +35,6 @@ export function SettingsClient({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const trialDaysLeft = daysUntil(profile.plan_expires_at);
-  const trialActive = profile.plan === "free" && trialDaysLeft > 0;
-  const trialExpired = profile.plan === "free" && trialDaysLeft <= 0;
 
   async function handleSave() {
     setSaving(true);
@@ -189,43 +161,6 @@ export function SettingsClient({
         <p className="text-[11px] text-text-quaternary">
           Aucun nouveau projet ne sera créé — vos romans et tout votre travail restent intacts.
         </p>
-      </Section>
-
-      {/* Abonnement */}
-      <Section title="Abonnement">
-        <div className="rounded-[var(--radius-md)] border border-white/[0.06] bg-bg-primary p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-[13px] text-text-primary font-medium">
-              {PLAN_LABEL[profile.plan]}
-            </div>
-            {trialActive && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent-border)]">
-                {trialDaysLeft} jour{trialDaysLeft > 1 ? "s" : ""} restant{trialDaysLeft > 1 ? "s" : ""}
-              </span>
-            )}
-            {trialExpired && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-bg text-amber border border-amber/30">
-                Essai terminé
-              </span>
-            )}
-          </div>
-          <div className="text-[11px] text-text-tertiary">
-            Essai démarré le {formatDate(profile.trial_started_at)}
-            <br />
-            {trialActive
-              ? `Fin de l'essai le ${formatDate(profile.plan_expires_at)}.`
-              : trialExpired
-                ? "Réabonnez-vous pour continuer à publier des chapitres."
-                : `Renouvellement le ${formatDate(profile.plan_expires_at)}.`}
-          </div>
-          <button
-            disabled
-            className="mt-3 inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-white/[0.08] text-text-quaternary text-[12px] cursor-not-allowed"
-            title="Stripe arrive en V1 finale"
-          >
-            Gérer mon abonnement (bientôt)
-          </button>
-        </div>
       </Section>
 
       {/* Contact / support */}

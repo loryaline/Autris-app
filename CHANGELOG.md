@@ -25,6 +25,7 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ### Retraits
 
+- Toutes les mentions d'abonnement / d'essai gratuit / de Stripe ont été retirées : section « Abonnement » des Paramètres, stats « 3 mois d'essai » de l'onboarding, bandeau du site, paragraphe « Période d'essai » des CGU, sous-traitant Stripe de la politique de confidentialité. Autris est gratuit pendant la bêta.
 
 ---
 

@@ -40,7 +40,7 @@ const SITE_URL = "https://autris.app";
 const SITE_NAME = "Autris";
 const SITE_TAGLINE = "L'espace d'écriture des romanciers francophones";
 const SITE_DESCRIPTION =
-  "Worldbuilding, planification narrative et éditeur tout-en-un pour écrire vos romans. Trois mois d'essai gratuit, sans carte bancaire.";
+  "Worldbuilding, planification narrative et éditeur tout-en-un pour écrire vos romans. Gratuit pendant la bêta.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

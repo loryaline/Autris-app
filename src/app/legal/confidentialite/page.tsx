@@ -45,8 +45,7 @@ export default function ConfidentialitePage() {
       <p>Vos données servent exclusivement à :</p>
       <ul>
         <li>vous fournir le service que vous avez choisi ;</li>
-        <li>vous envoyer des emails transactionnels (confirmation de compte, fin de période d&apos;essai, reset de mot de passe) ;</li>
-        <li>vous facturer si vous souscrivez à un abonnement Pro (via Stripe) ;</li>
+        <li>vous envoyer des emails transactionnels (confirmation de compte, reset de mot de passe) ;</li>
         <li>respecter nos obligations légales suisses et européennes.</li>
       </ul>
 
@@ -65,11 +64,6 @@ export default function ConfidentialitePage() {
         <li>
           <strong>Vercel</strong> (États-Unis) — hébergement du site et
           gestion des sessions.
-        </li>
-        <li>
-          <strong>Stripe</strong> (Irlande / États-Unis) — traitement des
-          paiements (uniquement si vous souscrivez à un abonnement payant).
-          Les coordonnées bancaires ne transitent pas par nos serveurs.
         </li>
         <li>
           <strong>Resend</strong> (États-Unis) — envoi d&apos;emails
