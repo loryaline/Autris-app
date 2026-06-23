@@ -248,12 +248,12 @@ export function OnboardingClient({
                   <div className="text-[11px] text-text-quaternary">pour configurer</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-[18px] font-bold text-text-primary">3 mois</div>
-                  <div className="text-[11px] text-text-quaternary">d&apos;essai gratuit</div>
+                  <div className="text-[18px] font-bold text-text-primary">100 %</div>
+                  <div className="text-[11px] text-text-quaternary">en français</div>
                 </div>
                 <div className="text-center">
                   <div className="text-[18px] font-bold text-text-primary">0 &euro;</div>
-                  <div className="text-[11px] text-text-quaternary">sans carte requise</div>
+                  <div className="text-[11px] text-text-quaternary">gratuit en bêta</div>
                 </div>
               </div>
             )}

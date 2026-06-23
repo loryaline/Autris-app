@@ -27,13 +27,14 @@ export default function CguPage() {
         effectuées depuis votre compte.
       </p>
 
-      <h2>3. Période d&apos;essai</h2>
+      <h2>3. Gratuité pendant la bêta</h2>
       <p>
-        Toute nouvelle inscription bénéficie d&apos;une période d&apos;essai
-        gratuite de trois mois, sans engagement et sans carte bancaire requise.
-        À l&apos;issue de cette période, vous pourrez choisir entre un
-        abonnement Pro, une formule gratuite limitée à un seul roman, ou
-        l&apos;export de vos données et la fermeture du compte.
+        Autris est entièrement gratuit pendant la phase de bêta : aucune carte
+        bancaire n&apos;est demandée à l&apos;inscription et il n&apos;y a
+        aucun engagement. Vous pouvez à tout moment exporter vos données et
+        fermer votre compte. Les modalités d&apos;un éventuel abonnement
+        ultérieur seront communiquées et acceptées explicitement avant toute
+        facturation — rien ne sera prélevé sans votre consentement.
       </p>
 
       <h2>4. Vos contenus</h2>
