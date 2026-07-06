@@ -48,9 +48,13 @@ export function DashboardClient({
   const [addNovelToProjectId, setAddNovelToProjectId] = useState<string | null>(null);
   const [newNovelTitle, setNewNovelTitle] = useState("");
 
-  // Ouvre le modal « Nouveau projet » si l'URL contient ?new=project
-  // (lien du bouton « + » de la sidebar et du bandeau Premiers pas).
-  // Nettoie ensuite l'URL pour ne pas ré-ouvrir au refresh.
+  // Ouvre le modal « Nouveau projet » :
+  //  - au montage si l'URL contient ?new=project (arrivée depuis une
+  //    autre route via le bouton « + » de la sidebar ou le bandeau
+  //    Premiers pas) ;
+  //  - à la volée quand l'événement autris:new-project est émis
+  //    (utilisatrice déjà sur / qui clique sur ces mêmes boutons — le
+  //    composant ne se remonte pas dans ce cas).
   useEffect(() => {
     if (typeof window === "undefined") return;
     let cancelled = false;
@@ -62,8 +66,11 @@ export function DashboardClient({
         window.history.replaceState(null, "", window.location.pathname);
       }
     });
+    const onOpen = () => setShowModal(true);
+    window.addEventListener("autris:new-project", onOpen);
     return () => {
       cancelled = true;
+      window.removeEventListener("autris:new-project", onOpen);
     };
   }, []);
   const [addingNovel, setAddingNovel] = useState(false);

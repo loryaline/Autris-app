@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DashboardClient } from "./dashboard-client";
 import { GoalCard } from "./goal-card";
 import { personaPrefs } from "@/lib/persona";
-import Link from "next/link";
+import { FirstStepsBanner } from "./first-steps-banner";
 import { WBNudge } from "@/components/home/WBNudge";
 import { MilestoneAlerts, type MilestoneAlertItem } from "@/components/home/MilestoneAlerts";
 
@@ -566,39 +566,6 @@ function StatCard({
         {suffix && <span className="suffix">{suffix}</span>}
       </div>
       <div className="rd-stat-caption">{caption}</div>
-    </div>
-  );
-}
-
-/** Bandeau de démarrage — affiché au persona « Explorateur » (débutant). */
-function FirstStepsBanner({ hasProjects }: { hasProjects: boolean }) {
-  return (
-    <div
-      className="rd-fade-in"
-      style={{
-        padding: "14px 18px",
-        borderRadius: "var(--r-lg)",
-        border: "1px solid var(--accent-border)",
-        background: "var(--accent-bg)",
-      }}
-    >
-      <div className="rd-eyebrow" style={{ color: "var(--accent)", marginBottom: 6 }}>
-        Premiers pas
-      </div>
-      <div style={{ fontSize: 13, color: "var(--text-2)", lineHeight: 1.6 }}>
-        Bienvenue sur Autris. Trois étapes pour démarrer : <strong>1.</strong> créez un
-        projet · <strong>2.</strong> esquissez votre univers · <strong>3.</strong>{" "}
-        planifiez vos chapitres, puis lancez-vous dans l&apos;écriture.
-      </div>
-      {!hasProjects && (
-        <Link
-          href="/?new=project"
-          className="rd-btn rd-btn-sm rd-btn-primary"
-          style={{ marginTop: 10 }}
-        >
-          Créer mon premier projet
-        </Link>
-      )}
     </div>
   );
 }
