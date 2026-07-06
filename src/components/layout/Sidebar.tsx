@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /* ---- Icônes (reprises du redesign) ---- */
@@ -74,6 +74,7 @@ export function Sidebar({
   const displayName = username ?? "Vous";
   const initial = (username ?? "A")[0].toUpperCase();
   const pathname = usePathname();
+  const router = useRouter();
 
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
@@ -187,9 +188,25 @@ export function Sidebar({
           <span className="rd-nav-title" style={{ padding: 0 }}>
             Mes projets
           </span>
-          <Link href="/?new=project" className="rd-tree-add" title="Nouveau projet">
+          <button
+            type="button"
+            onClick={() => {
+              // Si on est sur le dashboard, on émet un événement pour
+              // ouvrir directement le modal (le composant ne se remonte
+              // pas sur navigation vers la même route). Sinon on navigue
+              // vers / avec ?new=project — le mount handler s'en charge.
+              if (pathname === "/") {
+                window.dispatchEvent(new CustomEvent("autris:new-project"));
+              } else {
+                router.push("/?new=project");
+              }
+            }}
+            className="rd-tree-add"
+            title="Nouveau projet"
+            aria-label="Nouveau projet"
+          >
             <IconPlus />
-          </Link>
+          </button>
         </div>
 
         <div className="rd-search">
