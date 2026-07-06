@@ -38,6 +38,26 @@ export function Topbar({ username }: { username?: string | null }) {
 
   return (
     <header className="rd-topbar shrink-0">
+      {/* Bouton menu (afficher/masquer la sidebar) — toujours visible */}
+      <button
+        className="rd-icon-btn"
+        onClick={() =>
+          window.dispatchEvent(new CustomEvent("autris:sidebar-toggle"))
+        }
+        title="Afficher / masquer la sidebar"
+        aria-label="Afficher / masquer la sidebar"
+        style={{ marginRight: 8 }}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path
+            d="M2 3.5H12M2 7H12M2 10.5H12"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+
       {/* Fil d'Ariane */}
       <div className="rd-crumbs">
         <span className="serif italic">Autris</span>

@@ -27,6 +27,18 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.3.0] — 2026-07-06
+
+### Ajouts
+
+- **Sidebar rétractable** (principale + sous-sidebar de planification + sous-sidebar World Building) : bouton bascule persistant dans le Topbar et dans chaque sous-sidebar, état persisté en localStorage, repli automatique sous 900 px de large. Permet de récupérer la largeur d'écran pour visualiser les tableaux du chapitrage.
+
+### Changements
+
+- Barres de défilement thémées (Chrome / Edge / Safari / Firefox) : plus le blanc criard par défaut, elles suivent maintenant les tokens de texte de chaque thème et sont discrètes.
+
+---
+
 ## [0.2.0] — 2026-06-23
 
 ### Corrections

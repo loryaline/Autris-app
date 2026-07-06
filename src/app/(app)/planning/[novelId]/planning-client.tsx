@@ -310,7 +310,23 @@ export function PlanningClient({
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 bg-bg-primary">
         {/* Breadcrumb */}
-        <div className="h-10 flex items-center px-6 border-b border-white/[0.04] shrink-0">
+        <div className="h-10 flex items-center px-6 border-b border-white/[0.04] shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent("autris:planning-sidebar-toggle"),
+              )
+            }
+            title="Afficher / masquer le panneau de planification"
+            aria-label="Afficher / masquer le panneau de planification"
+            className="rd-icon-btn"
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M5.5 2V12" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+          </button>
           <span className="text-[12.5px] text-text-tertiary">{projectTitle}</span>
           <span className="mx-2 text-text-quaternary/60 text-[11px]">/</span>
           <span className="text-[12.5px] text-text-tertiary">{novelTitle}</span>

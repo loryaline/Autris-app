@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /* ---- Icônes (reprises du redesign) ---- */
 const IconHome = () => (
@@ -79,6 +79,37 @@ export function Sidebar({
   const q = query.trim().toLowerCase();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
+  // Repliage global de la sidebar. null = pas encore hydraté (on ne
+  // rend rien pour éviter un mismatch SSR). Persistance localStorage,
+  // repliage auto sous 900px de large si aucune préférence enregistrée.
+  const [sidebarHidden, setSidebarHidden] = useState<boolean | null>(null);
+  useEffect(() => {
+    let init = false;
+    try {
+      const stored = localStorage.getItem("autris.sidebar.collapsed");
+      if (stored === "1") init = true;
+      else if (stored === "0") init = false;
+      else if (typeof window !== "undefined" && window.innerWidth < 900) init = true;
+    } catch {
+      /* localStorage indisponible */
+    }
+    Promise.resolve().then(() => setSidebarHidden(init));
+
+    const onToggle = () => {
+      setSidebarHidden((prev) => {
+        const next = !prev;
+        try {
+          localStorage.setItem("autris.sidebar.collapsed", next ? "1" : "0");
+        } catch {
+          /* idem */
+        }
+        return next;
+      });
+    };
+    window.addEventListener("autris:sidebar-toggle", onToggle);
+    return () => window.removeEventListener("autris:sidebar-toggle", onToggle);
+  }, []);
+
   // Roman dont les feuilles Planif/Rédaction sont visibles : celui de la
   // route courante (/editor/X ou /planning/X), sinon le roman actif global.
   const routeNovelId = (() => {
@@ -104,10 +135,14 @@ export function Sidebar({
 
   const filtered = (projects ?? []).filter(matchProject);
 
+  // Pas d'affichage tant que l'état de repli n'est pas hydraté (pour
+  // éviter un flash de sidebar visible avant de la replier).
+  if (sidebarHidden === null || sidebarHidden) return null;
+
   return (
     <aside className="rd-sidebar w-[240px] shrink-0">
-      {/* Brand */}
-      <div className="rd-brand">
+      {/* Brand + bouton pour replier la sidebar depuis l'intérieur */}
+      <div className="rd-brand" style={{ position: "relative" }}>
         <Link href="/" className="rd-brand-mark" aria-label="Accueil Autris">
           A
         </Link>
@@ -115,6 +150,26 @@ export function Sidebar({
           <span className="rd-brand-text">Autris</span>
           <span className="rd-brand-dot" />
         </div>
+        <button
+          type="button"
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent("autris:sidebar-toggle"))
+          }
+          title="Masquer la sidebar"
+          aria-label="Masquer la sidebar"
+          className="rd-tree-add"
+          style={{ marginLeft: "auto" }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M7.5 3L4.5 6L7.5 9"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Navigation */}
