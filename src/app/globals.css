@@ -249,6 +249,34 @@
 .hero-glow { background-image: var(--hero-glow); }
 .univers-glow { background-image: var(--board-glow); }
 
+/* ===== Barres de défilement thémées =====
+   Remplace le rendu par défaut du navigateur (blanc criard dans Chrome,
+   inversion violente en thème clair) par une barre discrète qui suit
+   les tokens de texte de chaque thème. Firefox utilise scrollbar-* ;
+   Chrome/Safari/Edge le pseudo ::-webkit-scrollbar. */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-4) 55%, transparent) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-4) 55%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.2s;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-3) 70%, transparent);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner { background: transparent; }
+
 /* ===== Base styles ===== */
 body {
   font-family: var(--font-sans);

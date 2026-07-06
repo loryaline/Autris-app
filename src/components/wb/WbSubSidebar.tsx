@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { categoriesForGenre, type WbCategory } from "@/lib/wb-constants";
 import type { Genre } from "@/types/database";
 
@@ -25,8 +26,89 @@ export function WbSubSidebar({
 
   const isHomeActive = activeCategory === "home";
 
+  // Repliage de la sous-sidebar WB (partagé via événement).
+  const [hidden, setHidden] = useState<boolean | null>(null);
+  useEffect(() => {
+    let init = false;
+    try {
+      const stored = localStorage.getItem("autris.wb-sidebar.collapsed");
+      if (stored === "1") init = true;
+      else if (stored === "0") init = false;
+      else if (typeof window !== "undefined" && window.innerWidth < 900) init = true;
+    } catch {
+      /* localStorage indisponible */
+    }
+    Promise.resolve().then(() => setHidden(init));
+
+    const onToggle = () => {
+      setHidden((prev) => {
+        const next = !prev;
+        try {
+          localStorage.setItem(
+            "autris.wb-sidebar.collapsed",
+            next ? "1" : "0",
+          );
+        } catch {
+          /* idem */
+        }
+        return next;
+      });
+    };
+    window.addEventListener("autris:wb-sidebar-toggle", onToggle);
+    return () =>
+      window.removeEventListener("autris:wb-sidebar-toggle", onToggle);
+  }, []);
+
+  if (hidden === null) return null;
+
+  // Cachée → mini bouton pour la ramener.
+  if (hidden) {
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          window.dispatchEvent(new CustomEvent("autris:wb-sidebar-toggle"))
+        }
+        title="Afficher les catégories"
+        aria-label="Afficher les catégories du World Building"
+        className="shrink-0 w-8 h-full border-r border-white/[0.05] bg-bg-secondary/40 flex items-start justify-center pt-4 text-text-quaternary hover:text-[var(--color-accent)] hover:bg-bg-secondary cursor-pointer transition-colors"
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path
+            d="M4.5 3L7.5 6L4.5 9"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    );
+  }
+
   return (
     <div className="w-[220px] shrink-0 border-r border-white/[0.05] bg-bg-secondary/50 px-3 py-4 flex flex-col h-full overflow-y-auto">
+      {/* Bouton pour masquer la sous-sidebar */}
+      <button
+        type="button"
+        onClick={() =>
+          window.dispatchEvent(new CustomEvent("autris:wb-sidebar-toggle"))
+        }
+        title="Masquer les catégories"
+        aria-label="Masquer les catégories"
+        className="self-end w-5 h-5 mb-2 flex items-center justify-center text-text-quaternary hover:text-[var(--color-accent)] cursor-pointer transition-colors"
+      >
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+          <path
+            d="M7.5 3L4.5 6L7.5 9"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
       {/* ===== Accueil ===== */}
       <button
         onClick={() => onCategoryChange("home")}

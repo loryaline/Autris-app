@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -69,6 +69,39 @@ export function PlanningSubSidebar({
   const [editDate, setEditDate] = useState("");
   const [editType, setEditType] = useState<MilestoneType>("plan");
 
+  // Repliage de la sous-sidebar de planification (partagé via événement).
+  const [hidden, setHidden] = useState<boolean | null>(null);
+  useEffect(() => {
+    let init = false;
+    try {
+      const stored = localStorage.getItem("autris.planning-sidebar.collapsed");
+      if (stored === "1") init = true;
+      else if (stored === "0") init = false;
+      else if (typeof window !== "undefined" && window.innerWidth < 900) init = true;
+    } catch {
+      /* localStorage indisponible */
+    }
+    Promise.resolve().then(() => setHidden(init));
+
+    const onToggle = () => {
+      setHidden((prev) => {
+        const next = !prev;
+        try {
+          localStorage.setItem(
+            "autris.planning-sidebar.collapsed",
+            next ? "1" : "0",
+          );
+        } catch {
+          /* idem */
+        }
+        return next;
+      });
+    };
+    window.addEventListener("autris:planning-sidebar-toggle", onToggle);
+    return () =>
+      window.removeEventListener("autris:planning-sidebar-toggle", onToggle);
+  }, []);
+
   async function addMilestone() {
     const title = newTitle.trim();
     if (!title) return;
@@ -131,16 +164,40 @@ export function PlanningSubSidebar({
     setEditDate(m.target_date ?? "");
   }
 
+  // Pas d'affichage tant que l'état de repli n'est pas hydraté.
+  if (hidden === null || hidden) return null;
+
   return (
     <div className="w-[220px] shrink-0 border-r border-white/[0.05] bg-bg-secondary flex flex-col h-full overflow-y-auto">
-      {/* Section title */}
-      <div className="px-4 pt-5 pb-2">
+      {/* Section title + bouton repli */}
+      <div className="px-4 pt-5 pb-2 flex items-center justify-between">
         <div
           className="text-[10px] font-medium text-text-quaternary uppercase"
           style={{ letterSpacing: "0.18em" }}
         >
           Planification
         </div>
+        <button
+          type="button"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent("autris:planning-sidebar-toggle"),
+            )
+          }
+          title="Masquer ce panneau"
+          aria-label="Masquer le panneau de planification"
+          className="w-5 h-5 flex items-center justify-center text-text-quaternary hover:text-[var(--color-accent)] cursor-pointer transition-colors"
+        >
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M7.5 3L4.5 6L7.5 9"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* View switcher */}
