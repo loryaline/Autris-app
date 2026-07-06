@@ -21,10 +21,17 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ### Corrections
 
-- Sidebar : le bouton « + » de « Mes projets » (et le bouton « Créer mon premier projet » du bandeau Premiers pas) ouvre à nouveau le modal de création de projet quand on est déjà sur le dashboard. Il ne faisait plus rien depuis la précédente correction, car cliquer sur un lien vers la même route ne remonte pas le composant — on émet désormais un événement client dédié.
 
 ### Retraits
 
+
+---
+
+## [0.3.1] — 2026-07-06
+
+### Corrections
+
+- Sidebar : le bouton « + » de « Mes projets » (et le bouton « Créer mon premier projet » du bandeau Premiers pas) ouvre à nouveau le modal de création de projet quand on est déjà sur le dashboard. Il ne faisait plus rien depuis la précédente correction, car cliquer sur un lien vers la même route ne remonte pas le composant — on émet désormais un événement client dédié.
 
 ---
 
