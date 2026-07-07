@@ -27,6 +27,20 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.3.2] — 2026-07-07
+
+### Changements
+
+- **Chapitrage : le tableau respire enfin.** La page de planification défile normalement (le titre et la bande Structure narrative sortent de l'écran au scroll), le tableau prend toute sa hauteur naturelle au lieu d'être enfermé dans une mini-fenêtre.
+- **Barre de défilement horizontale custom** pour le tableau : un rail de 16 px toujours visible, collé en bas de l'écran tant que le tableau est affiché. Le pouce se glisse à la souris ou au doigt, un clic sur le rail saute à la position visée — fini la barre Windows fuyante impossible à attraper.
+- Barres de défilement globales élargies (14 px) pour être plus faciles à saisir.
+
+### Corrections
+
+- Retrait des dégradés indicateurs de scroll du tableau qui laissaient des bandes verticales fantômes sur toute la hauteur quand on défilait horizontalement.
+
+---
+
 ## [0.3.1] — 2026-07-06
 
 ### Corrections

@@ -256,12 +256,12 @@
    Chrome/Safari/Edge le pseudo ::-webkit-scrollbar. */
 
 * {
-  scrollbar-width: thin;
+  scrollbar-width: auto;
   scrollbar-color: color-mix(in srgb, var(--text-4) 55%, transparent) transparent;
 }
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
 }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
@@ -276,6 +276,11 @@
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-corner { background: transparent; }
+
+/* Masque la barre native d'un conteneur (utilisé quand une barre proxy
+   sticky la remplace, cf. ChapterTable). */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
 
 /* ===== Base styles ===== */
 body {

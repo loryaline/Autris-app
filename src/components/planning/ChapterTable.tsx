@@ -347,30 +347,49 @@ export function ChapterTable({
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [showColumnMenu, setShowColumnMenu] = useState(false);
 
-  // Scroll overflow detection
   const tableWrapperRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const checkScroll = useCallback(() => {
+  // Barre de scroll horizontale custom collée en bas du viewport.
+  // Le tableau fait sa hauteur naturelle (la page scrolle), donc sa
+  // vraie barre horizontale est hors de vue tant qu'on n'a pas défilé
+  // tout en bas. Une barre native proxy posait problème : sur Windows
+  // elle s'affine / disparaît au hover et est dure à saisir. On rend
+  // donc un rail + pouce maison, toujours visibles, pilotés au pointeur.
+  const scrollTrackRef = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState({ left: 0, width: 0 });
+  const thumbDrag = useRef<{ startX: number; startLeft: number } | null>(null);
+
+  const updateThumb = useCallback(() => {
     const el = tableWrapperRef.current;
+    const track = scrollTrackRef.current;
     if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 0);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    const ratio = el.clientWidth / el.scrollWidth;
+    if (ratio >= 1) {
+      setThumb((t) => (t.width === 0 ? t : { left: 0, width: 0 }));
+      return;
+    }
+    const trackW = track?.clientWidth ?? el.clientWidth;
+    const w = Math.max(48, trackW * ratio);
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const left = (el.scrollLeft / maxScroll) * (trackW - w);
+    // Ne re-render que si la géométrie a réellement bougé, sinon le
+    // ResizeObserver + setState forment une boucle infinie.
+    setThumb((t) =>
+      Math.abs(t.left - left) < 0.5 && Math.abs(t.width - w) < 0.5
+        ? t
+        : { left, width: w },
+    );
   }, []);
 
   useEffect(() => {
-    checkScroll();
     const el = tableWrapperRef.current;
     if (!el) return;
-    el.addEventListener("scroll", checkScroll);
-    const observer = new ResizeObserver(checkScroll);
-    observer.observe(el);
-    return () => {
-      el.removeEventListener("scroll", checkScroll);
-      observer.disconnect();
-    };
-  }, [checkScroll, columnWidths, hiddenColumns]);
+    updateThumb();
+    const ro = new ResizeObserver(updateThumb);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => ro.disconnect();
+  }, [updateThumb, columnWidths, hiddenColumns, chapters.length]);
 
   function toggleColumn(key: string) {
     setHiddenColumns((prev) => {
@@ -1088,20 +1107,12 @@ export function ChapterTable({
         </span>
       </div>
 
-      {/* Table with scroll indicators */}
-      <div className="relative flex-1 min-h-0">
-        {/* Left scroll indicator */}
-        {canScrollLeft && (
-          <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-bg-primary/80 to-transparent z-20 pointer-events-none" />
-        )}
-        {/* Right scroll indicator */}
-        {canScrollRight && (
-          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-bg-primary/80 to-transparent z-20 pointer-events-none" />
-        )}
-
+      {/* Table */}
+      <div className="relative">
         <div
           ref={tableWrapperRef}
-          className={`overflow-auto h-full border border-white/[0.06] rounded-[var(--radius-lg)] bg-bg-secondary/30 ${
+          onScroll={updateThumb}
+          className={`overflow-x-auto scrollbar-none border border-white/[0.06] rounded-[var(--radius-lg)] bg-bg-secondary/30 ${
             dragSelecting ? "select-none" : ""
           }`}
         >
@@ -1300,6 +1311,67 @@ export function ChapterTable({
             </button>
           </div>
         </div>
+
+        {/* Barre de scroll horizontale custom — sticky en bas du viewport
+            tant que le tableau est à l'écran. Rail + pouce maison : pas
+            d'auto-masquage Windows, zone de saisie de 16px constante. */}
+        {thumb.width > 0 && (
+          <div
+            ref={scrollTrackRef}
+            className="sticky bottom-1 z-30 mx-1 h-[16px] rounded-full relative"
+            style={{
+              background: "color-mix(in srgb, var(--bg-3) 85%, transparent)",
+              border: "1px solid var(--border-soft)",
+            }}
+            onPointerDown={(e) => {
+              // Clic sur le rail (hors pouce) : saute à la position visée.
+              if (e.target !== e.currentTarget) return;
+              const el = tableWrapperRef.current;
+              const track = scrollTrackRef.current;
+              if (!el || !track) return;
+              const rect = track.getBoundingClientRect();
+              const x = e.clientX - rect.left - thumb.width / 2;
+              const maxScroll = el.scrollWidth - el.clientWidth;
+              const range = track.clientWidth - thumb.width;
+              el.scrollLeft = range > 0 ? (x / range) * maxScroll : 0;
+            }}
+          >
+            <div
+              role="scrollbar"
+              aria-orientation="horizontal"
+              aria-valuenow={Math.round(thumb.left)}
+              className="absolute top-[2px] bottom-[2px] rounded-full cursor-grab active:cursor-grabbing"
+              style={{
+                left: thumb.left,
+                width: thumb.width,
+                background: "color-mix(in srgb, var(--text-3) 70%, transparent)",
+              }}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const el = tableWrapperRef.current;
+                if (!el) return;
+                (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                thumbDrag.current = { startX: e.clientX, startLeft: el.scrollLeft };
+              }}
+              onPointerMove={(e) => {
+                const ds = thumbDrag.current;
+                const el = tableWrapperRef.current;
+                const track = scrollTrackRef.current;
+                if (!ds || !el || !track) return;
+                const maxScroll = el.scrollWidth - el.clientWidth;
+                const range = track.clientWidth - thumb.width;
+                if (range <= 0) return;
+                el.scrollLeft =
+                  ds.startLeft + (e.clientX - ds.startX) * (maxScroll / range);
+              }}
+              onPointerUp={(e) => {
+                thumbDrag.current = null;
+                (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Click outside to close column menu */}
