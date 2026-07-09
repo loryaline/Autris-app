@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.3.3] — 2026-07-09
+
+### Changements
+
+- Le statut « ⚠ en retard » du tableau de bord est passé en rouge danger avec halo pulsé (au lieu d'un orange discret qui se fondait dans le décor). L'animation est coupée pour qui préfère les animations réduites.
+
+---
+
 ## [0.3.2] — 2026-07-07
 
 ### Changements
