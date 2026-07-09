@@ -186,7 +186,7 @@ export function GoalCard(props: GoalCardProps) {
           ) : paceVerdict === "ahead" ? (
             <span className="rd-chip rd-chip-success">✓ en avance</span>
           ) : paceVerdict === "behind" ? (
-            <span className="rd-chip rd-chip-warn">⚠ en retard</span>
+            <span className="rd-chip rd-chip-danger">⚠ en retard</span>
           ) : paceVerdict === "onTrack" ? (
             <span className="rd-chip">≈ dans les temps</span>
           ) : (

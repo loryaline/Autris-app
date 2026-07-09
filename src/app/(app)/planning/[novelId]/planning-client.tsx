@@ -308,7 +308,7 @@ export function PlanningClient({
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-bg-primary">
+      <div className="flex-1 flex flex-col min-w-0 bg-bg-primary overflow-y-auto">
         {/* Breadcrumb */}
         <div className="h-10 flex items-center px-6 border-b border-white/[0.04] shrink-0 gap-2">
           <button

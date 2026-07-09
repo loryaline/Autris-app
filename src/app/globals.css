@@ -256,12 +256,12 @@
    Chrome/Safari/Edge le pseudo ::-webkit-scrollbar. */
 
 * {
-  scrollbar-width: thin;
+  scrollbar-width: auto;
   scrollbar-color: color-mix(in srgb, var(--text-4) 55%, transparent) transparent;
 }
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
 }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
@@ -276,6 +276,11 @@
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-corner { background: transparent; }
+
+/* Masque la barre native d'un conteneur (utilisé quand une barre proxy
+   sticky la remplace, cf. ChapterTable). */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
 
 /* ===== Base styles ===== */
 body {
@@ -972,6 +977,21 @@ body {
   background: color-mix(in srgb, var(--tertiary) 15%, transparent);
   border-color: color-mix(in srgb, var(--tertiary) 40%, transparent);
   color: var(--tertiary);
+}
+/* État critique (retard) : rouge, gras, halo pulsé — doit sauter aux yeux. */
+.rd-chip-danger {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 65%, transparent);
+  color: var(--danger);
+  font-weight: 600;
+  animation: rd-chip-danger-pulse 2s ease-in-out infinite;
+}
+@keyframes rd-chip-danger-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 45%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rd-chip-danger { animation: none; }
 }
 
 /* Calendrier */
