@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.3.4] — 2026-08-02
+
+### Corrections
+
+- Chapitrage : éditer plusieurs cases encore vides d'une colonne personnalisée dans la même session recopiait le contenu de la dernière case éditée dans les autres (visible surtout en collant du texte). Les cases fraîchement créées partageaient un identifiant provisoire commun ; chaque case est désormais identifiée par son couple colonne + chapitre.
+
+---
+
 ## [0.3.3] — 2026-07-09
 
 ### Changements
