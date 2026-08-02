@@ -753,15 +753,45 @@ export function ChapterTable({
         (cv) => cv.column_id === columnId && cv.chapter_id === chapterId
       );
       if (existing) {
-        return prev.map((cv) => (cv.id === existing.id ? { ...cv, value } : cv));
+        // Match par (colonne, chapitre) et non par id : les entrées pas
+        // encore persistées partageaient l'id "temp", et matcher dessus
+        // recopiait la valeur dans TOUTES les cases fraîchement éditées.
+        return prev.map((cv) =>
+          cv.column_id === columnId && cv.chapter_id === chapterId
+            ? { ...cv, value }
+            : cv
+        );
       }
-      return [...prev, { id: "temp", column_id: columnId, chapter_id: chapterId, value }];
+      return [
+        ...prev,
+        {
+          id: `temp-${columnId}-${chapterId}`,
+          column_id: columnId,
+          chapter_id: chapterId,
+          value,
+        },
+      ];
     });
 
-    await supabase.from("planning_cell_values").upsert(
-      { column_id: columnId, chapter_id: chapterId, user_id: user.id, value },
-      { onConflict: "column_id,chapter_id" }
-    );
+    const { data: saved } = await supabase
+      .from("planning_cell_values")
+      .upsert(
+        { column_id: columnId, chapter_id: chapterId, user_id: user.id, value },
+        { onConflict: "column_id,chapter_id" }
+      )
+      .select("id")
+      .single();
+
+    // Remplace l'id temporaire par l'id serveur pour les prochains updates.
+    if (saved?.id) {
+      setCellValues((prev) =>
+        prev.map((cv) =>
+          cv.column_id === columnId && cv.chapter_id === chapterId
+            ? { ...cv, id: saved.id }
+            : cv
+        )
+      );
+    }
   }
 
   /* ---- Add custom column ---- */
