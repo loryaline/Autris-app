@@ -391,6 +391,41 @@ export function ChapterTable({
     return () => ro.disconnect();
   }, [updateThumb, columnWidths, hiddenColumns, chapters.length]);
 
+  // En-tête de colonnes toujours visible : `sticky` ne fonctionne plus
+  // (le wrapper overflow-x du tableau la piège — un conteneur de scroll
+  // borne ses enfants sticky). On la translate donc à la main en suivant
+  // le scroll vertical du conteneur ancêtre, bornée à la hauteur du
+  // tableau pour qu'elle ne déborde pas en dessous.
+  const headerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const wrapper = tableWrapperRef.current;
+    const header = headerRef.current;
+    if (!wrapper || !header) return;
+
+    let scroller: HTMLElement | null = wrapper.parentElement;
+    while (scroller && scroller !== document.body) {
+      const s = getComputedStyle(scroller);
+      if (/(auto|scroll)/.test(s.overflowY)) break;
+      scroller = scroller.parentElement;
+    }
+    if (!scroller || scroller === document.body) return;
+
+    const sync = () => {
+      const scTop = scroller!.getBoundingClientRect().top;
+      const wrapTop = wrapper.getBoundingClientRect().top;
+      const max = wrapper.scrollHeight - header.offsetHeight;
+      const y = Math.min(Math.max(0, scTop - wrapTop), Math.max(0, max));
+      header.style.transform = y > 0 ? `translateY(${y}px)` : "";
+    };
+    sync();
+    scroller.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    return () => {
+      scroller!.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+    };
+  }, []);
+
   function toggleColumn(key: string) {
     setHiddenColumns((prev) => {
       const next = new Set(prev);
@@ -1147,9 +1182,11 @@ export function ChapterTable({
           }`}
         >
           <div style={{ minWidth: "max-content" }}>
-            {/* Header — opaque pour ne pas laisser transparaître les lignes au scroll */}
+            {/* Header — opaque pour ne pas laisser transparaître les lignes au scroll.
+                Suivi du scroll vertical par translateY (cf. effet headerRef). */}
             <div
-              className="grid border-b border-white/[0.08] sticky top-0 z-20 shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+              ref={headerRef}
+              className="grid border-b border-white/[0.08] relative z-20 shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
               style={{
                 gridTemplateColumns: gridTemplate,
                 background: "var(--color-bg-tertiary)",

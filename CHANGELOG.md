@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.3.5] — 2026-08-02
+
+### Corrections
+
+- Chapitrage : l'en-tête des colonnes reste visible en haut de l'écran pendant le défilement vertical (elle disparaissait depuis le passage au défilement pleine page de la 0.3.2).
+
+---
+
 ## [0.3.4] — 2026-08-02
 
 ### Corrections
