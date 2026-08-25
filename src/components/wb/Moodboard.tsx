@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { appConfirm } from "@/lib/app-confirm";
 import type { WbEntry } from "@/types/database";
 
 export function Moodboard({
@@ -62,7 +63,7 @@ export function Moodboard({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Supprimer cette image du moodboard ?")) return;
+    if (!(await appConfirm("Supprimer cette image du moodboard ?", { confirmLabel: "Supprimer" }))) return;
     const entry = entries.find((e) => e.id === id);
     if (entry?.main_image_url) {
       // Tenter de supprimer le fichier du storage

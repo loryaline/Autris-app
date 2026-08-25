@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { appConfirm } from "@/lib/app-confirm";
 import {
   getCategoryDef,
   MAGIC_SUBTYPES,
@@ -1175,10 +1176,11 @@ export function ContextPanel({
                                     />
                                     <div className="flex gap-1 mt-1.5">
                                       <button
-                                        onClick={() => {
+                                        onClick={async () => {
                                           if (
-                                            confirm(
-                                              "Restaurer cette version ? Le contenu actuel sera automatiquement sauvegardé avant."
+                                            await appConfirm(
+                                              "Restaurer cette version ? Le contenu actuel sera automatiquement sauvegardé avant.",
+                                              { confirmLabel: "Restaurer", danger: false },
                                             )
                                           ) {
                                             onRestoreVersion(v.content, v.word_count);
@@ -1200,8 +1202,8 @@ export function ContextPanel({
                                         ✎
                                       </button>
                                       <button
-                                        onClick={() => {
-                                          if (confirm("Supprimer cette version ?")) deleteVersion(v.id);
+                                        onClick={async () => {
+                                          if (await appConfirm("Supprimer cette version ?", { confirmLabel: "Supprimer" })) deleteVersion(v.id);
                                         }}
                                         className="text-[10px] text-text-tertiary hover:text-red cursor-pointer border border-border rounded px-1.5 py-0.5 bg-transparent transition-colors"
                                         title="Supprimer"

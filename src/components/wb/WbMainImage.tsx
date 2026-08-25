@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { appConfirm } from "@/lib/app-confirm";
 
 export function WbMainImage({
   entryId,
@@ -65,7 +66,7 @@ export function WbMainImage({
 
   async function handleRemove() {
     if (!value) return;
-    if (!confirm("Retirer l'image principale ?")) return;
+    if (!(await appConfirm("Retirer l'image principale ?", { confirmLabel: "Retirer" }))) return;
     setBusy(true);
     await removeStorageObject(value);
     await supabase

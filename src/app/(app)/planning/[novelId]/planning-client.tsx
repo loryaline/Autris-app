@@ -6,6 +6,8 @@ import { ChapterTable } from "@/components/planning/ChapterTable";
 import { OutlineView } from "@/components/planning/OutlineView";
 import { StructureBand } from "@/components/planning/StructureBand";
 import { SynopsisView, type SynopsisDoc } from "@/components/planning/SynopsisView";
+import { CsvImportModal } from "@/components/planning/CsvImportModal";
+import { SnapshotsMenu } from "@/components/planning/SnapshotsMenu";
 import { getNarrativeMethod } from "@/lib/narrative-methods";
 import type { ChapterStatus } from "@/types/database";
 
@@ -262,6 +264,7 @@ export function PlanningClient({
   const [beats, setBeats] = useState<PlanningBeat[]>(initialBeats);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>(initialCustomColumns);
   const [cellValues, setCellValues] = useState<CellValue[]>(initialCellValues);
+  const [showCsvImport, setShowCsvImport] = useState(false);
 
   // État partagé du tableau — remonté ici pour survivre à un changement
   // de vue (Tableau ↔ Outline ↔ Post-its). Sinon ChapterTable se démonte
@@ -413,6 +416,31 @@ export function PlanningClient({
               {activeView === "tableau" && (
                 <div className="flex flex-col items-end gap-2 pt-1 shrink-0">
                   <div className="flex items-center gap-2">
+                    <SnapshotsMenu
+                      novelId={novelId}
+                      chapters={chapters}
+                      customColumns={customColumns}
+                      cellValues={cellValues}
+                      columnOrder={tableColumnOrder}
+                      columnColors={tableColumnColors}
+                      columnWidths={tableColumnWidths}
+                    />
+                    <button
+                      onClick={() => setShowCsvImport(true)}
+                      title="Importer un CSV — les lignes s'ajoutent à la suite du tableau"
+                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12.5px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                        <path
+                          d="M7 9V2M7 2L4 5M7 2L10 5M2.5 11H11.5"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      Importer
+                    </button>
                     <button
                       onClick={() => {
                         const csv = buildChapterCsv(
@@ -554,6 +582,18 @@ export function PlanningClient({
           </div>
         )}
       </div>
+
+      {showCsvImport && (
+        <CsvImportModal
+          novelId={novelId}
+          chapters={chapters}
+          customColumns={customColumns}
+          setChapters={setChapters}
+          setCustomColumns={setCustomColumns}
+          setCellValues={setCellValues}
+          onClose={() => setShowCsvImport(false)}
+        />
+      )}
     </div>
   );
 }

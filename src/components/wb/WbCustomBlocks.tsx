@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { appConfirm } from "@/lib/app-confirm";
 
 /**
  * Blocs personnalisés sur une fiche WB.
@@ -278,8 +279,8 @@ function BlockToolbar({
         ↓
       </button>
       <button
-        onClick={() => {
-          if (confirm("Supprimer ce bloc ?")) onDelete();
+        onClick={async () => {
+          if (await appConfirm("Supprimer ce bloc ?", { confirmLabel: "Supprimer" })) onDelete();
         }}
         title="Supprimer le bloc"
         className="w-6 h-6 flex items-center justify-center text-text-quaternary hover:text-red rounded hover:bg-red-bg/40 cursor-pointer"
