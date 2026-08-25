@@ -57,36 +57,54 @@ export function RichEditableCell({
   onSave,
   className,
   placeholder,
+  editing,
+  initialPos,
+  onExitEdit,
 }: {
   value: string;
   onSave: (val: string) => void;
   className?: string;
   placeholder?: string;
+  /** Mode contrôlé (sélection façon Sheets) : si fourni, la cellule
+   * n'entre PLUS en édition d'elle-même au mousedown — c'est le parent
+   * qui pilote via `editing` (double-clic / Entrée dans le tableau). */
+  editing?: boolean;
+  /** Position de caret initiale (mode contrôlé), calculée par le parent. */
+  initialPos?: number | null;
+  /** Appelé à la sortie d'édition (mode contrôlé). */
+  onExitEdit?: () => void;
 }) {
-  // La cellule est "focalisée" (= ProseMirror monté) uniquement quand on
-  // a cliqué dedans. Sinon on rend juste le HTML statique pour économiser
-  // les instances ProseMirror sur un tableau qui peut compter 50+ cases.
-  // On stocke la position de click dans le state lui-même pour rester
-  // stable d'un render à l'autre (et satisfaire react-hooks/refs).
+  // Mode historique (non contrôlé) : la cellule est "focalisée"
+  // (= ProseMirror monté) uniquement quand on a cliqué dedans. Sinon on
+  // rend le HTML statique pour économiser les instances ProseMirror sur
+  // un tableau qui peut compter 50+ cases.
   const [focused, setFocused] = useState<{ pos: number | null } | null>(null);
+  const isControlled = editing !== undefined;
+  const showEditor = isControlled ? editing : focused !== null;
 
-  if (!focused) {
+  if (!showEditor) {
     const empty = isEmptyHtml(value || "");
     return (
       <div
-        onMouseDown={(e) => {
-          const pos = computeClickOffset(
-            e.currentTarget as HTMLElement,
-            e.clientX,
-            e.clientY,
-          );
-          setFocused({ pos });
-        }}
+        onMouseDown={
+          isControlled
+            ? undefined
+            : (e) => {
+                const pos = computeClickOffset(
+                  e.currentTarget as HTMLElement,
+                  e.clientX,
+                  e.clientY,
+                );
+                setFocused({ pos });
+              }
+        }
         // h-full + w-full : la zone cliquable couvre toute la cellule,
         // pas seulement la bounding-box du texte. Sans ça, cliquer dans
         // l'espace vide d'une cellule étirée par une ligne haute ne
         // déclenchait pas l'édition.
-        className={`h-full w-full px-2 py-1.5 text-[12px] cursor-text whitespace-pre-wrap break-words rich-cell-display ${className ?? ""}`}
+        className={`h-full w-full px-2 py-1.5 text-[12px] whitespace-pre-wrap break-words rich-cell-display ${
+          isControlled ? "cursor-cell" : "cursor-text"
+        } ${className ?? ""}`}
       >
         {empty ? (
           <span className="text-text-quaternary">{placeholder ?? ""}</span>
@@ -101,8 +119,11 @@ export function RichEditableCell({
     <FocusedCell
       value={value}
       onSave={onSave}
-      onLeave={() => setFocused(null)}
-      initialClickPos={focused.pos}
+      onLeave={() => {
+        if (isControlled) onExitEdit?.();
+        else setFocused(null);
+      }}
+      initialClickPos={isControlled ? (initialPos ?? null) : focused?.pos ?? null}
       className={className}
       placeholder={placeholder}
     />
@@ -401,7 +422,7 @@ function BubbleMenu({
  * accès à la map ProseMirror ici, mais ProseMirror est tolérant à un
  * offset DOM qui dépasse — il clamp automatiquement.
  */
-function computeClickOffset(
+export function computeClickOffset(
   el: HTMLElement,
   clientX: number,
   clientY: number,

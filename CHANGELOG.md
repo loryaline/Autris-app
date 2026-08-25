@@ -27,6 +27,26 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.4.0] — 2026-08-25
+
+### Ajouts
+
+- **Import CSV dans le chapitrage** : bouton « Importer » avec aperçu du fichier, choix de la ligne de départ (clic sur une ligne), détection automatique des en-têtes (tolérante aux accents, majuscules, ponctuation, ligatures) et sélecteur de destination par colonne — chaque colonne du CSV peut être envoyée vers une colonne de base, une colonne perso existante, une nouvelle colonne, ou ignorée. Les lignes s'ajoutent à la suite du tableau.
+- **Versions du tableau de planification** : bouton « Versions » pour figer un instantané complet du chapitrage (chapitres, colonnes, cases, couleurs), le consulter en lecture seule, le restaurer (avec sauvegarde automatique de sécurité avant), ou le supprimer. Nécessite la migration `migration-planning-snapshots.sql`.
+- **Bouton « Vider » le tableau** : vide le contenu des cases (en gardant les chapitres) ou supprime tous les chapitres — toujours précédé d'une version de sécurité automatique.
+
+### Changements
+
+- **Sélection des cases façon Google Sheets** : clic = sélection, double-clic ou Entrée = édition, cliquer-glisser = sélection rectangulaire, Shift+clic/flèches = étendre, Ctrl+clic = ajouter, flèches = déplacer, Suppr = vider les cases sélectionnées, Échap = désélectionner, clic droit = couleurs. Nouveau visuel : remplissage léger + bordure sur le périmètre de la plage.
+- **Tous les dialogues de confirmation sont désormais intégrés à l'app** (suppression de colonnes, chapitres, fiches, images, synopsis, dates butoirs, versions…) : plus aucun `confirm()` natif du navigateur, qui pouvait être bloqué définitivement par « ne plus autoriser ce site à afficher des boîtes de dialogue ».
+
+### Corrections
+
+- Les colonnes personnalisées absentes de l'ordre sauvegardé (créées par l'import, ou orphelines d'anciens imports) apparaissent désormais en fin de tableau au lieu d'être invisibles et insupprimables.
+- Import CSV : les inserts groupés n'envoient plus de null dans les colonnes obligatoires (status, themes) ; les messages d'erreur remontent la cause exacte ; deux colonnes CSV pointant vers la même destination ne font plus planter l'écriture.
+
+---
+
 ## [0.3.5] — 2026-08-02
 
 ### Corrections

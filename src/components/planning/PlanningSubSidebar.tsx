@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { appConfirm } from "@/lib/app-confirm";
 
 const VIEWS = [
   { key: "tableau", label: "Chapitrage", icon: "▦" },
@@ -152,7 +153,7 @@ export function PlanningSubSidebar({
   }
 
   async function deleteMilestone(id: string) {
-    if (!confirm("Supprimer cette date butoir ?")) return;
+    if (!(await appConfirm("Supprimer cette date butoir ?", { confirmLabel: "Supprimer" }))) return;
     await supabase.from("planning_milestones").delete().eq("id", id);
     router.refresh();
   }

@@ -6,6 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { createClient } from "@/lib/supabase/client";
+import { appConfirm } from "@/lib/app-confirm";
 import { FloatingToolbar } from "@/components/editor/FloatingToolbar";
 import { htmlToDocxBlob, downloadBlob } from "@/lib/docx-export";
 
@@ -166,7 +167,7 @@ export function SynopsisView({
 
   async function deleteActive() {
     if (list.length <= 1 || !active || !editor) return;
-    if (!confirm(`Supprimer le synopsis « ${active.title} » ?`)) return;
+    if (!(await appConfirm(`Supprimer le synopsis « ${active.title} » ?`, { confirmLabel: "Supprimer" }))) return;
     const removedId = active.id;
     const remaining = list.filter((s) => s.id !== removedId);
     setList(remaining);

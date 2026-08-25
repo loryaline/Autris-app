@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback, type Dispatch, type SetStateAction } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { appConfirm } from "@/lib/app-confirm";
 import type { ChapterStatus } from "@/types/database";
 import type { ChapterData as ChapterRow, CustomColumn, CellValue } from "@/app/(app)/planning/[novelId]/planning-client";
-import { RichEditableCell } from "./RichEditableCell";
+import { RichEditableCell, computeClickOffset } from "./RichEditableCell";
 import { ThemePills } from "./ThemePills";
 
 /* ---- Column definitions ---- */
@@ -111,6 +112,9 @@ function EditableCell(props: {
   onSave: (val: string) => void;
   className?: string;
   placeholder?: string;
+  editing?: boolean;
+  initialPos?: number | null;
+  onExitEdit?: () => void;
 }) {
   return <RichEditableCell {...props} />;
 }
@@ -198,116 +202,33 @@ export function ChapterTable({
     | { kind: "cell";   chapterId: string; colKey: string; anchor: { top: number; left: number } }
   >(null);
 
-  // Multi-sélection de cellules : clé "chapterId::colKey"
-  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
-  // Drag-select actif (au moins un mouvement détecté)
+  /* ============================================================
+   * Sélection façon Google Sheets
+   * - clic : sélectionne la case (sans l'éditer)
+   * - double-clic / Entrée : édite la case
+   * - cliquer-glisser : sélection rectangulaire
+   * - Shift+clic / Shift+flèches : étend le rectangle depuis l'ancre
+   * - Ctrl/Cmd+clic : ajoute ou retire une case
+   * - flèches : déplace la sélection · Échap : désélectionne
+   * - Suppr / Retour arrière : vide le contenu des cases sélectionnées
+   * ============================================================ */
+  type CellPos = { r: number; c: number };
+  const [selAnchor, setSelAnchor] = useState<CellPos | null>(null);
+  const [selFocus, setSelFocus] = useState<CellPos | null>(null);
+  // Cases hors rectangle ajoutées au Ctrl+clic
+  const [extraCells, setExtraCells] = useState<Set<string>>(new Set());
+  // Case en cours d'édition (double-clic / Entrée)
+  const [editingCell, setEditingCell] = useState<{ key: string; pos: number | null } | null>(null);
   const [dragSelecting, setDragSelecting] = useState(false);
 
   function cellKey(chapterId: string, colKey: string): string {
     return `${chapterId}::${colKey}`;
   }
 
-  /**
-   * Démarre un tracking de sélection multi-cellule depuis n'importe où
-   * dans la case (mousedown sur la case elle-même, plus de pastille
-   * dédiée). On NE bloque PAS le mousedown — l'éditeur de la case
-   * source reçoit le click et entre normalement en édition.
-   *
-   * Ce n'est qu'à la traversée d'une frontière de case (le pointeur
-   * survole une case avec un `data-cell-key` différent) qu'on bascule
-   * en mode sélection multi-cellule :
-   *   - on annule la sélection texte navigateur
-   *   - on blur l'éditeur de la case source (la cellule sort du mode
-   *     édition et recolle son contenu)
-   *   - on accumule les cases survolées dans selectedCells
-   *
-   * Au lâcher, si la sélection a effectivement traversé une frontière,
-   * on ouvre la palette pour appliquer une couleur à toutes les cases
-   * sélectionnées. Sinon, comportement normal (édition de la case
-   * d'origine, pas de palette).
-   */
-  function startCellRangeSelect(originChapterId: string, originColKey: string) {
-    const originKey = cellKey(originChapterId, originColKey);
-    let active = false; // devient true à la première traversée de frontière
-    let lastClientX = 0;
-    let lastClientY = 0;
-
-    const handlePoint = (clientX: number, clientY: number) => {
-      lastClientX = clientX;
-      lastClientY = clientY;
-      const target = document.elementFromPoint(clientX, clientY);
-      if (!target) return;
-      const cellEl = (target as HTMLElement).closest(
-        "[data-cell-key]",
-      ) as HTMLElement | null;
-      if (!cellEl) return;
-      const k = cellEl.getAttribute("data-cell-key");
-      if (!k) return;
-
-      if (k === originKey && !active) {
-        // Toujours dans la case d'origine et pas encore sorti → on laisse
-        // le navigateur / l'éditeur gérer normalement.
-        return;
-      }
-      if (!active) {
-        // Première traversée de frontière → on bascule en mode sélection.
-        active = true;
-        setDragSelecting(true);
-        window.getSelection()?.removeAllRanges();
-        (document.activeElement as HTMLElement | null)?.blur?.();
-        setSelectedCells(new Set([originKey, k]));
-      } else {
-        setSelectedCells((prev) => {
-          if (prev.has(k)) return prev;
-          const next = new Set(prev);
-          next.add(k);
-          return next;
-        });
-      }
-    };
-
-    const onMouseMove = (ev: MouseEvent) => handlePoint(ev.clientX, ev.clientY);
-    const onTouchMove = (ev: TouchEvent) => {
-      const t = ev.touches[0];
-      if (!t) return;
-      // preventDefault uniquement quand on est passé en mode sélection,
-      // sinon on bloquerait le scroll naturel sur tactile.
-      if (active) ev.preventDefault();
-      handlePoint(t.clientX, t.clientY);
-    };
-
-    const cleanup = () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onEnd);
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onEnd);
-      document.removeEventListener("touchcancel", onEnd);
-      setDragSelecting(false);
-      if (active) {
-        // Palette ancrée sous la dernière case survolée
-        const lastEl = document.elementFromPoint(lastClientX, lastClientY);
-        const cellEl = (lastEl as HTMLElement | null)?.closest(
-          "[data-cell-key]",
-        ) as HTMLElement | null;
-        const r = cellEl?.getBoundingClientRect();
-        setPalette({
-          kind: "cell",
-          chapterId: originChapterId,
-          colKey: originColKey,
-          anchor: {
-            top: (r?.bottom ?? lastClientY) + 4,
-            left: Math.max(8, (r?.left ?? lastClientX) - 60),
-          },
-        });
-      }
-    };
-    const onEnd = () => cleanup();
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onEnd);
-    document.addEventListener("touchmove", onTouchMove, { passive: false });
-    document.addEventListener("touchend", onEnd);
-    document.addEventListener("touchcancel", onEnd);
+  function clearSelection() {
+    setSelAnchor(null);
+    setSelFocus(null);
+    setExtraCells(new Set());
   }
 
   // Column order: provided by parent (lifted state) — fallback if null/empty
@@ -346,6 +267,11 @@ export function ChapterTable({
   // Hidden columns
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [showColumnMenu, setShowColumnMenu] = useState(false);
+
+  // Vidage du tableau (bouton « Vider »)
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
 
   const tableWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -451,6 +377,26 @@ export function ChapterTable({
     })
     .filter(Boolean) as (ColumnDef & { customId?: string })[];
 
+  // Colonnes custom absentes de column_order (créées par l'import CSV,
+  // ou orphelines d'un ancien bug) : on les APPEND au lieu de les cacher.
+  // Sans ça elles existent en base mais sont invisibles partout — ni
+  // affichables, ni supprimables.
+  {
+    const knownKeys = new Set(allColumnDefs.map((c) => c.key));
+    for (const col of customColumns) {
+      const key = `custom:${col.id}`;
+      if (!knownKeys.has(key)) {
+        allColumnDefs.push({
+          key,
+          label: col.name,
+          width: "160px",
+          type: "custom" as const,
+          customId: col.id,
+        });
+      }
+    }
+  }
+
   // Visible columns (filtered)
   const visibleColumns = allColumnDefs.filter((c) => !hiddenColumns.has(c.key));
 
@@ -458,6 +404,180 @@ export function ChapterTable({
   const gridTemplate = visibleColumns
     .map((c) => `${columnWidths[c.key] ?? 160}px`)
     .join(" ");
+
+  /* ---- Sélection : dérivations (rectangle ancre→focus + extras) ---- */
+  const selRect =
+    selAnchor && selFocus
+      ? {
+          minR: Math.min(selAnchor.r, selFocus.r),
+          maxR: Math.max(selAnchor.r, selFocus.r),
+          minC: Math.min(selAnchor.c, selFocus.c),
+          maxC: Math.max(selAnchor.c, selFocus.c),
+        }
+      : null;
+
+  const selectedKeys: Set<string> = (() => {
+    const s = new Set(extraCells);
+    if (selRect) {
+      for (let r = selRect.minR; r <= Math.min(selRect.maxR, sorted.length - 1); r++) {
+        for (let c = selRect.minC; c <= Math.min(selRect.maxC, visibleColumns.length - 1); c++) {
+          s.add(cellKey(sorted[r].id, visibleColumns[c].key));
+        }
+      }
+    }
+    return s;
+  })();
+
+  /** Ferme proprement une éventuelle édition en cours (commit via blur). */
+  function commitAnyEdit() {
+    if (editingCell) {
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      setEditingCell(null);
+    }
+  }
+
+  /** Sélectionne une case et démarre le suivi du drag rectangulaire. */
+  function beginCellSelection(pos: CellPos, e: React.MouseEvent) {
+    commitAnyEdit();
+    window.getSelection()?.removeAllRanges();
+
+    const k = cellKey(sorted[pos.r].id, visibleColumns[pos.c].key);
+    if (e.shiftKey && selAnchor) {
+      setSelFocus(pos);
+    } else if (e.ctrlKey || e.metaKey) {
+      // Fige le rectangle courant dans les extras puis toggle la case.
+      const merged = new Set(selectedKeys);
+      if (merged.has(k)) {
+        merged.delete(k);
+        setExtraCells(merged);
+        setSelAnchor(null);
+        setSelFocus(null);
+      } else {
+        setExtraCells(merged);
+        setSelAnchor(pos);
+        setSelFocus(pos);
+      }
+    } else {
+      setExtraCells(new Set());
+      setSelAnchor(pos);
+      setSelFocus(pos);
+    }
+
+    // Drag rectangulaire : le focus suit la case sous le pointeur.
+    setDragSelecting(true);
+    const onMove = (ev: MouseEvent) => {
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const cellEl = (el as HTMLElement | null)?.closest(
+        "[data-row-idx]",
+      ) as HTMLElement | null;
+      if (!cellEl) return;
+      const r = Number(cellEl.getAttribute("data-row-idx"));
+      const c = Number(cellEl.getAttribute("data-col-idx"));
+      if (Number.isNaN(r) || Number.isNaN(c)) return;
+      setSelFocus((prev) => (prev && prev.r === r && prev.c === c ? prev : { r, c }));
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      setDragSelecting(false);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
+  /** Vide le contenu des cases sélectionnées (champs texte, thèmes,
+   * colonnes custom — le titre/statut/mots ne sont pas touchés). */
+  function clearCellsContent(keys: Set<string>) {
+    const colByKey = new Map(visibleColumns.map((c) => [c.key, c]));
+    for (const key of keys) {
+      const [chapterId, colKey] = key.split("::");
+      const col = colByKey.get(colKey);
+      if (!col) continue;
+      if (col.key === "theme") {
+        saveChapterField(chapterId, "themes", []);
+      } else if (col.type === "custom" && col.customId) {
+        saveCellValue(col.customId, chapterId, "");
+      } else if (col.type === "text" && col.field && col.field !== "themes") {
+        saveChapterField(chapterId, col.field, null);
+      }
+      // title / status / words : intouchés
+    }
+  }
+
+  // Clavier : flèches, Entrée, Suppr, Échap. Le handler est recréé à
+  // chaque render (il capture l'état courant) et exposé via une ref pour
+  // ne brancher l'écouteur document qu'une seule fois.
+  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  keyHandlerRef.current = (e: KeyboardEvent) => {
+    if (editingCell) return; // l'éditeur gère son propre clavier
+    const t = e.target as HTMLElement | null;
+    if (t?.closest("input, textarea, [contenteditable=true]")) return;
+    if (!selAnchor || !selFocus) return;
+
+    if (e.key === "Escape") {
+      clearSelection();
+      return;
+    }
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      clearCellsContent(selectedKeys);
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const row = sorted[selAnchor.r];
+      const col = visibleColumns[selAnchor.c];
+      if (row && col && (col.type === "text" || col.type === "custom" || col.type === "title")) {
+        setEditingCell({ key: cellKey(row.id, col.key), pos: null });
+      }
+      return;
+    }
+    const ARROWS: Record<string, [number, number]> = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1],
+    };
+    const delta = ARROWS[e.key];
+    if (delta) {
+      e.preventDefault();
+      const base = e.shiftKey ? selFocus : selAnchor;
+      const next: CellPos = {
+        r: Math.min(Math.max(0, base.r + delta[0]), sorted.length - 1),
+        c: Math.min(Math.max(0, base.c + delta[1]), visibleColumns.length - 1),
+      };
+      if (e.shiftKey) {
+        setSelFocus(next);
+      } else {
+        setExtraCells(new Set());
+        setSelAnchor(next);
+        setSelFocus(next);
+      }
+      // Garde la case visible
+      document
+        .querySelector(`[data-row-idx="${next.r}"][data-col-idx="${next.c}"]`)
+        ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => keyHandlerRef.current(e);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Clic hors du tableau → désélection (comme Sheets).
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      if (tableWrapperRef.current?.contains(t)) return;
+      if (t.closest("[data-bubble-menu]")) return;
+      clearSelection();
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
 
   /* ---- Column resize ---- */
   function handleColumnResize(colKey: string, e: React.MouseEvent) {
@@ -713,13 +833,101 @@ export function ChapterTable({
     } else if (palette.kind === "cell") {
       // Multi-sélection si > 1, sinon la case cible uniquement.
       const keys =
-        selectedCells.size > 1
-          ? Array.from(selectedCells)
+        selectedKeys.size > 1
+          ? Array.from(selectedKeys)
           : [`${palette.chapterId}::${palette.colKey}`];
       applyColorToCells(keys, color);
     }
-    setSelectedCells(new Set());
+    clearSelection();
     setPalette(null);
+  }
+
+  /* ---- Vidage du tableau ----
+   * Deux modes, toujours précédés d'un snapshot automatique (Versions) :
+   * - "content" : vide toutes les cases (champs planif + colonnes custom)
+   *   mais garde les chapitres (titres, statuts, texte en Rédaction).
+   * - "chapters" : supprime TOUS les chapitres — y compris leur texte
+   *   écrit dans la Rédaction. Irréversible pour le texte.
+   */
+  async function doClearTable(mode: "content" | "chapters") {
+    if (clearing) return;
+    setClearing(true);
+    setClearError(null);
+    try {
+      const supabase = supabaseRef.current;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("non connectée");
+
+      // Snapshot de sécurité (mêmes données que le menu Versions)
+      const { error: snapErr } = await supabase.from("planning_snapshots").insert({
+        novel_id: novelId,
+        user_id: user.id,
+        name: `Avant vidage du ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}`,
+        auto: true,
+        data: {
+          chapters,
+          customColumns,
+          cellValues: cellValues.map(({ column_id, chapter_id, value, color }) => ({
+            column_id,
+            chapter_id,
+            value,
+            color: color ?? null,
+          })),
+          columnOrder: columnOrderProp,
+          columnColors: columnColorsProp,
+          columnWidths: columnWidthsProp,
+        },
+      });
+      if (snapErr) {
+        throw new Error(
+          "impossible de créer la sauvegarde de sécurité (migration planning_snapshots exécutée ?)",
+        );
+      }
+
+      if (mode === "chapters") {
+        const { error: e } = await supabase
+          .from("chapters")
+          .delete()
+          .eq("novel_id", novelId);
+        if (e) throw new Error("suppression des chapitres");
+        setChapters([]);
+        setCellValues([]);
+      } else {
+        const emptied = {
+          synopsis: null,
+          plot_elements: null,
+          minor_elements: null,
+          observations: null,
+          tension_indices: null,
+          pivot: null,
+          narrative_knot: null,
+          themes: [] as string[],
+          row_color: null,
+          cell_colors: {} as Record<string, string>,
+        };
+        const { error: e } = await supabase
+          .from("chapters")
+          .update(emptied)
+          .eq("novel_id", novelId);
+        if (e) throw new Error("vidage des chapitres");
+        if (customColumns.length > 0) {
+          await supabase
+            .from("planning_cell_values")
+            .delete()
+            .in("column_id", customColumns.map((c) => c.id));
+        }
+        setChapters((prev) => prev.map((c) => ({ ...c, ...emptied })));
+        setCellValues([]);
+      }
+      clearSelection();
+      setShowClearConfirm(false);
+    } catch (e) {
+      setClearError(
+        `Échec (${e instanceof Error ? e.message : "erreur inconnue"}).`,
+      );
+    } finally {
+      setClearing(false);
+    }
   }
 
   /* ---- Status cycle ---- */
@@ -860,13 +1068,14 @@ export function ChapterTable({
     setShowAddColumn(false);
   }
 
-  /* ---- Delete custom column ---- */
-  async function deleteCustomColumn(columnId: string, columnName: string) {
-    const ok = window.confirm(
-      `Supprimer la colonne « ${columnName} » ?\n\nToutes les valeurs saisies pour cette colonne seront définitivement perdues.`
-    );
-    if (!ok) return;
+  /* ---- Delete custom column ----
+   * Confirmation via modal maison (window.confirm peut être bloqué par
+   * le navigateur — « ne plus autoriser ce site à afficher des
+   * boîtes de dialogue »).
+   */
+  const [confirmDeleteCol, setConfirmDeleteCol] = useState<{ id: string; name: string } | null>(null);
 
+  async function deleteCustomColumn(columnId: string) {
     const key = `custom:${columnId}`;
     // Optimiste : on retire tout localement
     setCustomColumns((prev) => prev.filter((c) => c.id !== columnId));
@@ -965,6 +1174,9 @@ export function ChapterTable({
               value={chapter.title}
               onSave={(val) => saveChapterField(chapter.id, "title", htmlToPlainTitle(val))}
               className="text-text-primary font-medium"
+              editing={editingCell?.key === cellKey(chapter.id, col.key)}
+              initialPos={editingCell?.pos ?? null}
+              onExitEdit={() => setEditingCell(null)}
             />
             {(beatBadges?.[chapter.id]?.length ?? 0) > 0 && (
               <div className="flex flex-wrap gap-1 px-2 pb-1">
@@ -1016,6 +1228,9 @@ export function ChapterTable({
           value={cv?.value ?? ""}
           onSave={(val) => saveCellValue(col.customId!, chapter.id, val)}
           className="text-text-secondary"
+          editing={editingCell?.key === cellKey(chapter.id, col.key)}
+          initialPos={editingCell?.pos ?? null}
+          onExitEdit={() => setEditingCell(null)}
         />
       );
     }
@@ -1028,6 +1243,9 @@ export function ChapterTable({
           value={fieldValue ?? ""}
           onSave={(val) => saveChapterField(chapter.id, col.field!, val || null)}
           className="text-text-secondary"
+          editing={editingCell?.key === cellKey(chapter.id, col.key)}
+          initialPos={editingCell?.pos ?? null}
+          onExitEdit={() => setEditingCell(null)}
         />
       );
     }
@@ -1128,7 +1346,7 @@ export function ChapterTable({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteCustomColumn(col.customId!, col.label);
+                          setConfirmDeleteCol({ id: col.customId!, name: col.label });
                         }}
                         title="Supprimer cette colonne personnalisée"
                         className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-text-quaternary hover:text-[#e89494] hover:bg-white/[0.04] cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none"
@@ -1164,6 +1382,21 @@ export function ChapterTable({
           Filtres
         </ToolbarButton>
 
+        <ToolbarButton
+          onClick={() => {
+            setClearError(null);
+            setShowClearConfirm(true);
+          }}
+          title="Vider le tableau (une sauvegarde automatique est créée avant)"
+          icon={
+            <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+              <path d="M3 4H11M5.5 4V3H8.5V4M4 4L4.5 11.5H9.5L10 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+          }
+        >
+          Vider
+        </ToolbarButton>
+
         <span className="ml-auto text-[11px] text-text-quaternary italic font-serif inline-flex items-center gap-1.5">
           <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className="opacity-60">
             <path d="M3 8V3H11M11 3L8 6M11 3L8 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" transform="translate(0 1)" />
@@ -1172,10 +1405,112 @@ export function ChapterTable({
         </span>
       </div>
 
+      {/* Confirmation de suppression de colonne */}
+      {confirmDeleteCol && (
+        <>
+          <div
+            className="fixed inset-0 z-[85] bg-black/50"
+            onClick={() => setConfirmDeleteCol(null)}
+          />
+          <div className="fixed z-[90] inset-x-0 top-[26vh] mx-auto w-[min(440px,92vw)] rounded-[var(--radius-lg)] border border-white/[0.10] bg-bg-secondary shadow-2xl p-5">
+            <div className="text-[14px] font-medium text-text-primary mb-2">
+              Supprimer la colonne « {confirmDeleteCol.name} » ?
+            </div>
+            <div className="text-[12.5px] text-text-tertiary leading-relaxed mb-4">
+              Toutes les valeurs saisies dans cette colonne seront
+              définitivement perdues.
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDeleteCol(null)}
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => {
+                  const c = confirmDeleteCol;
+                  setConfirmDeleteCol(null);
+                  deleteCustomColumn(c.id);
+                }}
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] font-medium cursor-pointer text-white"
+                style={{ background: "var(--danger)" }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Confirmation de vidage */}
+      {showClearConfirm && (
+        <>
+          <div
+            className="fixed inset-0 z-[85] bg-black/50"
+            onClick={() => !clearing && setShowClearConfirm(false)}
+          />
+          <div className="fixed z-[90] inset-x-0 top-[22vh] mx-auto w-[min(520px,92vw)] rounded-[var(--radius-lg)] border border-white/[0.10] bg-bg-secondary shadow-2xl p-5">
+            <div className="text-[14px] font-medium text-text-primary mb-2">
+              Vider le tableau ?
+            </div>
+            <div className="text-[12.5px] text-text-tertiary leading-relaxed mb-4">
+              Une version de sécurité est créée automatiquement avant (menu
+              Versions) — les données du tableau seront restaurables.
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => doClearTable("content")}
+                disabled={clearing}
+                className="text-left px-4 py-3 rounded-[var(--radius-md)] border border-white/[0.10] bg-bg-primary hover:border-[var(--color-accent-border)] cursor-pointer transition-colors disabled:opacity-50"
+              >
+                <div className="text-[13px] text-text-primary font-medium">
+                  Vider le contenu des cases
+                </div>
+                <div className="text-[11.5px] text-text-quaternary mt-0.5">
+                  Les chapitres restent (titres, statuts, texte en Rédaction) —
+                  seules les cases de planification sont vidées.
+                </div>
+              </button>
+              <button
+                onClick={() => doClearTable("chapters")}
+                disabled={clearing}
+                className="text-left px-4 py-3 rounded-[var(--radius-md)] border bg-bg-primary cursor-pointer transition-colors disabled:opacity-50"
+                style={{ borderColor: "color-mix(in srgb, var(--danger) 45%, transparent)" }}
+              >
+                <div className="text-[13px] font-medium" style={{ color: "var(--danger)" }}>
+                  Supprimer tous les chapitres
+                </div>
+                <div className="text-[11.5px] text-text-quaternary mt-0.5">
+                  ⚠ Supprime aussi le texte écrit dans la Rédaction — la
+                  version de sécurité ne sauvegarde QUE le tableau, pas le
+                  texte des chapitres. Irréversible pour le texte.
+                </div>
+              </button>
+            </div>
+            {clearError && (
+              <div className="mt-3 text-[12px]" style={{ color: "var(--danger)" }}>
+                {clearError}
+              </div>
+            )}
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                disabled={clearing}
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer disabled:opacity-50"
+              >
+                {clearing ? "En cours…" : "Annuler"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Table */}
       <div className="relative">
         <div
           ref={tableWrapperRef}
+          id="chapter-table-scroll"
           onScroll={updateThumb}
           className={`overflow-x-auto scrollbar-none border border-white/[0.06] rounded-[var(--radius-lg)] bg-bg-secondary/30 ${
             dragSelecting ? "select-none" : ""
@@ -1305,43 +1640,84 @@ export function ChapterTable({
                     }}
                   />
 
-                  {visibleColumns.map((col) => {
+                  {visibleColumns.map((col, colIdx) => {
                     const cellColor = getCellColor(chapter, col);
                     const colColor = columnColors[col.key];
                     const k = cellKey(chapter.id, col.key);
-                    const isSelected = selectedCells.has(k);
+                    const isSelected = selectedKeys.has(k);
+                    const isEditing = editingCell?.key === k;
+                    const inRect =
+                      !!selRect &&
+                      idx >= selRect.minR &&
+                      idx <= selRect.maxR &&
+                      colIdx >= selRect.minC &&
+                      colIdx <= selRect.maxC;
+                    const isAnchor =
+                      !!selAnchor && selAnchor.r === idx && selAnchor.c === colIdx;
+                    // Bordures du périmètre du rectangle (façon Sheets)
+                    const edges = inRect
+                      ? {
+                          top: idx === selRect!.minR,
+                          bottom: idx === selRect!.maxR,
+                          left: colIdx === selRect!.minC,
+                          right: colIdx === selRect!.maxC,
+                        }
+                      : { top: true, bottom: true, left: true, right: true };
                     return (
                       <div
                         key={col.key}
                         data-cell-key={k}
-                        // mousedown sur la cellule entière : on ne bloque
-                        // pas l'événement (pas de preventDefault) pour
-                        // laisser l'éditeur entrer en mode édition. Si
-                        // l'utilisatrice sort vers une autre case en
-                        // gardant le bouton enfoncé, startCellRangeSelect
-                        // basculera en mode sélection multi-cellule.
+                        data-row-idx={idx}
+                        data-col-idx={colIdx}
+                        // Clic = sélection (pas d'édition). Double-clic ou
+                        // Entrée = édition. Drag = rectangle. Comme Sheets.
                         onMouseDown={(e) => {
                           if (e.button !== 0) return;
-                          startCellRangeSelect(chapter.id, col.key);
+                          if (isEditing) return; // édition en cours : laisser l'éditeur gérer
+                          e.preventDefault();
+                          beginCellSelection({ r: idx, c: colIdx }, e);
                         }}
-                        onTouchStart={() => {
-                          startCellRangeSelect(chapter.id, col.key);
+                        onDoubleClick={(e) => {
+                          if (isEditing) return;
+                          if (col.type !== "text" && col.type !== "custom" && col.type !== "title") return;
+                          if (col.key === "theme") return; // pastilles : édition dédiée
+                          const pos = computeClickOffset(
+                            e.currentTarget as HTMLElement,
+                            e.clientX,
+                            e.clientY,
+                          );
+                          setExtraCells(new Set());
+                          setSelAnchor({ r: idx, c: colIdx });
+                          setSelFocus({ r: idx, c: colIdx });
+                          setEditingCell({ key: k, pos });
                         }}
-                        // Right-click : ouvre la palette de couleur pour
-                        // CETTE seule case (équivalent du menu contextuel
-                        // d'Excel / Notion). Pour colorer plusieurs
-                        // cases, drag-select. Pour colorer une seule,
-                        // right-click.
+                        // Tactile : 1er tap sélectionne, 2e tap sur la même
+                        // case ouvre l'édition (pas de double-tap fiable).
+                        onTouchEnd={() => {
+                          if (isEditing) return;
+                          const editable =
+                            (col.type === "text" || col.type === "custom" || col.type === "title") &&
+                            col.key !== "theme";
+                          if (isAnchor && selectedKeys.size === 1 && editable) {
+                            setEditingCell({ key: k, pos: null });
+                          } else {
+                            commitAnyEdit();
+                            setExtraCells(new Set());
+                            setSelAnchor({ r: idx, c: colIdx });
+                            setSelFocus({ r: idx, c: colIdx });
+                          }
+                        }}
+                        // Right-click : palette de couleur pour la sélection
+                        // courante (ou cette case si elle n'en fait pas partie).
                         onContextMenu={(e) => {
                           e.preventDefault();
-                          // Sortir l'éditeur du mode édition s'il y est :
-                          // sinon le double outline (cell-focused +
-                          // selection) rend la cellule visuellement trop
-                          // grosse, et le right-click n'a pas vocation à
-                          // démarrer une saisie de texte.
+                          commitAnyEdit();
                           window.getSelection()?.removeAllRanges();
-                          (document.activeElement as HTMLElement | null)?.blur?.();
-                          setSelectedCells(new Set([k]));
+                          if (!selectedKeys.has(k)) {
+                            setExtraCells(new Set());
+                            setSelAnchor({ r: idx, c: colIdx });
+                            setSelFocus({ r: idx, c: colIdx });
+                          }
                           setPalette({
                             kind: "cell",
                             chapterId: chapter.id,
@@ -1349,16 +1725,37 @@ export function ChapterTable({
                             anchor: { top: e.clientY + 4, left: e.clientX - 60 },
                           });
                         }}
-                        className={`relative last:border-r-0 ${
-                          isSelected
-                            ? "outline outline-2 outline-[var(--color-accent)] outline-offset-[-2px]"
-                            : ""
-                        }`}
+                        className="relative last:border-r-0"
                         style={{
                           background: cellColor ?? colColor ?? undefined,
                         }}
                       >
                         {renderCell(col, chapter)}
+                        {/* Habillage sélection — overlay non interactif */}
+                        {isSelected && !isEditing && (
+                          <div
+                            className="absolute inset-0 pointer-events-none z-10"
+                            style={{
+                              background:
+                                "color-mix(in srgb, var(--color-accent) 10%, transparent)",
+                              borderTop: edges.top
+                                ? "2px solid var(--color-accent)"
+                                : undefined,
+                              borderBottom: edges.bottom
+                                ? "2px solid var(--color-accent)"
+                                : undefined,
+                              borderLeft: edges.left
+                                ? "2px solid var(--color-accent)"
+                                : undefined,
+                              borderRight: edges.right
+                                ? "2px solid var(--color-accent)"
+                                : undefined,
+                              boxShadow: isAnchor
+                                ? "inset 0 0 0 2px var(--color-accent)"
+                                : undefined,
+                            }}
+                          />
+                        )}
                       </div>
                     );
                   })}
@@ -1406,6 +1803,7 @@ export function ChapterTable({
             <div
               role="scrollbar"
               aria-orientation="horizontal"
+              aria-controls="chapter-table-scroll"
               aria-valuenow={Math.round(thumb.left)}
               className="absolute top-[2px] bottom-[2px] rounded-full cursor-grab active:cursor-grabbing"
               style={{
@@ -1456,7 +1854,7 @@ export function ChapterTable({
             className="fixed inset-0 z-40"
             onClick={() => {
               setPalette(null);
-              setSelectedCells(new Set());
+              clearSelection();
             }}
           />
           <div
@@ -1483,13 +1881,13 @@ export function ChapterTable({
             <div className="px-1 pb-1 text-[9px] uppercase text-text-quaternary tracking-wider">
               {palette.kind === "row" ? "Couleur de la ligne"
                 : palette.kind === "col" ? "Couleur de la colonne"
-                : selectedCells.size > 1
-                  ? `Couleur · ${selectedCells.size} cellules`
+                : selectedKeys.size > 1
+                  ? `Couleur · ${selectedKeys.size} cellules`
                   : "Couleur de la cellule"}
             </div>
-            {palette.kind === "cell" && selectedCells.size <= 1 && (
+            {palette.kind === "cell" && selectedKeys.size <= 1 && (
               <div className="px-1 pb-1 text-[10px] text-text-quaternary italic font-serif">
-                Glissez d&apos;une case à l&apos;autre pour en sélectionner plusieurs · clic droit pour une seule.
+                Sélectionnez une plage (clic-glisser) puis clic droit pour colorer plusieurs cases.
               </div>
             )}
             <div className="grid grid-cols-4 gap-1">
@@ -1510,19 +1908,19 @@ export function ChapterTable({
               Effacer la couleur
             </button>
 
-            {/* Action destructrice — exclusive au mode ligne. Confirmation
-                native pour éviter une suppression accidentelle. */}
+            {/* Action destructrice — exclusive au mode ligne. */}
             {palette.kind === "row" && (
               <>
                 <div className="my-1 border-t border-white/[0.06]" />
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!palette || palette.kind !== "row") return;
                     const ch = chapters.find((c) => c.id === palette.chapterId);
                     const name = ch?.title?.trim() || "ce chapitre";
                     if (
-                      confirm(
+                      await appConfirm(
                         `Supprimer « ${name} » ? Cette action est irréversible.`,
+                        { confirmLabel: "Supprimer" },
                       )
                     ) {
                       handleDeleteChapter(palette.chapterId);

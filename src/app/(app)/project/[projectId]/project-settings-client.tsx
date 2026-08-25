@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { appConfirm } from "@/lib/app-confirm";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -170,7 +171,8 @@ export function ProjectSettings({ project }: { project: ProjectData }) {
   }
 
   async function handleRemoveCover() {
-    if (!coverImageUrl || !confirm("Retirer l'image de couverture ?")) return;
+    if (!coverImageUrl) return;
+    if (!(await appConfirm("Retirer l'image de couverture ?", { confirmLabel: "Retirer" }))) return;
     const supabase = createClient();
     const marker = "/wb-images/";
     const idx = coverImageUrl.indexOf(marker);
@@ -462,16 +464,17 @@ function NovelSettings({
     setTimeout(() => setSaved(false), 2000);
   }
 
-  function handleActivateClick() {
+  async function handleActivateClick() {
     if (novel.is_active) return;
     if (
-      confirm(
+      await appConfirm(
         "⚠️ Un seul roman peut être actif à la fois.\n\n" +
           "Activer « " +
           novel.title +
           " » désactivera les autres romans (tous projets confondus). " +
           "Ils continueront d'exister et de compter leurs mots — seul le roman actif " +
-          "servira de référence pour l'objectif quotidien du calendrier.\n\nContinuer ?"
+          "servira de référence pour l'objectif quotidien du calendrier.",
+        { confirmLabel: "Activer", danger: false },
       )
     ) {
       onActivate();

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { appConfirm } from "@/lib/app-confirm";
 import type { WbEntry, WbLink, WbStatus } from "@/types/database";
 import {
   WB_STATUSES,
@@ -97,7 +98,7 @@ export function WbEntryDetail({
   }
 
   async function handleDelete() {
-    if (!confirm(`Supprimer définitivement "${local.title}" ?`)) return;
+    if (!(await appConfirm(`Supprimer définitivement « ${local.title} » ?`, { confirmLabel: "Supprimer" }))) return;
     await supabase.from("wb_entries").delete().eq("id", local.id);
     onDelete(local.id);
   }
