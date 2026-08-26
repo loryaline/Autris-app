@@ -268,6 +268,13 @@ export function ChapterTable({
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [showColumnMenu, setShowColumnMenu] = useState(false);
 
+  // Menu d'options d'une ligne (poignée gauche)
+  const [rowMenu, setRowMenu] = useState<{
+    chapterId: string;
+    idx: number;
+    anchor: { top: number; left: number };
+  } | null>(null);
+
   // Vidage du tableau (bouton « Vider »)
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -985,6 +992,44 @@ export function ChapterTable({
     return () => window.removeEventListener("autris:add-chapter", handler);
   }, [handleAddChapter]);
 
+  /* ---- Insertion d'un chapitre à une position donnée (menu de ligne) ----
+   * insertIdx = index dans l'ordre trié où insérer le nouveau chapitre.
+   * Les chapitres suivants sont décalés d'une position.
+   */
+  async function insertChapterAt(insertIdx: number) {
+    const supabase = supabaseRef.current;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("chapters")
+      .insert({
+        novel_id: novelId,
+        user_id: user.id,
+        title: "À nommer",
+        position: insertIdx,
+      })
+      .select("id, title, position, status, synopsis, word_count, themes, plot_elements, minor_elements, observations, tension_indices, pivot, narrative_knot, row_color, cell_colors")
+      .single();
+    if (!data) return;
+
+    // Décale les positions des chapitres à partir du point d'insertion
+    const bumped = sorted.slice(insertIdx).map((c, i) => ({
+      ...c,
+      position: insertIdx + 1 + i,
+    }));
+    setChapters([
+      ...sorted.slice(0, insertIdx),
+      data as ChapterRow,
+      ...bumped,
+    ]);
+    await Promise.all(
+      bumped.map((c) =>
+        supabase.from("chapters").update({ position: c.position }).eq("id", c.id),
+      ),
+    );
+  }
+
   /* ---- Custom column cell save ---- */
   async function saveCellValue(columnId: string, chapterId: string, value: string) {
     const supabase = supabaseRef.current;
@@ -1166,8 +1211,10 @@ export function ChapterTable({
         <div className="flex items-start gap-2 min-w-0">
           <button
             onClick={() => cycleStatus(chapter.id, chapter.status)}
-            title={`Statut : ${statusInfo.label}`}
-            className={`mt-[9px] ml-2 shrink-0 w-1.5 h-1.5 rounded-full cursor-pointer ${dotClassFor(chapter.status)}`}
+            title={`Statut : ${statusInfo.label} — cliquer pour faire évoluer`}
+            // ml-[18px] : dégage la poignée de ligne (14px) qui apparaît
+            // au survol sur le bord gauche, + 4px de respiration.
+            className={`mt-[9px] ml-[18px] shrink-0 w-2 h-2 rounded-full cursor-pointer transition-transform hover:scale-150 ${dotClassFor(chapter.status)}`}
           />
           <div className="flex-1 min-w-0">
             <EditableCell
@@ -1405,6 +1452,89 @@ export function ChapterTable({
         </span>
       </div>
 
+      {/* Menu d'options d'une ligne */}
+      {rowMenu && (
+        <>
+          <div className="fixed inset-0 z-[70]" onClick={() => setRowMenu(null)} />
+          <div
+            className="fixed z-[75] w-[230px] py-1.5 rounded-[var(--radius-md)] border border-white/[0.10] bg-bg-tertiary shadow-xl"
+            style={{
+              top: Math.min(rowMenu.anchor.top, window.innerHeight - 220),
+              left: Math.max(8, Math.min(rowMenu.anchor.left, window.innerWidth - 240)),
+            }}
+          >
+            <button
+              onClick={() => {
+                const m = rowMenu;
+                setRowMenu(null);
+                insertChapterAt(m.idx);
+              }}
+              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2"
+            >
+              <span className="text-[13px] leading-none w-4 text-center">↑</span>
+              Insérer un chapitre au-dessus
+            </button>
+            <button
+              onClick={() => {
+                const m = rowMenu;
+                setRowMenu(null);
+                insertChapterAt(m.idx + 1);
+              }}
+              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2"
+            >
+              <span className="text-[13px] leading-none w-4 text-center">↓</span>
+              Insérer un chapitre en dessous
+            </button>
+            <button
+              onClick={() => {
+                const m = rowMenu;
+                setRowMenu(null);
+                setPalette({
+                  kind: "row",
+                  chapterId: m.chapterId,
+                  anchor: m.anchor,
+                });
+              }}
+              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2"
+            >
+              <span className="w-4 flex justify-center">
+                <span
+                  className="w-3 h-3 rounded-full border border-white/[0.2]"
+                  style={{
+                    background:
+                      chapters.find((c) => c.id === rowMenu.chapterId)?.row_color ??
+                      "transparent",
+                  }}
+                />
+              </span>
+              Couleur de la ligne…
+            </button>
+            <div className="my-1 border-t border-white/[0.06]" />
+            <button
+              onClick={async () => {
+                const m = rowMenu;
+                setRowMenu(null);
+                const ch = chapters.find((c) => c.id === m.chapterId);
+                const name = ch?.title?.trim() || "ce chapitre";
+                if (
+                  await appConfirm(
+                    `Supprimer « ${name} » ?\n\nLe texte écrit dans la Rédaction pour ce chapitre sera aussi supprimé. Cette action est irréversible.`,
+                    { confirmLabel: "Supprimer" },
+                  )
+                ) {
+                  handleDeleteChapter(m.chapterId);
+                }
+              }}
+              className="w-full text-left px-3 py-1.5 text-[12.5px] cursor-pointer bg-transparent border-none flex items-center gap-2 hover:bg-white/[0.05]"
+              style={{ color: "var(--danger)" }}
+            >
+              <span className="text-[13px] leading-none w-4 text-center">🗑</span>
+              Supprimer le chapitre
+            </button>
+          </div>
+        </>
+      )}
+
       {/* Confirmation de suppression de colonne */}
       {confirmDeleteCol && (
         <>
@@ -1612,8 +1742,8 @@ export function ChapterTable({
                     }
                   }}
                 >
-                  {/* Poignée ligne — visible au hover. Click ouvre la palette,
-                      drag réordonne. Largeur 5px sur le bord gauche. */}
+                  {/* Poignée ligne — visible au hover. Click ouvre le MENU
+                      d'options de la ligne, drag réordonne. */}
                   <button
                     type="button"
                     draggable
@@ -1627,18 +1757,30 @@ export function ChapterTable({
                     onClick={(e) => {
                       e.stopPropagation();
                       const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                      setPalette({
-                        kind: "row",
+                      setRowMenu({
                         chapterId: chapter.id,
-                        anchor: { top: r.bottom + 4, left: r.right + 4 },
+                        idx,
+                        anchor: { top: r.bottom + 4, left: r.left },
                       });
                     }}
-                    title="Couleur · glisser pour réordonner"
-                    className="absolute left-0 top-1 bottom-1 w-1 rounded-full opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab z-10"
+                    title="Options de la ligne · glisser pour réordonner"
+                    className="absolute left-0 top-1 bottom-1 w-3.5 flex items-center justify-center rounded-sm opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab z-10 border-none"
                     style={{
-                      background: rowColor ?? "var(--color-accent)",
+                      background:
+                        rowColor ??
+                        "color-mix(in srgb, var(--color-accent) 18%, transparent)",
+                      color: "var(--color-accent)",
                     }}
-                  />
+                  >
+                    <svg width="8" height="14" viewBox="0 0 8 14" fill="currentColor">
+                      <circle cx="2.5" cy="3" r="1" />
+                      <circle cx="5.5" cy="3" r="1" />
+                      <circle cx="2.5" cy="7" r="1" />
+                      <circle cx="5.5" cy="7" r="1" />
+                      <circle cx="2.5" cy="11" r="1" />
+                      <circle cx="5.5" cy="11" r="1" />
+                    </svg>
+                  </button>
 
                   {visibleColumns.map((col, colIdx) => {
                     const cellColor = getCellColor(chapter, col);
@@ -1671,13 +1813,21 @@ export function ChapterTable({
                         data-col-idx={colIdx}
                         // Clic = sélection (pas d'édition). Double-clic ou
                         // Entrée = édition. Drag = rectangle. Comme Sheets.
-                        onMouseDown={(e) => {
+                        //
+                        // Capture : le contenu d'une case est du HTML riche
+                        // (paragraphes, marques…). En phase de bulle, un
+                        // enfant pouvait avaler le mousedown et la case ne
+                        // se sélectionnait pas quand on cliquait sur le
+                        // texte — seulement dans le vide. En capture, la
+                        // case est servie la première, quoi qu'il y ait
+                        // dessous.
+                        onMouseDownCapture={(e) => {
                           if (e.button !== 0) return;
                           if (isEditing) return; // édition en cours : laisser l'éditeur gérer
                           e.preventDefault();
                           beginCellSelection({ r: idx, c: colIdx }, e);
                         }}
-                        onDoubleClick={(e) => {
+                        onDoubleClickCapture={(e) => {
                           if (isEditing) return;
                           if (col.type !== "text" && col.type !== "custom" && col.type !== "title") return;
                           if (col.key === "theme") return; // pastilles : édition dédiée
@@ -1871,7 +2021,9 @@ export function ChapterTable({
                 el.style.top = `${Math.max(margin, palette.anchor.top - rect.height - 8)}px`;
               }
             }}
-            className="fixed z-50 bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-md)] shadow-xl p-2 flex flex-col gap-1"
+            // w-[200px] : sans largeur fixe, le texte d'aide (non wrappé)
+            // étirait toute la popover.
+            className="fixed z-50 w-[200px] bg-bg-tertiary border border-white/[0.08] rounded-[var(--radius-md)] shadow-xl p-2 flex flex-col gap-1"
             style={{
               top: palette.anchor.top,
               left: Math.max(8, Math.min(palette.anchor.left, window.innerWidth - 220)),
@@ -1886,11 +2038,12 @@ export function ChapterTable({
                   : "Couleur de la cellule"}
             </div>
             {palette.kind === "cell" && selectedKeys.size <= 1 && (
-              <div className="px-1 pb-1 text-[10px] text-text-quaternary italic font-serif">
-                Sélectionnez une plage (clic-glisser) puis clic droit pour colorer plusieurs cases.
+              <div className="px-1 pb-1 text-[10px] leading-snug text-text-quaternary italic font-serif break-words">
+                Sélectionnez une plage (clic-glisser) puis clic droit pour
+                colorer plusieurs cases.
               </div>
             )}
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-4 gap-1 justify-items-center">
               {COLOR_PALETTE.map((c) => (
                 <button
                   key={c.hex}

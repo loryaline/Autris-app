@@ -180,6 +180,78 @@ export interface WbLink {
   created_at: string;
 }
 
+/* ---- Plateaux du World Building ---- */
+
+/** Nature d'un nœud posé sur un plateau. */
+export type WbNodeKind =
+  /** Lié : référence une fiche du World Building. */
+  | "fiche"
+  /** Libres : n'existent que sur le plateau. */
+  | "postit"
+  | "texte"
+  | "forme"
+  | "image"
+  | "cadre";
+
+export interface WbBoard {
+  id: string;
+  project_id: string;
+  /** null = plateau de tout le projet (cas par défaut). */
+  novel_id: string | null;
+  user_id: string;
+  title: string;
+  description: string;
+  /** Plateau ouvert par défaut à l'arrivée sur le World Building. */
+  is_main: boolean;
+  viewport: { x: number; y: number; zoom: number };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WbBoardNode {
+  id: string;
+  board_id: string;
+  user_id: string;
+  kind: WbNodeKind;
+  /** Renseigné si kind = "fiche". Non unique : une fiche peut être posée plusieurs fois. */
+  entry_id: string | null;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: number;
+  rotation: number;
+  /** Contenu des nœuds libres — { html } pour un post-it. */
+  content: Record<string, unknown>;
+  /** Apparence — { color } pour un post-it. */
+  style: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WbBoardEdge {
+  id: string;
+  board_id: string;
+  user_id: string;
+  from_node_id: string;
+  to_node_id: string;
+  /** Renseigné = lien typé : l'étiquette vient de wb_links, jamais d'ici. */
+  wb_link_id: string | null;
+  /** Étiquette des flèches libres uniquement. */
+  label: string;
+  /**
+   * Point par lequel passe la flèche, exprimé RELATIVEMENT à ses deux
+   * extrémités — sinon le tracé resterait planté sur place quand les
+   * fiches se déplacent (notamment portées par un cadre).
+   *   t : position le long de l'axe (0 = milieu, ±0.5 = extrémités)
+   *   o : écart perpendiculaire, en pixels plateau
+   * Tableau vide = flèche droite.
+   */
+  waypoints: { t: number; o: number }[];
+  style: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface Scene {
   id: string;
   chapter_id: string;

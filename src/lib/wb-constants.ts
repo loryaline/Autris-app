@@ -200,6 +200,78 @@ export const LINK_TYPE_GROUPS: { label: string; types: readonly string[] }[] = [
 
 export const LINK_TYPES = LINK_TYPE_GROUPS.flatMap((g) => g.types) as readonly string[];
 
+/**
+ * Types de lien qui expriment LE MÊME FAIT vu de l'autre côté.
+ *
+ * « Alina est la sœur de Set » et « Set est le frère d'Alina » ne sont
+ * pas deux relations : c'est une seule, énoncée de chaque bord. Sans
+ * cette table, on créerait des doublons et le plateau afficherait deux
+ * flèches pour une seule fraternité.
+ */
+const RECIPROCAL_TYPES: Record<string, readonly string[]> = {
+  // Symétriques : le même mot des deux côtés
+  ami: ["ami"],
+  ennemi: ["ennemi"],
+  allié: ["allié"],
+  rival: ["rival"],
+  compagnon: ["compagnon"],
+  connaissance: ["connaissance"],
+  autre: ["autre"],
+  "famille (autre)": ["famille (autre)"],
+
+  // Asymétriques
+  mentor: ["élève"],
+  élève: ["mentor"],
+
+  père: ["fils", "fille"],
+  mère: ["fils", "fille"],
+  fils: ["père", "mère"],
+  fille: ["père", "mère"],
+
+  frère: ["frère", "sœur", "demi-frère", "demi-sœur"],
+  sœur: ["frère", "sœur", "demi-frère", "demi-sœur"],
+  "demi-frère": ["frère", "sœur", "demi-frère", "demi-sœur"],
+  "demi-sœur": ["frère", "sœur", "demi-frère", "demi-sœur"],
+
+  époux: ["épouse", "époux"],
+  épouse: ["époux", "épouse"],
+
+  cousin: ["cousin", "cousine"],
+  cousine: ["cousin", "cousine"],
+
+  oncle: ["neveu", "nièce"],
+  tante: ["neveu", "nièce"],
+  neveu: ["oncle", "tante"],
+  nièce: ["oncle", "tante"],
+
+  "grand-père": ["fils", "fille"],
+  "grand-mère": ["fils", "fille"],
+
+  "beau-parent": ["beau-fils", "belle-fille"],
+  "beau-fils": ["beau-parent"],
+  "belle-fille": ["beau-parent"],
+
+  possède: ["appartient à"],
+  "appartient à": ["possède"],
+};
+
+/**
+ * Deux types énoncent-ils le même fait, chacun de son côté ?
+ * (« sœur » ↔ « frère », « père » ↔ « fils », « ami » ↔ « ami »…)
+ */
+export function areReciprocal(a: string | null, b: string | null): boolean {
+  if (!a || !b) return false;
+  const na = a.trim().toLowerCase();
+  const nb = b.trim().toLowerCase();
+
+  // Un même mot des deux côtés n'est réciproque QUE si le type est connu
+  // comme symétrique. Surtout pas par défaut : « amoureux » est un type
+  // saisi à la main, et l'amour n'est pas toujours partagé — présumer la
+  // symétrie inventerait un sentiment que l'autrice n'a pas écrit.
+  if (na === nb) return (RECIPROCAL_TYPES[na] ?? []).includes(na);
+  return (RECIPROCAL_TYPES[na] ?? []).includes(nb);
+}
+
 // Statuts
 export const WB_STATUSES: { key: WbStatus; label: string; color: string }[] = [
   { key: "brouillon", label: "Brouillon", color: "text-text-tertiary" },

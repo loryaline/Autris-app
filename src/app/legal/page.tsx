@@ -5,7 +5,7 @@ export default function LegalIndex() {
     {
       href: "/legal/mentions",
       title: "Mentions légales",
-      desc: "Identité de l'éditeur et coordonnées de contact.",
+      desc: "Édition, hébergement, gratuité et coordonnées de contact.",
     },
     {
       href: "/legal/cgu",
@@ -25,7 +25,7 @@ export default function LegalIndex() {
         Informations <span className="italic text-[var(--color-accent)]">légales</span>
       </h1>
       <p className="text-[14px] text-text-tertiary mb-8">
-        Tout ce qu&apos;il faut savoir sur Autris, l&apos;éditrice du service, et vos droits.
+        Tout ce qu&apos;il faut savoir sur Autris, son fonctionnement et vos droits.
       </p>
 
       <ul className="flex flex-col gap-3">
