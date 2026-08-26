@@ -27,6 +27,31 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.5.0] — 2026-08-26
+
+### Ajouts
+
+- **Les plateaux du World Building.** Ouvrir le World Building donne désormais sur un plateau : une surface infinie où l'on dispose son univers. Les fiches y sont posées par glisser-déposer depuis le panneau de droite, et les liens tracés à la souris **sont** de vraies relations — écrites dans les fiches, visibles partout. Poser une fiche fait apparaître d'elle-même les relations qu'elle entretient déjà avec ce qui est sur le plateau. Nécessite la migration `migration-wb-boards.sql`.
+- **Panneau à trois largeurs** : fermé, palette (les fiches à glisser) ou bibliothèque (le World Building tel qu'il a toujours été, au pixel près). Double-clic sur le fond du plateau pour revenir à la vue initiale.
+- **Objets du plateau** : post-its à texte riche, textes libres, formes (rectangle, arrondi, ellipse), images, cadres nommés qui emportent leur contenu, et flèches libres entre objets quelconques. Une fiche « Carte » s'affiche en grand, telle quelle, sous les autres — un vrai fond de carte sur lequel poser les lieux.
+- **Manipulation** : sélection au lasso (Maj + glisser) et au Maj/Ctrl+clic, alignement et espacement régulier, ordre d'empilement, redimensionnement, copier/coller/dupliquer, **annuler/refaire**. Les outils apparaissent dans une barre flottante collée à la sélection.
+- **Plusieurs plateaux par projet** — un plateau principal, plus autant de plateaux thématiques qu'on veut (les familles régnantes, la carte des factions…).
+- **Export complet du projet** (Paramètres du projet) : une archive .zip contenant tout — univers, manuscrits, chapitrages et synopsis — en Markdown, directement importable dans Notion.
+
+### Changements
+
+- **Pages légales réécrites.** L'édition du service est anonyme (aucune raison sociale, aucun nom). Une mention explique que le code est écrit avec l'assistance de Claude — la conception, l'expérience et les fonctionnalités restant le fait de l'éditrice — et que c'est cette absence de coût de développement qui permet la gratuité. Nouvelle section « Rien n'est prisonnier d'Autris » : le système n'est pas fermé, les exports existent à chaque étape, et l'export régulier est vivement encouragé.
+- Le panneau de fiche est devenu un composant partagé entre l'éditeur de roman et le plateau : une seule mise en page pour un affichage en colonne étroite, avec image, statut, tags et liens modifiables.
+- **Relations réciproques.** « Alina sœur de Set » et « Set frère d'Alina » énoncent un seul fait : ils sont désormais reconnus comme tels, fusionnés en une seule flèche à deux pointes sur le plateau et en une seule pastille dans les fiches. Tracer le réciproque d'une relation existante ne crée plus de doublon.
+- **Le sens des relations est enfin lisible dans les fiches.** « Eliot est amoureux d'Alina » ne dit rien des sentiments d'Alina : la liste des liens dit maintenant qui est le sujet (« amoureux de Eliot » ou « Eliot De Grace · est amoureux »), avec la phrase complète en infobulle.
+
+### Corrections
+
+- Chapitrage : cliquer sur le **texte** d'une case la sélectionne à nouveau (le contenu riche avalait l'événement avant qu'il n'atteigne la case).
+- Chapitrage : la poignée de ligne, trop fine pour être visée, est devenue une vraie prise avec un **menu d'options** — insérer un chapitre au-dessus ou en dessous, colorer la ligne, supprimer le chapitre. La pastille de statut a été décalée et agrandie pour ne plus se superposer à elle.
+
+---
+
 ## [0.4.0] — 2026-08-25
 
 ### Ajouts

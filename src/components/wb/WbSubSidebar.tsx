@@ -12,11 +12,17 @@ export function WbSubSidebar({
   activeCategory,
   onCategoryChange,
   counts,
+  onOpenBoard,
+  boardActive = false,
 }: {
   genre: Genre;
   activeCategory: ActiveView;
   onCategoryChange: (cat: ActiveView) => void;
   counts: Record<string, number>;
+  /** Ramène au plateau (referme la bibliothèque). */
+  onOpenBoard?: () => void;
+  /** true quand le plateau occupe l'écran — l'entrée est alors mise en avant. */
+  boardActive?: boolean;
 }) {
   const cats = categoriesForGenre(genre);
   const grouped = cats.reduce<Record<string, typeof cats>>((acc, c) => {
@@ -109,10 +115,23 @@ export function WbSubSidebar({
         </svg>
       </button>
 
+      {/* ===== Plateau — l'accueil du World Building ===== */}
+      {onOpenBoard && (
+        <button
+          onClick={onOpenBoard}
+          className={`wb-cat${boardActive ? " active" : ""}`}
+          style={{ marginBottom: 4 }}
+          title="Le plateau : cartographier son univers"
+        >
+          <span className="wb-cat-icon">🗺️</span>
+          <span className="wb-cat-label">Plateau</span>
+        </button>
+      )}
+
       {/* ===== Accueil ===== */}
       <button
         onClick={() => onCategoryChange("home")}
-        className={`wb-cat${isHomeActive ? " active" : ""}`}
+        className={`wb-cat${isHomeActive && !boardActive ? " active" : ""}`}
         style={{ marginBottom: 14 }}
       >
         <span className="wb-cat-icon">🏠</span>

@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Genre, WbEntry, WbLink, WbStatus } from "@/types/database";
 import {
-  categoriesForGenre,
   getCategoryDef,
   MOEURS_TABLE_GENRES,
   UNIVERS_SUBTYPES,
@@ -19,6 +18,9 @@ import { WbEntryDetail } from "@/components/wb/WbEntryDetail";
 import { WbHome } from "@/components/wb/WbHome";
 import { Moodboard } from "@/components/wb/Moodboard";
 import { WbCommandPalette } from "@/components/wb/WbCommandPalette";
+import { WbEntryPanel } from "@/components/wb/WbEntryPanel";
+import { WbBoard } from "@/components/wb/board/WbBoard";
+import { FichePalette } from "@/components/wb/board/FichePalette";
 import { WbMoeursTable } from "@/components/wb/WbMoeursTable";
 import { summarizeEntry } from "@/lib/wb-summary";
 import { toneFor } from "@/lib/wb-tones";
@@ -28,6 +30,8 @@ type StatusFilter = "all" | WbStatus;
 type UniversView = "grid" | "moeurs";
 /** Vue active : soit une catégorie WB classique, soit l'accueil (dashboard). */
 type ActiveView = "home" | WbCategory;
+/** Largeur du panneau de droite. Voir PRD « Plateaux vivants ». */
+type PanelMode = "ferme" | "palette" | "bibliotheque";
 
 /**
  * Rend un titre de catégorie en "serif mixte" : la dernière partie
@@ -81,8 +85,16 @@ export function WbClient({
   const [tagFilter, setTagFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [universView, setUniversView] = useState<UniversView>("grid");
+
+  // Largeur du panneau de droite (cf. PRD « Plateaux vivants ») :
+  //   ferme       → tout l'écran au plateau
+  //   palette     → 320 px, on y glisse les fiches (défaut)
+  //   bibliotheque→ plein écran : le World Building tel qu'il a toujours été
+  const [panelMode, setPanelMode] = useState<PanelMode>("palette");
+  // Fiches déjà posées sur le plateau — repérage visuel dans la Palette.
+  const [placedEntryIds, setPlacedEntryIds] = useState<Set<string>>(new Set());
   const supabase = createClient();
   const searchParams = useSearchParams();
 
@@ -94,6 +106,9 @@ export function WbClient({
     if (!entry) return;
     setSelectedId(entryId);
     setActiveCategory(entry.category as WbCategory);
+    // Arriver par un lien direct vers une fiche : on l'ouvre en grand,
+    // l'intention est de la lire, pas de cartographier.
+    setPanelMode("bibliotheque");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -102,7 +117,7 @@ export function WbClient({
     function onKey(ev: KeyboardEvent) {
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "k") {
         ev.preventDefault();
-        setPaletteOpen(true);
+        setCommandPaletteOpen(true);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -247,6 +262,9 @@ export function WbClient({
       if (target.category === "univers_monde") setUniversView("grid");
     }
     setSelectedId(id);
+    // Ouvrir une fiche depuis la recherche globale ou une autre fiche :
+    // on montre la fiche, sans refermer le plateau si on y était.
+    setPanelMode((m) => (m === "ferme" ? "palette" : m));
   }
 
   return (
@@ -257,11 +275,147 @@ export function WbClient({
         onCategoryChange={(c) => {
           setActiveCategory(c);
           setSelectedId(null);
+          // Naviguer dans les catégories, c'est aller à la bibliothèque.
+          setPanelMode("bibliotheque");
         }}
         counts={counts}
+        boardActive={panelMode !== "bibliotheque"}
+        onOpenBoard={() => {
+          setPanelMode("palette");
+          setSelectedId(null);
+        }}
       />
 
-      {selectedEntry ? (
+      {/* Le plateau : l'accueil du World Building. Masqué seulement quand
+          la bibliothèque prend tout l'écran. */}
+      {panelMode !== "bibliotheque" && (
+        <WbBoard
+          projectId={projectId}
+          entries={entries}
+          links={links}
+          onOpenEntry={(id) => {
+            setSelectedId(id);
+            const e = entries.find((x) => x.id === id);
+            if (e) setActiveCategory(e.category as WbCategory);
+            setPanelMode("palette");
+          }}
+          onBackgroundDoubleClick={() => {
+            // Double-clic sur le fond : le panneau revient à sa vue initiale.
+            setSelectedId(null);
+            setPanelMode("palette");
+          }}
+          onLinkCreated={addLink}
+          onPlacedEntriesChange={setPlacedEntryIds}
+        />
+      )}
+
+      {/* Panneau fermé : languette pour le rappeler */}
+      {panelMode === "ferme" && (
+        <button
+          type="button"
+          onClick={() => setPanelMode("palette")}
+          title="Afficher les fiches"
+          aria-label="Afficher le panneau des fiches"
+          className="shrink-0 w-8 h-full flex items-start justify-center pt-4 cursor-pointer transition-colors text-text-quaternary hover:text-[var(--color-accent)]"
+          style={{
+            borderLeft: "1px solid var(--border-soft)",
+            background: "var(--bg-2)",
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M7.5 3L4.5 6L7.5 9"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
+
+      {/* Panneau en Palette, sans fiche ouverte : la liste à glisser */}
+      {panelMode === "palette" && !selectedEntry && (
+        <FichePalette
+          entries={entries}
+          placedEntryIds={placedEntryIds}
+          onOpenEntry={(id) => {
+            setSelectedId(id);
+            const e = entries.find((x) => x.id === id);
+            if (e) setActiveCategory(e.category as WbCategory);
+          }}
+          onExpand={() => setPanelMode("bibliotheque")}
+          onClose={() => setPanelMode("ferme")}
+        />
+      )}
+
+      {/* Panneau élargi (fiche ouverte à côté du plateau) ou Bibliothèque */}
+      {(panelMode === "bibliotheque" || (panelMode === "palette" && selectedEntry)) && (
+        <div
+          className={
+            panelMode === "bibliotheque"
+              ? "flex-1 min-w-0 flex relative"
+              : "w-[480px] shrink-0 flex flex-col h-full"
+          }
+          style={
+            panelMode === "palette"
+              ? { borderLeft: "1px solid var(--border-soft)" }
+              : undefined
+          }
+        >
+          {/* Retour au plateau — même chevron que celui qui referme la
+              Palette, pour que le geste soit le même partout. */}
+          {panelMode === "bibliotheque" && (
+            <button
+              type="button"
+              onClick={() => {
+                setPanelMode("palette");
+                setSelectedId(null);
+              }}
+              title="Revenir au plateau"
+              aria-label="Revenir au plateau"
+              className="absolute top-3 left-2 z-20 w-6 h-6 flex items-center justify-center rounded cursor-pointer transition-colors text-text-quaternary hover:text-[var(--color-accent)] hover:bg-white/[0.05] bg-transparent border-none"
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                <path
+                  d="M5.5 3L9.5 7L5.5 11"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+          {selectedEntry && panelMode === "palette" ? (
+        // Panneau étroit : mise en page une colonne, la même que le
+        // panneau de contexte de l'éditeur. WbEntryDetail (grilles 12
+        // colonnes) est réservé à la Bibliothèque.
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+          <WbEntryPanel
+            entry={selectedEntry}
+            projectId={projectId}
+            projectTags={projectTags}
+            allEntries={entries}
+            entryLinks={linksByEntryId.get(selectedEntry.id) ?? []}
+            onSelectEntry={selectEntry}
+            onLinkAdded={addLink}
+            onLinkRemoved={removeLinkLocal}
+            openFullLabel="↗ Bibliothèque"
+            openFullTitle="Ouvrir la fiche en pleine largeur"
+            backLabel="← Plateau"
+            onBack={() => setSelectedId(null)}
+            onOpenFull={() => setPanelMode("bibliotheque")}
+            onLocalUpdate={(patch) =>
+              setEntries((prev) =>
+                prev.map((e) =>
+                  e.id === selectedEntry.id ? { ...e, ...(patch as Partial<WbEntry>) } : e,
+                ),
+              )
+            }
+          />
+        </div>
+      ) : selectedEntry ? (
         <WbEntryDetail
           entry={selectedEntry}
           projectId={projectId}
@@ -895,10 +1049,13 @@ export function WbClient({
         </div>
       )}
 
+        </div>
+      )}
+
       <WbCommandPalette
-        open={paletteOpen}
+        open={commandPaletteOpen}
         entries={entries}
-        onClose={() => setPaletteOpen(false)}
+        onClose={() => setCommandPaletteOpen(false)}
         onSelectEntry={selectEntry}
       />
     </div>

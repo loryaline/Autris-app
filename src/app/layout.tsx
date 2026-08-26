@@ -50,9 +50,9 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
-  authors: [{ name: "Chênerêve Éditions" }],
-  creator: "Chênerêve Éditions",
-  publisher: "Chênerêve Éditions",
+  authors: [{ name: "Autris" }],
+  creator: "Autris",
+  publisher: "Autris",
   keywords: [
     "écriture",
     "roman",

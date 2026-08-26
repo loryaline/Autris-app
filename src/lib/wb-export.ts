@@ -8,7 +8,7 @@ import { getCategoryDef } from "@/lib/wb-constants";
  * arborescence : une page par catégorie, une sous-page par fiche.
  */
 
-interface ExportableEntry {
+export interface ExportableEntry {
   id: string;
   title: string | null;
   subtitle: string | null;
@@ -70,7 +70,7 @@ export function slugify(s: string): string {
 }
 
 /** Nom de fichier/dossier sûr (sans caractères interdits). */
-function safeName(s: string): string {
+export function safeName(s: string): string {
   return (
     s
       .replace(/[/\\:*?"<>|]/g, "-")
@@ -82,7 +82,7 @@ function safeName(s: string): string {
 }
 
 /** Markdown autonome d'une fiche (titre en #, prêt pour une page Notion). */
-function entryMarkdown(e: ExportableEntry): string {
+export function entryMarkdown(e: ExportableEntry): string {
   const cat = getCategoryDef(e.category);
   let md = `# ${e.title?.trim() || "Sans titre"}\n\n`;
   md += `> ${cat?.label ?? e.category}\n\n`;

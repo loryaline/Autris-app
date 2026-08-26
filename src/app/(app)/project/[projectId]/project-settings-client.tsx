@@ -46,6 +46,10 @@ export function ProjectSettings({ project }: { project: ProjectData }) {
   const [deleting, setDeleting] = useState(false);
   const [showAddNovel, setShowAddNovel] = useState(false);
   const [newNovelTitle, setNewNovelTitle] = useState("");
+  // Export complet du projet (.zip Markdown, importable dans Notion)
+  const [projectExporting, setProjectExporting] = useState(false);
+  const [projectExportStep, setProjectExportStep] = useState<string | null>(null);
+  const [projectExportError, setProjectExportError] = useState<string | null>(null);
   const [addingNovel, setAddingNovel] = useState(false);
 
   async function handleSaveProject() {
@@ -377,6 +381,62 @@ export function ProjectSettings({ project }: { project: ProjectData }) {
           + Nouveau roman
         </button>
       )}
+
+      {/* Sauvegarde complète du projet */}
+      <Card className="p-4 mt-4 mb-3">
+        <h2 className="text-[15px] font-medium text-text-primary mb-1">
+          Sauvegarder tout le projet
+        </h2>
+        <p className="text-[12.5px] text-text-tertiary leading-relaxed mb-3">
+          Une archive .zip contenant <strong>tout</strong> : l&apos;univers,
+          les manuscrits, les chapitrages et les synopsis — en Markdown, prêt
+          à être importé dans Notion. Gardez-en une copie chez vous : c&apos;est
+          la meilleure protection contre une panne d&apos;hébergeur.
+        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={projectExporting}
+            onClick={async () => {
+              setProjectExporting(true);
+              setProjectExportError(null);
+              setProjectExportStep("Préparation…");
+              try {
+                const { buildProjectNotionZip } = await import(
+                  "@/lib/export/exportProjectNotion"
+                );
+                const { downloadBlob } = await import("@/lib/wb-export");
+                const { blob, filename, counts } = await buildProjectNotionZip(
+                  project.id,
+                  setProjectExportStep,
+                );
+                downloadBlob(filename, blob);
+                setProjectExportStep(
+                  `${counts.fiches} fiches · ${counts.chapitres} chapitres · ${counts.synopsis} synopsis`,
+                );
+              } catch (e) {
+                setProjectExportError(
+                  e instanceof Error ? e.message : "Export échoué.",
+                );
+                setProjectExportStep(null);
+              } finally {
+                setProjectExporting(false);
+              }
+            }}
+          >
+            {projectExporting ? "Export en cours…" : "↓ Exporter tout le projet (.zip)"}
+          </Button>
+          {projectExportStep && !projectExportError && (
+            <span className="text-[12px] text-text-tertiary">
+              {projectExportStep}
+            </span>
+          )}
+          {projectExportError && (
+            <span className="text-[12px] text-red">{projectExportError}</span>
+          )}
+        </div>
+      </Card>
 
       {/* Danger zone */}
       <Card className="p-4 mt-4 border-red/20">

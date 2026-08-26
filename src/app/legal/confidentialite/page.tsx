@@ -13,9 +13,33 @@ export default function ConfidentialitePage() {
       
       <h2>1. Responsable du traitement</h2>
       <p>
-        Le responsable du traitement de vos données est{" "}
-        <strong>Chênerêve Éditions</strong> (Suisse). Contact :{" "}
-        <a href="mailto:aline@autris.app">aline@autris.app</a>.
+        Le responsable du traitement est le particulier qui édite Autris, à
+        titre non professionnel et sans but lucratif. Il est joignable à
+        l&apos;adresse <a href="mailto:aline@autris.app">aline@autris.app</a>,
+        qui est le point de contact pour toute demande relative à vos données
+        (accès, rectification, effacement, portabilité, opposition).
+      </p>
+      <p>
+        Son identité est déposée auprès de l&apos;hébergeur, qui peut la
+        communiquer aux autorités compétentes sur réquisition.
+      </p>
+
+      <h2>1 bis. Développement assisté par intelligence artificielle</h2>
+      <p>
+        Le <em>code</em> d&apos;Autris est écrit avec l&apos;assistance de{" "}
+        <strong>Claude</strong> (Anthropic). Cette assistance porte
+        exclusivement sur la fabrication du logiciel — la conception du
+        service et ses fonctionnalités relèvent de la personne qui l&apos;édite.
+      </p>
+      <p>
+        <strong>
+          Vos écrits ne sont jamais transmis à un service d&apos;intelligence
+          artificielle.
+        </strong>{" "}
+        Ils ne sont ni lus, ni analysés, ni utilisés pour entraîner un modèle,
+        et aucune fonctionnalité d&apos;Autris n&apos;envoie vos textes vers un
+        tiers. Ils restent dans la base de données du service, accessibles à
+        vous seule.
       </p>
 
       <h2>2. Données collectées</h2>
@@ -98,8 +122,11 @@ export default function ConfidentialitePage() {
           annuler la suppression, puis effacement définitif.
         </li>
         <li>
-          <strong>Données comptables et de facturation</strong> : conservées
-          10 ans conformément aux obligations légales suisses.
+          <strong>Données de paiement</strong> : aucune. Le service étant
+          gratuit, aucune donnée bancaire n&apos;est collectée ni conservée.
+          Si une participation aux frais d&apos;hébergement devenait
+          nécessaire, cette politique serait mise à jour et vous en seriez
+          informée avant tout paiement.
         </li>
       </ul>
 
@@ -159,7 +186,7 @@ export default function ConfidentialitePage() {
         dans l&apos;Union européenne.
       </p>
 
-      <p className="meta">Dernière mise à jour : <em>(à compléter)</em></p>
+      <p className="meta">Dernière mise à jour : <em>26.08.2026</em></p>
     </>
   );
 }
