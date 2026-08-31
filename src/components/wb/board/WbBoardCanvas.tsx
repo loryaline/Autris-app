@@ -178,34 +178,67 @@ export function WbBoardCanvas({
   const [heights, setHeights] = useState<Record<string, number>>({});
   const observerRef = useRef<ResizeObserver | null>(null);
 
-  useEffect(() => {
-    const ro = new ResizeObserver((obs) => {
-      setHeights((prev) => {
-        const next = { ...prev };
-        let changed = false;
-        for (const o of obs) {
-          const id = (o.target as HTMLElement).dataset.nodeId;
-          if (!id) continue;
-          const h = o.contentRect.height;
-          if (h > 0 && Math.abs((prev[id] ?? 0) - h) > 0.5) {
-            next[id] = h;
-            changed = true;
+  /**
+   * L'observateur est créé À LA DEMANDE, pas dans un effet.
+   *
+   * `observeNode` est un rappel de `ref` : React l'appelle AVANT les
+   * effets. Créer l'observateur dans un `useEffect` le laissait donc à
+   * `null` pendant tout le premier rendu, et aucune des vignettes déjà
+   * posées n'était jamais mesurée. Les flèches retombaient sur la hauteur
+   * stockée — 116 px là où une fiche à portrait en fait 252 — et leurs
+   * pointes s'arrêtaient au milieu de l'image au lieu du bord.
+   */
+  const getObserver = useCallback(() => {
+    if (!observerRef.current) {
+      observerRef.current = new ResizeObserver((obs) => {
+        setHeights((prev) => {
+          const next = { ...prev };
+          let changed = false;
+          for (const o of obs) {
+            const id = (o.target as HTMLElement).dataset.nodeId;
+            if (!id) continue;
+            const h = o.contentRect.height;
+            if (h > 0 && Math.abs((prev[id] ?? 0) - h) > 0.5) {
+              next[id] = h;
+              changed = true;
+            }
           }
-        }
-        return changed ? next : prev;
+          return changed ? next : prev;
+        });
       });
-    });
-    observerRef.current = ro;
-    return () => ro.disconnect();
+    }
+    return observerRef.current;
   }, []);
+
+  useEffect(() => () => observerRef.current?.disconnect(), []);
 
   useEffect(() => {
     onHeightsChange?.(heights);
   }, [heights, onHeightsChange]);
 
-  const observeNode = useCallback((el: HTMLDivElement | null) => {
-    if (el) observerRef.current?.observe(el);
-  }, []);
+  const observeNode = useCallback(
+    (el: HTMLDivElement | null) => {
+      if (!el) return;
+      const ro = getObserver();
+      ro.observe(el);
+      // React 19 : le nettoyage rendu par un rappel de ref est appelé au
+      // démontage. Sans lui, l'observateur retiendrait des vignettes
+      // supprimées et leur hauteur resterait dans la table.
+      return () => {
+        ro.unobserve(el);
+        const id = el.dataset.nodeId;
+        if (id) {
+          setHeights((prev) => {
+            if (!(id in prev)) return prev;
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+        }
+      };
+    },
+    [getObserver],
+  );
 
   // Taille de la surface — celle qui porte réellement la transformation.
   // Sert à garder la barre contextuelle à l'écran, et à dire à la

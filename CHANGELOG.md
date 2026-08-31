@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.6.1] — 2026-08-31
+
+### Corrections
+
+- **Les flèches s'arrêtent à nouveau au bord des vignettes** au lieu de venir se planter au milieu du portrait. La hauteur réelle des vignettes n'était jamais mesurée : l'observateur était créé trop tard pour les fiches déjà posées au chargement, et toute la géométrie retombait sur la hauteur stockée — moitié moins qu'une fiche à portrait.
+- **Le cadre de la mini-carte tombe juste.** Il souffrait de la même mesure absente : la miniature cadrait sur des vignettes deux fois trop courtes, ce qui faussait l'échelle et la position de la fenêtre.
+
+---
+
 ## [0.6.0] — 2026-08-31
 
 ### Ajouts
