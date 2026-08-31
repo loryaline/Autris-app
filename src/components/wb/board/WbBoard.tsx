@@ -1,13 +1,32 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { WbBoardEdge, WbBoardNode, WbEntry, WbLink } from "@/types/database";
 import { useBoard } from "./useBoard";
-import { WbBoardCanvas, defaultNodeBox, type Viewport } from "./WbBoardCanvas";
+import {
+  WbBoardCanvas,
+  defaultNodeBox,
+  LAYOUT_STEP,
+  type Viewport,
+} from "./WbBoardCanvas";
 import { LinkTypePicker } from "./LinkTypePicker";
+import { BoardMiniMap } from "./BoardMiniMap";
+import {
+  BoardFinder,
+  EMPTY_FILTER,
+  dimmedByFilter,
+  type BoardFilter,
+} from "./BoardFinder";
 import { RichEditableCell } from "@/components/planning/RichEditableCell";
 import { createClient } from "@/lib/supabase/client";
 import { appConfirm } from "@/lib/app-confirm";
+import { customLinkTypes, generationGap, isFamilyType } from "@/lib/wb-constants";
 
 /**
  * Le plateau complet : surface + barre d'outils + création de liens.
@@ -90,6 +109,31 @@ function OrderButton({
   );
 }
 
+/** Une option du menu « Déplier » : un titre, une explication. */
+function ExpandOption({
+  title,
+  desc,
+  onClick,
+}: {
+  title: string;
+  desc: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left px-3.5 py-2 cursor-pointer bg-transparent border-none hover:bg-white/[0.05] transition-colors"
+    >
+      <div className="text-[13px]" style={{ color: "var(--text-1)" }}>
+        {title}
+      </div>
+      <div className="text-[11px] mt-0.5" style={{ color: "var(--text-4)" }}>
+        {desc}
+      </div>
+    </button>
+  );
+}
+
 /** Bouton de la barre du haut (créer un objet). */
 function ToolButton({
   onClick,
@@ -163,8 +207,23 @@ export function WbBoard({
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
   const [viewportReady, setViewportReady] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [editingPostit, setEditingPostit] = useState<WbBoardNode | null>(null);
+  // On ne garde QUE l'identifiant : une copie du nœud se périmerait dès
+  // la première frappe, et la réinjecter (au clic sur une couleur, par
+  // exemple) effacerait le texte en cours de saisie.
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [showShapeMenu, setShowShapeMenu] = useState(false);
+  const [showExpandMenu, setShowExpandMenu] = useState(false);
+  // Message fugace : dire ce qui vient de se passer quand le plateau,
+  // lui, ne bouge pas — « rien n'est apparu » ne doit jamais rester
+  // ambigu entre une panne et un plateau déjà complet.
+  const [flash, setFlash] = useState<string | null>(null);
+  // Filtrer est un point de vue, jamais une modification : rien n'est écrit.
+  const [filter, setFilter] = useState<BoardFilter>(EMPTY_FILTER);
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 3200);
+    return () => clearTimeout(t);
+  }, [flash]);
   const [renamingCadre, setRenamingCadre] = useState<
     { node: WbBoardNode; value: string } | null
   >(null);
@@ -199,6 +258,8 @@ export function WbBoard({
     [entries],
   );
   const linksById = useMemo(() => new Map(links.map((l) => [l.id, l])), [links]);
+  // Le vocabulaire propre au projet, à reproposer au lieu de le réécrire.
+  const ownTypes = useMemo(() => customLinkTypes(links), [links]);
 
   // Signale à la Palette quelles fiches sont déjà posées.
   const placedKey = board.nodes
@@ -214,6 +275,41 @@ export function WbBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placedKey]);
 
+  /** Nœud en cours d'édition, lu dans l'état du plateau (jamais copié). */
+  const editingPostit = editingNodeId
+    ? (board.nodes.find((n) => n.id === editingNodeId) ?? null)
+    : null;
+
+  /* ---- Saisie d'un texte / post-it ----
+   * Une session d'édition = UNE entrée d'historique, prise à
+   * l'ouverture. Les frappes s'enregistrent ensuite en silence, avec un
+   * léger différé pour ne pas écrire à chaque lettre. */
+  const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (editingNodeId) board.beginHistory();
+    // On ne veut réagir qu'à l'ouverture d'une session d'édition.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingNodeId]);
+
+  const saveDraft = useCallback(
+    (node: WbBoardNode, html: string) => {
+      if (draftTimer.current) clearTimeout(draftTimer.current);
+      draftTimer.current = setTimeout(() => {
+        board.updateNodeQuiet(node.id, {
+          content: { ...node.content, html },
+        });
+      }, 350);
+    },
+    [board],
+  );
+
+  // Le dernier jet ne doit pas mourir avec le composant.
+  useEffect(() => {
+    return () => {
+      if (draftTimer.current) clearTimeout(draftTimer.current);
+    };
+  }, []);
+
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleViewport = useCallback(
     (v: Viewport, persist: boolean) => {
@@ -225,7 +321,15 @@ export function WbBoard({
     [board],
   );
 
-  /** Dimensions de la surface de plateau (hors barre d'outils). */
+  /** Hauteurs réelles des vignettes, mesurées par la surface. */
+  const [nodeHeights, setNodeHeights] = useState<Record<string, number>>({});
+
+  // Taille de la SURFACE, rapportée par elle-même (cf. WbBoardCanvas).
+  // La déduire ici — hauteur du conteneur moins TOOLBAR_H — revenait à
+  // parier sur la mise en page, et le cadre de la mini-carte payait
+  // chaque écart sans que rien ne le signale.
+  const [hostSize, setHostSize] = useState({ w: 0, h: 0 });
+
   const canvasSize = useCallback(() => {
     const r = hostRef.current?.getBoundingClientRect();
     return { w: r?.width ?? 800, h: (r?.height ?? 600) - TOOLBAR_H };
@@ -260,6 +364,51 @@ export function WbBoard({
       handleViewport({ x: w / 2 - cx * zoom, y: h / 2 - cy * zoom, zoom }, persist);
     },
     [board.nodes, canvasSize, handleViewport],
+  );
+
+  /** Enregistre le plateau en PNG. */
+  const handleExportImage = useCallback(async () => {
+    const host = hostRef.current;
+    if (!host) return;
+    try {
+      const { exportBoardImage } = await import("@/lib/export/exportBoardImage");
+      await exportBoardImage({
+        title: board.board?.title ?? "Plateau",
+        nodes: board.nodes,
+        edges: board.edges,
+        entriesById,
+        linksById,
+        heights: nodeHeights,
+        host,
+      });
+      setFlash("Image enregistrée.");
+    } catch (err) {
+      setFlash(err instanceof Error ? err.message : "L'export a échoué.");
+    }
+  }, [board.board, board.nodes, board.edges, entriesById, linksById, nodeHeights]);
+
+  /** Objets mis en retrait par le filtre courant. */
+  const dimmed = useMemo(
+    () => dimmedByFilter(board.nodes, entriesById, filter),
+    [board.nodes, entriesById, filter],
+  );
+
+  /** Amène un objet au centre de l'écran et le sélectionne. */
+  const goToNode = useCallback(
+    (node: WbBoardNode) => {
+      const { w, h } = canvasSize();
+      const zoom = Math.max(viewport.zoom, 0.6);
+      handleViewport(
+        {
+          x: w / 2 - (node.x + node.w / 2) * zoom,
+          y: h / 2 - (node.y + node.h / 2) * zoom,
+          zoom,
+        },
+        true,
+      );
+      setSelectedIds(new Set([node.id]));
+    },
+    [canvasSize, handleViewport, viewport.zoom],
   );
 
   // Premier affichage : si le plateau n'a jamais été déplacé, on cadre le
@@ -319,6 +468,155 @@ export function WbBoard({
       board.applyOrder(arr);
     },
     [board, orderedNodes, selectedIds],
+  );
+
+  /* ============================================================
+   * Déplier — ce qu'aucun tableau blanc ne sait faire
+   *
+   * Le World Building connaît déjà les relations : on ne redemande pas
+   * à l'autrice de les retracer à la main. Déplier pose les fiches
+   * manquantes et laisse `materializeLinks` dessiner les flèches.
+   * ============================================================ */
+
+  /** Fiches déjà posées, indexées par fiche d'origine. */
+  const placedByEntry = useMemo(() => {
+    const m = new Map<string, WbBoardNode>();
+    for (const n of board.nodes) if (n.entry_id) m.set(n.entry_id, n);
+    return m;
+  }, [board.nodes]);
+
+  /** Pose une fiche au point voulu et rattache ses relations connues. */
+  const placeEntry = useCallback(
+    async (entryId: string, x: number, y: number) => {
+      const box = defaultNodeBox(entriesById.get(entryId));
+      const created = await board.addNode("fiche", x, y, {
+        entryId,
+        w: box.w,
+        h: box.h,
+        z: box.z,
+      });
+      if (created) await board.materializeLinks(created, links);
+      return created;
+    },
+    [board, entriesById, links],
+  );
+
+  /**
+   * Déplie la parenté d'un personnage : aînés au-dessus, descendance en
+   * dessous, fratrie et conjoints au même niveau.
+   */
+  const expandFamily = useCallback(
+    async (node: WbBoardNode) => {
+      const me = node.entry_id;
+      if (!me) return;
+
+      // Regroupe les fiches à poser par niveau de génération.
+      const byLevel = new Map<number, string[]>();
+      for (const l of links) {
+        const involves = l.from_entry_id === me || l.to_entry_id === me;
+        if (!involves || !isFamilyType(l.link_type)) continue;
+        const otherId = l.from_entry_id === me ? l.to_entry_id : l.from_entry_id;
+        if (placedByEntry.has(otherId) || !entriesById.has(otherId)) continue;
+
+        // Le décalage se lit depuis le sujet : si c'est MOI le sujet,
+        // l'autre est du côté opposé.
+        const gap = generationGap(l.link_type);
+        const level = l.from_entry_id === me ? -gap : gap;
+        const arr = byLevel.get(level) ?? [];
+        if (!arr.includes(otherId)) arr.push(otherId);
+        byLevel.set(level, arr);
+      }
+      if (byLevel.size === 0) return;
+
+      await board.asSingleAction(async () => {
+        for (const [level, ids] of byLevel) {
+          // Un niveau au-dessus = plus haut à l'écran, donc y décroissant.
+          const y = node.y - level * LAYOUT_STEP.y;
+          for (const [i, id] of ids.entries()) {
+            const x = node.x + (i - (ids.length - 1) / 2) * LAYOUT_STEP.x;
+            await placeEntry(id, x, y);
+          }
+        }
+      });
+    },
+    [board, links, placedByEntry, entriesById, placeEntry],
+  );
+
+  /** Déplie un groupe social : les membres en cercle autour de la fiche. */
+  const expandGroup = useCallback(
+    async (node: WbBoardNode, group: string) => {
+      const me = node.entry_id;
+      if (!me) return;
+      const members = entries.filter(
+        (e) =>
+          e.id !== me &&
+          (e.groups ?? []).includes(group) &&
+          !placedByEntry.has(e.id),
+      );
+      if (members.length === 0) return;
+
+      await board.asSingleAction(async () => {
+        const radius = Math.max(340, members.length * 52);
+        for (const [i, e] of members.entries()) {
+          const angle = (i / members.length) * Math.PI * 2 - Math.PI / 2;
+          await placeEntry(
+            e.id,
+            node.x + Math.cos(angle) * radius,
+            node.y + Math.sin(angle) * radius * 0.75,
+          );
+        }
+      });
+    },
+    [board, entries, placedByEntry, placeEntry],
+  );
+
+  /**
+   * Trace les relations existantes entre fiches DÉJÀ posées, sans rien
+   * poser de neuf : deux fiches arrivées séparément sur le plateau se
+   * retrouvent liées dans l'univers mais sans flèche entre elles.
+   */
+  const revealExisting = useCallback(async () => {
+    let n = 0;
+    await board.asSingleAction(async () => {
+      n = await board.revealLinks(links);
+    });
+    setFlash(
+      !n
+        ? "Aucun lien à afficher : tout ce que l'univers sait est déjà tracé."
+        : n === 1
+          ? "1 lien affiché."
+          : `${n} liens affichés.`,
+    );
+  }, [board, links]);
+
+  /** Déplie toutes les fiches directement liées, en couronne. */
+  const expandRelations = useCallback(
+    async (node: WbBoardNode) => {
+      const me = node.entry_id;
+      if (!me) return;
+      const ids: string[] = [];
+      for (const l of links) {
+        const involves = l.from_entry_id === me || l.to_entry_id === me;
+        if (!involves) continue;
+        const otherId = l.from_entry_id === me ? l.to_entry_id : l.from_entry_id;
+        if (placedByEntry.has(otherId) || !entriesById.has(otherId)) continue;
+        if (!ids.includes(otherId)) ids.push(otherId);
+      }
+      if (ids.length === 0) return;
+
+      await board.asSingleAction(async () => {
+        const radius = Math.max(340, ids.length * 52);
+        for (const [i, id] of ids.entries()) {
+          const angle = (i / ids.length) * Math.PI * 2 - Math.PI / 2;
+          await placeEntry(
+            id,
+            node.x + Math.cos(angle) * radius,
+            node.y + Math.sin(angle) * radius * 0.75,
+          );
+        }
+      });
+    },
+    [board, links, placedByEntry, entriesById, placeEntry],
   );
 
   /* ---- Copier / coller / dupliquer ----
@@ -475,7 +773,7 @@ export function WbBoard({
       h: 140,
       z: zBounds().max + 1,
     });
-    if (node) setEditingPostit(node);
+    if (node) setEditingNodeId(node.id);
   }
 
   async function handleAddTexte() {
@@ -487,7 +785,7 @@ export function WbBoard({
       h: 32,
       z: zBounds().max + 1,
     });
-    if (node) setEditingPostit(node);
+    if (node) setEditingNodeId(node.id);
   }
 
   async function handleAddForme(shape: "rect" | "round" | "ellipse") {
@@ -608,6 +906,14 @@ export function WbBoard({
     selectedIds.size === 1
       ? board.nodes.find((n) => n.id === [...selectedIds][0]) ?? null
       : null;
+
+  /** Vignettes fiches sélectionnées — colorables même à plusieurs :
+   * une teinte par maison ou par arc se pose sur tout un groupe. */
+  const selectedFiches = board.nodes.filter(
+    (n) => selectedIds.has(n.id) && n.kind === "fiche",
+  );
+  const allFiches =
+    selectedFiches.length > 0 && selectedFiches.length === selectedIds.size;
 
   return (
     <div ref={hostRef} className="flex-1 min-w-0 flex flex-col relative">
@@ -845,9 +1151,36 @@ export function WbBoard({
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
+          <BoardFinder
+            nodes={board.nodes}
+            entriesById={entriesById}
+            filter={filter}
+            onFilterChange={setFilter}
+            onGoTo={goToNode}
+            palette={[
+              { label: "Doré (défaut)", stroke: "var(--accent)" },
+              ...SHAPE_COLORS.map((c) => ({ label: c.label, stroke: c.stroke })),
+            ]}
+          />
           <span className="text-[11px]" style={{ color: "var(--text-4)" }}>
             {Math.round(viewport.zoom * 100)} %
           </span>
+          <button
+            onClick={handleExportImage}
+            title="Enregistrer le plateau en image (PNG)"
+            className="rd-icon-btn"
+            aria-label="Enregistrer le plateau en image"
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <path
+                d="M7 2v7M7 9L4.5 6.5M7 9l2.5-2.5M2.5 11.5h9"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
           <button
             onClick={() => centerOnContent(1, true)}
             title="Recentrer la vue sur le centre du plateau (et remettre le zoom à 100 %)"
@@ -872,11 +1205,14 @@ export function WbBoard({
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
         expandedId={selectedNode?.kind === "fiche" ? selectedNode.id : null}
+        dimmedIds={dimmed}
+        onHeightsChange={setNodeHeights}
+        onCanvasSizeChange={setHostSize}
         onMoveNode={board.moveNode}
         onResizeNode={board.resizeNode}
         onOpenEntry={onOpenEntry}
         onBackgroundDoubleClick={onBackgroundDoubleClick}
-        onEditPostit={setEditingPostit}
+        onEditPostit={(n) => setEditingNodeId(n.id)}
         onRenameEdge={(edge) =>
           setRenamingEdge({ edge, value: edge.label ?? "" })
         }
@@ -916,6 +1252,62 @@ export function WbBoard({
         onBeginHistory={board.beginHistory}
         selectionToolbar={
           <>
+            {/* Éditer — sur un texte ou un post-it seul */}
+            {(selectedNode?.kind === "texte" || selectedNode?.kind === "postit") && (
+              <>
+                <button
+                  onClick={() => setEditingNodeId(selectedNode.id)}
+                  title="Modifier le contenu"
+                  className="inline-flex items-center gap-1.5 h-7 px-2 rounded text-[11.5px] cursor-pointer transition-colors bg-transparent border-none hover:bg-white/[0.05]"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                    <path
+                      d="M2.5 11.5L3 9L9.5 2.5a1.4 1.4 0 0 1 2 2L5 11l-2.5.5Z"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Éditer
+                </button>
+                <span
+                  className="w-px h-4 mx-1"
+                  style={{ background: "var(--border-soft)" }}
+                />
+              </>
+            )}
+
+            {/* Déplier — sur une fiche seule */}
+            {selectedNode?.kind === "fiche" && selectedNode.entry_id && (
+              <>
+                <button
+                  onClick={() => setShowExpandMenu((v) => !v)}
+                  title="Déplier les fiches liées d'après les relations déjà écrites"
+                  className="inline-flex items-center gap-1.5 h-7 px-2 rounded text-[11.5px] cursor-pointer transition-colors bg-transparent border-none hover:bg-white/[0.05]"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="1.6" fill="currentColor" />
+                    <circle cx="2.5" cy="3" r="1.3" stroke="currentColor" strokeWidth="1.1" />
+                    <circle cx="11.5" cy="3" r="1.3" stroke="currentColor" strokeWidth="1.1" />
+                    <circle cx="2.5" cy="11" r="1.3" stroke="currentColor" strokeWidth="1.1" />
+                    <circle cx="11.5" cy="11" r="1.3" stroke="currentColor" strokeWidth="1.1" />
+                    <path
+                      d="M5.8 5.9L3.4 4M8.2 5.9L10.6 4M5.8 8.1L3.4 10M8.2 8.1L10.6 10"
+                      stroke="currentColor"
+                      strokeWidth="1"
+                    />
+                  </svg>
+                  Déplier
+                </button>
+                <span
+                  className="w-px h-4 mx-1"
+                  style={{ background: "var(--border-soft)" }}
+                />
+              </>
+            )}
+
             {/* Alignement — dès qu'il y a plusieurs objets */}
             {selectedIds.size > 1 && (
               <>
@@ -1053,6 +1445,52 @@ export function WbBoard({
               </>
             )}
 
+            {/* Couleur d'une vignette fiche — pour trier l'univers à
+                l'œil : une couleur par maison, par arc, par ce qu'on veut. */}
+            {allFiches && (
+              <>
+                <span
+                  className="w-px h-4 mx-1"
+                  style={{ background: "var(--border-soft)" }}
+                />
+                {[
+                  { label: "Doré (défaut)", stroke: "var(--accent)" },
+                  ...SHAPE_COLORS,
+                ].map((c) => {
+                  const active = selectedFiches.every(
+                    (n) => (n.style.color ?? "var(--accent)") === c.stroke,
+                  );
+                  return (
+                    <button
+                      key={c.stroke}
+                      onClick={() =>
+                        board.asSingleAction(async () => {
+                          for (const n of selectedFiches) {
+                            await board.updateNode(n.id, {
+                              style: { ...n.style, color: c.stroke },
+                            });
+                          }
+                        })
+                      }
+                      title={
+                        selectedFiches.length > 1
+                          ? `${c.label} — ${selectedFiches.length} fiches`
+                          : c.label
+                      }
+                      aria-label={c.label}
+                      className="w-4 h-4 rounded-[3px] cursor-pointer"
+                      style={{
+                        background: c.stroke,
+                        border: active
+                          ? "2px solid var(--text-1)"
+                          : "1px solid var(--border-soft)",
+                      }}
+                    />
+                  );
+                })}
+              </>
+            )}
+
             {/* Couleur d'un cadre */}
             {selectedNode?.kind === "cadre" && (
               <>
@@ -1123,6 +1561,25 @@ export function WbBoard({
         }
       />
 
+      <BoardMiniMap
+        nodes={board.nodes}
+        viewport={viewport}
+        canvasW={hostSize.w}
+        canvasH={hostSize.h}
+        dimmedIds={dimmed}
+        heights={nodeHeights}
+        onJump={(x, y) =>
+          handleViewport(
+            {
+              x: hostSize.w / 2 - x * viewport.zoom,
+              y: hostSize.h / 2 - y * viewport.zoom,
+              zoom: viewport.zoom,
+            },
+            true,
+          )
+        }
+      />
+
       {/* Aide contextuelle discrète */}
       {board.nodes.length <= 1 && (
         <div
@@ -1142,7 +1599,7 @@ export function WbBoard({
         <>
           <div
             className="fixed inset-0 z-[80] bg-black/40"
-            onClick={() => setEditingPostit(null)}
+            onClick={() => setEditingNodeId(null)}
           />
           {(() => {
             const isTexte = editingPostit.kind === "texte";
@@ -1172,12 +1629,17 @@ export function WbBoard({
                   }}
                 >
                   <RichEditableCell
+                    // Éditeur monté et focalisé dès l'ouverture : sinon
+                    // on tape dans le vide, et Entrée actionne le bouton
+                    // « Terminé » qui a le focus par défaut.
+                    editing
+                    onExitEdit={() => {}}
                     value={(editingPostit.content.html as string) ?? ""}
-                    onSave={(html) => {
-                      board.updateNode(editingPostit.id, {
-                        content: { ...editingPostit.content, html },
-                      });
-                    }}
+                    // La saisie est enregistrée à la frappe, pas à la
+                    // sortie du champ : plus rien ne dépend du focus, donc
+                    // plus rien ne se perd en cliquant ailleurs.
+                    onChange={(html) => saveDraft(editingPostit, html)}
+                    onSave={(html) => saveDraft(editingPostit, html)}
                   />
                 </div>
 
@@ -1191,10 +1653,12 @@ export function WbBoard({
                       {[16, 22, 30, 42].map((s) => (
                         <button
                           key={s}
+                          // Garde le focus dans l'éditeur : un blur ici
+                          // interromprait la saisie en cours.
+                          onMouseDown={(ev) => ev.preventDefault()}
                           onClick={() => {
                             const style = { ...editingPostit.style, fontSize: s };
                             board.updateNode(editingPostit.id, { style });
-                            setEditingPostit({ ...editingPostit, style });
                           }}
                           className="w-7 h-7 rounded cursor-pointer font-serif"
                           style={{
@@ -1222,10 +1686,10 @@ export function WbBoard({
                     POSTIT_COLORS.map((c) => (
                       <button
                         key={c}
+                        onMouseDown={(ev) => ev.preventDefault()}
                         onClick={() => {
                           const style = { ...editingPostit.style, color: c };
                           board.updateNode(editingPostit.id, { style });
-                          setEditingPostit({ ...editingPostit, style });
                         }}
                         aria-label={`Couleur ${c}`}
                         className="w-5 h-5 rounded-[3px] cursor-pointer"
@@ -1240,7 +1704,7 @@ export function WbBoard({
                     ))
                   )}
                   <button
-                    onClick={() => setEditingPostit(null)}
+                    onClick={() => setEditingNodeId(null)}
                     className="ml-auto h-8 px-3 rounded text-[12.5px] cursor-pointer border-none"
                     style={
                       isTexte
@@ -1254,6 +1718,100 @@ export function WbBoard({
               </div>
             );
           })()}
+        </>
+      )}
+
+      {/* Message fugace */}
+      {flash && (
+        <div
+          className="fixed left-1/2 bottom-8 -translate-x-1/2 z-[90] px-3.5 py-2 rounded-[var(--radius-md)] text-[12px] shadow-2xl pointer-events-none"
+          style={{
+            background: "var(--bg-3)",
+            border: "1px solid var(--border-soft)",
+            color: "var(--text-2)",
+          }}
+        >
+          {flash}
+        </div>
+      )}
+
+      {/* Menu Déplier */}
+      {showExpandMenu && selectedNode?.entry_id && (
+        <>
+          <div
+            className="fixed inset-0 z-[80]"
+            onClick={() => setShowExpandMenu(false)}
+          />
+          <div
+            className="fixed z-[85] inset-x-0 top-[24vh] mx-auto w-[min(380px,92vw)] rounded-[var(--radius-md)] py-1.5 shadow-2xl"
+            style={{ background: "var(--bg-3)", border: "1px solid var(--border-soft)" }}
+          >
+            <div
+              className="px-3.5 pt-1.5 pb-2 text-[10px] uppercase"
+              style={{ letterSpacing: "0.14em", color: "var(--text-4)" }}
+            >
+              Déplier autour de{" "}
+              {entriesById.get(selectedNode.entry_id)?.title ?? "cette fiche"}
+            </div>
+
+            <ExpandOption
+              title="La famille"
+              desc="Aînés au-dessus, descendance en dessous, fratrie au même niveau."
+              onClick={() => {
+                setShowExpandMenu(false);
+                expandFamily(selectedNode);
+              }}
+            />
+            <ExpandOption
+              title="Toutes les relations"
+              desc="Chaque fiche directement liée, disposée en couronne."
+              onClick={() => {
+                setShowExpandMenu(false);
+                expandRelations(selectedNode);
+              }}
+            />
+
+            <div className="my-1 border-t border-white/[0.06]" />
+            <ExpandOption
+              title="Les liens manquants"
+              desc="Sans rien poser : trace les relations entre fiches déjà présentes."
+              onClick={() => {
+                setShowExpandMenu(false);
+                revealExisting();
+              }}
+            />
+
+            {(entriesById.get(selectedNode.entry_id)?.groups ?? []).length > 0 && (
+              <>
+                <div className="my-1 border-t border-white/[0.06]" />
+                <div
+                  className="px-3.5 pt-1 pb-1 text-[10px] uppercase"
+                  style={{ letterSpacing: "0.14em", color: "var(--text-4)" }}
+                >
+                  Groupes
+                </div>
+                {(entriesById.get(selectedNode.entry_id)?.groups ?? []).map((g) => (
+                  <ExpandOption
+                    key={g}
+                    title={g}
+                    desc="Tous les membres du groupe, en cercle."
+                    onClick={() => {
+                      setShowExpandMenu(false);
+                      expandGroup(selectedNode, g);
+                    }}
+                  />
+                ))}
+              </>
+            )}
+
+            <p
+              className="px-3.5 pt-2 pb-1 text-[10.5px] leading-snug"
+              style={{ color: "var(--text-4)" }}
+            >
+              Seules les fiches absentes du plateau sont posées. Rien n&apos;est
+              écrit dans l&apos;univers : on affiche ce qu&apos;il sait déjà.
+            </p>
+          </div>
         </>
       )}
 
@@ -1500,6 +2058,7 @@ export function WbBoard({
           }
           toTitle={entriesById.get(pendingLink.to.entry_id ?? "")?.title ?? "l'autre"}
           anchor={pendingLink.anchor}
+          customTypes={ownTypes}
           onPick={confirmLink}
           onCancel={() => setPendingLink(null)}
         />

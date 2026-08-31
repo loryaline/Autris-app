@@ -13,12 +13,15 @@ export function LinkTypePicker({
   fromTitle,
   toTitle,
   anchor,
+  customTypes = [],
   onPick,
   onCancel,
 }: {
   fromTitle: string;
   toTitle: string;
   anchor: { top: number; left: number };
+  /** Types déjà inventés dans ce projet — proposés avant la liste fournie. */
+  customTypes?: readonly string[];
   onPick: (type: string) => void;
   onCancel: () => void;
 }) {
@@ -35,10 +38,16 @@ export function LinkTypePicker({
   }, [onCancel]);
 
   const q = query.trim().toLowerCase();
-  const groups = LINK_TYPE_GROUPS.map((g) => ({
-    label: g.label,
-    types: g.types.filter((t) => !q || t.toLowerCase().includes(q)),
-  })).filter((g) => g.types.length > 0);
+  // Ses propres mots d'abord : c'est le vocabulaire de SON univers.
+  const groups = [
+    { label: "Vos types", types: customTypes },
+    ...LINK_TYPE_GROUPS,
+  ]
+    .map((g) => ({
+      label: g.label,
+      types: g.types.filter((t) => !q || t.toLowerCase().includes(q)),
+    }))
+    .filter((g) => g.types.length > 0);
 
   const custom = q && !groups.some((g) => g.types.some((t) => t.toLowerCase() === q));
 

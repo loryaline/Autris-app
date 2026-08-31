@@ -27,6 +27,40 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.6.0] — 2026-08-31
+
+### Ajouts
+
+- **Trouver et filtrer sur un plateau.** Un champ de recherche retrouve une fiche par son nom, un cadre par son titre, un post-it par son contenu — et amène la vue dessus. Les filtres isolent une catégorie ou une couleur : ce qui ne correspond pas est **estompé, jamais retiré**, pour que les flèches qui traversent le plateau restent lisibles.
+- **Mini-carte** en bas à droite : tout le plateau d'un coup d'œil, avec la fenêtre courante en clair sur un fond assombri. Un clic s'y rend.
+- **Export d'un plateau en image** (PNG, densité double). C'est un redessin fidèle — mêmes positions, mêmes couleurs, mêmes courbes — et non une capture d'écran.
+- **Couleur des vignettes fiches**, avec la palette des cadres. Applicable à toute une sélection d'un coup : une teinte par maison, par arc, par ce qu'on veut.
+- **« Les liens manquants »** dans le menu Déplier : trace les relations entre fiches déjà posées, sans rien ajouter au plateau. Sous la main, jamais automatique.
+- **Portrait carré** sur les vignettes de personnages illustrés : un personnage se reconnaît à son visage.
+- **Relations et plateaux dans l'export du projet** : `Univers/Relations.md` (toutes les relations, orientées, groupées par sujet) et `Univers/Plateaux.md` (la composition de chaque plateau).
+- **Types de liens personnalisés mémorisés.** Un type inventé une fois — « amoureux », « suzerain » — est reproposé ensuite sous « Vos types », au lieu d'être ressaisi à chaque flèche.
+
+### Changements
+
+- **Vocabulaire familial neutre.** Le genre appartient au personnage, pas au lien qui l'unit à un autre : père/mère deviennent **parent**, fils/fille **enfant**, frère/sœur **adelphe**, époux/épouse **mariés** (avec **conjoint** pour l'union sans mariage). Les mots retirés restent lus — réciprocité, dépliage généalogique et arbre généalogique fonctionnent sur les univers déjà écrits. Migration facultative : `migration-wb-links-adelphe.sql`.
+- **Flèches à deux pointes uniquement pour les relations symétriques.** « adelphe » se lit pareil des deux bords, « parent » non — son inverse est un autre fait, la filiation. Une double pointe sur un lien asymétrique empêchait de savoir qui était le parent.
+- **Un ajout de lien refusé s'explique** au lieu d'échouer en silence : poser « adelphe » alors que la relation existe déjà dans l'autre sens dit maintenant pourquoi.
+- **Poignées de lien et de redimensionnement distinctes**, de taille constante quel que soit le zoom, avec un point de liaison sur chacun des quatre bords.
+- Les cadres se déplacent à nouveau en cliquant n'importe où dans leur surface.
+
+### Corrections
+
+- **Le total des mots ne passe plus pour la production de la semaine** sur le tableau de bord : le chiffre porte désormais « au total », et l'absence d'écriture se dit en toutes lettres.
+- **Le texte libre du plateau se modifie au double-clic**, comme le titre d'un cadre. Le contenu riche avalait l'événement avant qu'il n'atteigne l'objet.
+- **Plus de flèche en double** entre deux mêmes vignettes : une relation n'est tracée qu'une fois, et le rendu masque les doublons hérités. Nettoyage facultatif : `migration-wb-board-edges-dedupe.sql`.
+- **Le dépliage espace les vignettes selon leur hauteur réelle** — les portraits se chevauchaient.
+
+### Retraits
+
+- **Parenté indirecte retirée du sélecteur de liens** : cousin, oncle, tante, neveu, nièce, grand-parent, belle-famille. Toutes passent par une tierce personne et se déduisent des liens directs, et toutes obligeaient à choisir entre deux mots genrés. « famille (autre) » reste ouvert pour le reste. Les liens déjà écrits avec ces mots continuent d'être lus.
+
+---
+
 ## [0.5.0] — 2026-08-26
 
 ### Ajouts

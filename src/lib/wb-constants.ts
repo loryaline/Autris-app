@@ -164,27 +164,28 @@ export const LINK_TYPE_GROUPS: { label: string; types: readonly string[] }[] = [
   {
     label: "Famille",
     types: [
-      "père",
-      "mère",
-      "fils",
-      "fille",
-      "frère",
-      "sœur",
-      "demi-frère",
-      "demi-sœur",
-      "époux",
-      "épouse",
-      "cousin",
-      "cousine",
-      "oncle",
-      "tante",
-      "neveu",
-      "nièce",
-      "grand-père",
-      "grand-mère",
-      "beau-parent",
-      "beau-fils",
-      "belle-fille",
+      // « parent » / « enfant » plutôt que père/mère/fils/fille : la
+      // filiation ne change pas selon le genre de qui la porte. Celui-ci
+      // appartient au personnage, sa fiche le dit déjà.
+      "parent",
+      "enfant",
+      // « adelphe » plutôt que frère/sœur : la fratrie est une relation
+      // mutuelle, donc affichée avec une pointe à chaque bout — et un
+      // mot genré y devient illisible (« sœur » avec deux pointes : la
+      // sœur de qui ?). « adelphe » ne genre ni l'un ni l'autre. Le
+      // genre appartient au personnage, pas au lien.
+      "adelphe",
+      "demi-adelphe",
+      // Deux unions distinctes, toutes deux neutres : « mariés » dit
+      // l'acte, « conjoint » dit la vie commune sans le mariage.
+      "mariés",
+      "conjoint",
+      // Pas de parenté indirecte ici — ni cousin, ni oncle/tante, ni
+      // neveu/nièce, ni grand-parent, ni belle-famille. Toutes passent
+      // par une tierce personne et se déduisent des liens ci-dessus ;
+      // et toutes obligeraient à choisir entre deux mots genrés là où
+      // la relation, elle, n'a pas de genre. Pour les cas qui ne se
+      // déduisent pas, « famille (autre) » reste ouvert.
       "famille (autre)",
     ],
   },
@@ -208,6 +209,49 @@ export const LINK_TYPES = LINK_TYPE_GROUPS.flatMap((g) => g.types) as readonly s
  * cette table, on créerait des doublons et le plateau afficherait deux
  * flèches pour une seule fraternité.
  */
+/** Toute la fratrie se répond, ancien vocabulaire genré compris. */
+const SIBLING_TYPES = [
+  "adelphe",
+  "demi-adelphe",
+  "frère",
+  "sœur",
+  "demi-frère",
+  "demi-sœur",
+] as const;
+
+/** L'union par le mariage, ancien vocabulaire genré compris. */
+const MARRIED_TYPES = ["mariés", "époux", "épouse"] as const;
+
+/** Les deux bords de la filiation, ancien vocabulaire genré compris. */
+const PARENT_TYPES = ["parent", "père", "mère"] as const;
+const CHILD_TYPES = ["enfant", "fils", "fille"] as const;
+
+/** Le cousinage, retiré de la saisie mais encore lisible. */
+const COUSIN_TYPES = ["cousinage", "cousin", "cousine"] as const;
+
+/**
+ * Mots retirés du sélecteur — parenté indirecte et formes genrées — mais
+ * toujours reconnus : ils peuplent les univers écrits avant ce ménage.
+ * Les oublier ferait perdre leur réciprocité à ces liens (donc des
+ * doublons) et les exclurait du dépliage généalogique.
+ */
+const LEGACY_FAMILY_TYPES = [
+  ...PARENT_TYPES,
+  ...CHILD_TYPES,
+  ...SIBLING_TYPES,
+  ...MARRIED_TYPES,
+  ...COUSIN_TYPES,
+  "oncle",
+  "tante",
+  "neveu",
+  "nièce",
+  "grand-père",
+  "grand-mère",
+  "beau-parent",
+  "beau-fils",
+  "belle-fille",
+] as const;
+
 const RECIPROCAL_TYPES: Record<string, readonly string[]> = {
   // Symétriques : le même mot des deux côtés
   ami: ["ami"],
@@ -223,29 +267,43 @@ const RECIPROCAL_TYPES: Record<string, readonly string[]> = {
   mentor: ["élève"],
   élève: ["mentor"],
 
-  père: ["fils", "fille"],
-  mère: ["fils", "fille"],
-  fils: ["père", "mère"],
-  fille: ["père", "mère"],
+  // Filiation. Les formes genrées restent lues, plus proposées.
+  parent: CHILD_TYPES,
+  père: CHILD_TYPES,
+  mère: CHILD_TYPES,
+  enfant: PARENT_TYPES,
+  fils: PARENT_TYPES,
+  fille: PARENT_TYPES,
 
-  frère: ["frère", "sœur", "demi-frère", "demi-sœur"],
-  sœur: ["frère", "sœur", "demi-frère", "demi-sœur"],
-  "demi-frère": ["frère", "sœur", "demi-frère", "demi-sœur"],
-  "demi-sœur": ["frère", "sœur", "demi-frère", "demi-sœur"],
+  // Fratrie. Les quatre mots genrés restent listés ici — plus proposés à
+  // la saisie, mais présents dans les univers écrits avant « adelphe » :
+  // sans eux ces liens perdraient leur réciprocité et se dédoubleraient.
+  adelphe: SIBLING_TYPES,
+  "demi-adelphe": SIBLING_TYPES,
+  frère: SIBLING_TYPES,
+  sœur: SIBLING_TYPES,
+  "demi-frère": SIBLING_TYPES,
+  "demi-sœur": SIBLING_TYPES,
 
-  époux: ["épouse", "époux"],
-  épouse: ["époux", "épouse"],
+  // Union. « conjoint » reste à part : ne pas marier d'office ceux que
+  // l'autrice a seulement mis ensemble.
+  mariés: MARRIED_TYPES,
+  époux: MARRIED_TYPES,
+  épouse: MARRIED_TYPES,
+  conjoint: ["conjoint"],
 
-  cousin: ["cousin", "cousine"],
-  cousine: ["cousin", "cousine"],
+  // Parenté indirecte : retirée de la saisie, conservée en lecture.
+  cousinage: COUSIN_TYPES,
+  cousin: COUSIN_TYPES,
+  cousine: COUSIN_TYPES,
 
   oncle: ["neveu", "nièce"],
   tante: ["neveu", "nièce"],
   neveu: ["oncle", "tante"],
   nièce: ["oncle", "tante"],
 
-  "grand-père": ["fils", "fille"],
-  "grand-mère": ["fils", "fille"],
+  "grand-père": CHILD_TYPES,
+  "grand-mère": CHILD_TYPES,
 
   "beau-parent": ["beau-fils", "belle-fille"],
   "beau-fils": ["beau-parent"],
@@ -254,6 +312,79 @@ const RECIPROCAL_TYPES: Record<string, readonly string[]> = {
   possède: ["appartient à"],
   "appartient à": ["possède"],
 };
+
+/**
+ * Décalage de génération porté par un type de lien : de combien le
+ * SUJET est-il au-dessus de l'OBJET ?
+ *
+ * « A est le parent de B » → +1 (A au-dessus de B). Sert à disposer un
+ * arbre généalogique : les aînés en haut, la descendance en bas, la
+ * fratrie au même niveau.
+ */
+const GENERATION_GAP: Record<string, number> = {
+  "grand-père": 2,
+  "grand-mère": 2,
+  parent: 1,
+  père: 1,
+  mère: 1,
+  oncle: 1,
+  tante: 1,
+  "beau-parent": 1,
+  mentor: 1,
+  enfant: -1,
+  fils: -1,
+  fille: -1,
+  neveu: -1,
+  nièce: -1,
+  "beau-fils": -1,
+  "belle-fille": -1,
+  élève: -1,
+};
+
+/** Types qui décrivent une parenté (pour « déplier la famille »). */
+const FAMILY_TYPES = new Set([
+  ...(LINK_TYPE_GROUPS.find((g) => g.label === "Famille")?.types ?? []),
+  ...LEGACY_FAMILY_TYPES,
+]);
+
+export function isFamilyType(type: string | null): boolean {
+  return !!type && FAMILY_TYPES.has(type.trim().toLowerCase());
+}
+
+/**
+ * Les types inventés par l'autrice, relevés dans ses liens existants.
+ *
+ * « amoureux », « suzerain », « dette de sang » : la liste fournie ne
+ * peut pas tout prévoir, et un type saisi une fois doit se reproposer
+ * ensuite — sinon on le ressaisit à chaque flèche, avec les fautes de
+ * frappe qui vont avec, et un même fait finit sous trois orthographes.
+ *
+ * Le vocabulaire retiré du sélecteur (formes genrées, parenté indirecte)
+ * est exclu : on le lit encore, on ne le propose plus.
+ */
+export function customLinkTypes(
+  links: readonly { link_type: string | null }[],
+): string[] {
+  const known = new Set<string>([
+    ...LINK_TYPES.map((t) => t.toLowerCase()),
+    ...LEGACY_FAMILY_TYPES.map((t) => t.toLowerCase()),
+  ]);
+  const seen = new Map<string, string>();
+  for (const l of links) {
+    const t = l.link_type?.trim();
+    if (!t) continue;
+    const k = t.toLowerCase();
+    if (known.has(k) || seen.has(k)) continue;
+    seen.set(k, t);
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, "fr"));
+}
+
+/** De combien de générations le sujet est-il au-dessus de l'objet ? */
+export function generationGap(type: string | null): number {
+  if (!type) return 0;
+  return GENERATION_GAP[type.trim().toLowerCase()] ?? 0;
+}
 
 /**
  * Deux types énoncent-ils le même fait, chacun de son côté ?

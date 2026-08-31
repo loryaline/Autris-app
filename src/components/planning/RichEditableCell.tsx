@@ -60,6 +60,7 @@ export function RichEditableCell({
   editing,
   initialPos,
   onExitEdit,
+  onChange,
 }: {
   value: string;
   onSave: (val: string) => void;
@@ -73,6 +74,13 @@ export function RichEditableCell({
   initialPos?: number | null;
   /** Appelé à la sortie d'édition (mode contrôlé). */
   onExitEdit?: () => void;
+  /**
+   * Appelé à CHAQUE frappe. `onSave` ne se déclenche qu'à la sortie du
+   * champ : quand l'éditeur vit dans une fenêtre avec d'autres boutons,
+   * cela suffit à perdre la saisie. Fournir `onChange` rend la
+   * sauvegarde indépendante du focus.
+   */
+  onChange?: (html: string) => void;
 }) {
   // Mode historique (non contrôlé) : la cellule est "focalisée"
   // (= ProseMirror monté) uniquement quand on a cliqué dedans. Sinon on
@@ -126,6 +134,7 @@ export function RichEditableCell({
       initialClickPos={isControlled ? (initialPos ?? null) : focused?.pos ?? null}
       className={className}
       placeholder={placeholder}
+      onChange={onChange}
     />
   );
 }
@@ -141,6 +150,7 @@ function FocusedCell({
   initialClickPos,
   className,
   placeholder,
+  onChange,
 }: {
   value: string;
   onSave: (val: string) => void;
@@ -148,6 +158,7 @@ function FocusedCell({
   initialClickPos: number | null;
   className?: string;
   placeholder?: string;
+  onChange?: (html: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasSelection, setHasSelection] = useState(false);
@@ -179,6 +190,9 @@ function FocusedCell({
         class:
           "tiptap-cell outline-none h-full w-full px-2 py-1.5 text-[12px] text-text-primary whitespace-pre-wrap break-words",
       },
+    },
+    onUpdate: ({ editor: ed }) => {
+      onChange?.(ed.getHTML());
     },
     onSelectionUpdate: ({ editor: ed }) => {
       const { from, to } = ed.state.selection;

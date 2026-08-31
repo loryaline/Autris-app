@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
 import { entryMarkdown, safeName, slugify } from "@/lib/wb-export";
 
+/** Saut de ligne des fichiers Markdown produits. */
+const NL = "\n";
+
 /**
  * Export complet d'un projet vers Notion.
  *
@@ -15,6 +18,8 @@ import { entryMarkdown, safeName, slugify } from "@/lib/wb-export";
  *   <Projet>/
  *   ├── README.md
  *   ├── Univers/<Catégorie>/<Fiche>.md
+ *   ├── Univers/Relations.md
+ *   ├── Univers/Plateaux.md
  *   └── Romans/<Roman>/
  *       ├── Chapitrage.md
  *       ├── Synopsis/<Titre>.md
@@ -179,7 +184,14 @@ export async function buildProjectNotionZip(
   const supabase = createClient();
   const JSZip = (await import("jszip")).default;
   const zip = new JSZip();
-  const counts = { fiches: 0, romans: 0, chapitres: 0, synopsis: 0 };
+  const counts = {
+    fiches: 0,
+    romans: 0,
+    chapitres: 0,
+    synopsis: 0,
+    relations: 0,
+    plateaux: 0,
+  };
 
   onProgress?.("Lecture du projet…");
   const { data: project } = await supabase
@@ -212,6 +224,78 @@ export async function buildProjectNotionZip(
     if (n > 1) name = `${name} (${n})`;
     zip.file(`Univers/${folder}/${name}.md`, entryMarkdown(e));
     counts.fiches += 1;
+  }
+
+  /* ---- Relations ----
+   * Les liens entre fiches ne vivaient jusqu'ici que dans l'application :
+   * une archive qui les laisse derrière exporte des personnages sans leur
+   * histoire commune. On les sort en une page lisible, groupée par fiche.
+   * Le sens compte, donc chaque relation est écrite depuis son sujet. */
+  const titleById = new Map(usableEntries.map((e) => [e.id, e.title ?? "Sans titre"]));
+  const { data: wbLinks } = await supabase
+    .from("wb_links")
+    .select("from_entry_id, to_entry_id, link_type")
+    .in("from_entry_id", [...titleById.keys()]);
+
+  const bySubject = new Map<string, string[]>();
+  for (const l of wbLinks ?? []) {
+    const from = titleById.get(l.from_entry_id);
+    const to = titleById.get(l.to_entry_id);
+    if (!from || !to) continue;
+    const arr = bySubject.get(from) ?? [];
+    arr.push(`- ${l.link_type ?? "lié"} → **${to}**`);
+    bySubject.set(from, arr);
+    counts.relations += 1;
+  }
+  if (bySubject.size > 0) {
+    const lines = ["# Relations", ""];
+    for (const name of [...bySubject.keys()].sort((a, b) => a.localeCompare(b, "fr"))) {
+      lines.push(`## ${name}`, "", ...bySubject.get(name)!, "");
+    }
+    zip.file("Univers/Relations.md", lines.join(NL));
+  }
+
+  /* ---- Plateaux ----
+   * La disposition d'un plateau (positions, zoom, tracé des flèches) est
+   * de la géométrie : elle n'a aucun sens hors d'Autris et n'est donc pas
+   * exportée. Ce qui se transporte, c'est la COMPOSITION — quelles fiches
+   * l'autrice a réunies sur quel plateau, et sous quel nom. */
+  const { data: boards } = await supabase
+    .from("wb_boards")
+    .select("id, title")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+
+  if (boards && boards.length > 0) {
+    const { data: boardNodes } = await supabase
+      .from("wb_board_nodes")
+      .select("board_id, entry_id")
+      .in("board_id", boards.map((b) => b.id));
+
+    const lines = ["# Plateaux", ""];
+    for (const b of boards) {
+      const names = (boardNodes ?? [])
+        .filter((n) => n.board_id === b.id && n.entry_id)
+        .map((n) => titleById.get(n.entry_id as string))
+        .filter((t): t is string => !!t);
+      lines.push(`## ${b.title}`, "");
+      if (names.length === 0) lines.push("_Aucune fiche posée._", "");
+      else {
+        for (const t of [...new Set(names)].sort((a, b2) => a.localeCompare(b2, "fr"))) {
+          lines.push(`- ${t}`);
+        }
+        lines.push("");
+      }
+      counts.plateaux += 1;
+    }
+    lines.push(
+      "---",
+      "",
+      "_La disposition des plateaux — positions, zoom, tracé des flèches —",
+      "n'est pas exportée : elle n'a de sens que dans Autris. Les relations",
+      "elles-mêmes se trouvent dans `Relations.md`._",
+    );
+    zip.file("Univers/Plateaux.md", lines.join(NL));
   }
 
   /* ---- Romans ---- */
@@ -359,6 +443,16 @@ export async function buildProjectNotionZip(
     "## Ce que contient cette archive",
     "",
     `- **Univers** — ${counts.fiches} fiche${counts.fiches > 1 ? "s" : ""} de World Building, une page par fiche`,
+    ...(counts.relations > 0
+      ? [
+          `- **Relations** — ${counts.relations} lien${counts.relations > 1 ? "s" : ""} entre fiches, groupés par sujet`,
+        ]
+      : []),
+    ...(counts.plateaux > 0
+      ? [
+          `- **Plateaux** — ${counts.plateaux} plateau${counts.plateaux > 1 ? "x" : ""} et leur composition`,
+        ]
+      : []),
     `- **Romans** — ${counts.romans} roman${counts.romans > 1 ? "s" : ""}, avec pour chacun :`,
     "  - `Manuscrit/` — un fichier par chapitre, numéroté dans l'ordre",
     "  - `Chapitrage.md` — le tableau de planification",
