@@ -27,11 +27,19 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.6.4] — 2026-08-31
+
+### Corrections
+
+- **L'onglet « Gantt » est rétabli.** Seul « Post-its » devait quitter la Planification : les post-its ont un ailleurs, sur le plateau du World Building, alors qu'une frise des jalons dans le temps n'existe nulle part dans Autris. L'onglet, son écran d'attente et l'adresse `?view=gantt` reviennent à l'identique.
+
+---
+
 ## [0.6.3] — 2026-08-31
 
 ### Retraits
 
-- **L'onglet « Post-its » quitte la Planification.** Il n'a jamais existé autrement que sous la forme d'un écran « arrive bientôt ». Les post-its ont trouvé leur place sur le plateau du World Building, sur une surface libre, à côté des fiches et des liens — en garder un second ici obligerait à choisir où l'on brainstorme. Un favori pointant vers cet onglet rouvre désormais le chapitrage. **Gantt reste** : une frise des jalons dans le temps n'existe nulle part ailleurs.
+- **Les onglets « Post-its » et « Gantt » quittent la Planification.** Ni l'un ni l'autre n'existait autrement que sous la forme d'un écran « arrive bientôt ». Les post-its ont trouvé leur place sur le plateau du World Building, sur une surface libre, à côté des fiches et des liens — en garder un second ici obligerait à choisir où l'on brainstorme. Un favori pointant vers l'un de ces onglets rouvre désormais le chapitrage. *(Gantt est rétabli en 0.6.4 : son retrait n'était pas voulu.)*
 
 ---
 
