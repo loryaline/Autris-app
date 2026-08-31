@@ -251,8 +251,13 @@ export function useBoard(projectId: string) {
     });
   }, []);
 
+  // Pendant une action composée (déplier une famille = N créations), on
+  // suspend l'enregistrement pour n'avoir QU'UNE entrée à annuler.
+  const historySuspended = useRef(false);
+
   /** À appeler AVANT toute action modifiant le plateau. */
   const beginHistory = useCallback(() => {
+    if (historySuspended.current) return;
     const s = stateRef.current;
     if (!s.board) return;
     undoStack.current.push({ nodes: s.nodes, edges: s.edges });
@@ -310,6 +315,20 @@ export function useBoard(projectId: string) {
     }
     await Promise.all(ops);
   }, []);
+
+  /** Exécute une action composée en ne laissant qu'une entrée à annuler. */
+  const asSingleAction = useCallback(
+    async (fn: () => Promise<void>) => {
+      beginHistory();
+      historySuspended.current = true;
+      try {
+        await fn();
+      } finally {
+        historySuspended.current = false;
+      }
+    },
+    [beginHistory],
+  );
 
   const undo = useCallback(async () => {
     const snap = undoStack.current.pop();
@@ -463,6 +482,20 @@ export function useBoard(projectId: string) {
     [beginHistory],
   );
 
+  /** Comme updateNode, mais SANS entrée d'historique : pour les
+   * écritures continues (frappe au clavier), où l'instantané est pris
+   * une fois pour toute la session d'édition. */
+  const updateNodeQuiet = useCallback(
+    async (id: string, patch: Partial<WbBoardNode>) => {
+      setState((s) => ({
+        ...s,
+        nodes: s.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)),
+      }));
+      await supabaseRef.current.from("wb_board_nodes").update(patch).eq("id", id);
+    },
+    [],
+  );
+
   /* ---- Suppression de nœuds ----
    * Ne touche QUE le plateau : les fiches et les relations restent intactes.
    * Les arêtes rattachées disparaissent (cascade DB), on les retire aussi
@@ -597,6 +630,97 @@ export function useBoard(projectId: string) {
    * déjà avec les fiches présentes sur le plateau : on ne redessine pas à
    * la main ce que le World Building sait déjà. Rien n'est écrit dans
    * wb_links — on ne fait qu'afficher l'existant. */
+  /**
+   * Flèches déjà insérées pendant cette session, par relation et par
+   * couple de vignettes. `setState` étant différé, deux insertions
+   * enchaînées lisent le même `state.edges` — sans ce registre, la
+   * seconde recrée ce que la première vient d'écrire, et l'étiquette
+   * s'affiche en double.
+   */
+  const insertedEdges = useRef(new Set<string>());
+
+  /**
+   * Trace TOUTE relation dont les deux bouts sont déjà posés.
+   *
+   * `materializeLinks` ne regarde qu'une fiche, au moment où on la pose :
+   * deux fiches arrivées séparément restent donc sans flèche, alors que
+   * le lien existe dans l'univers. Ici on balaie le plateau entier —
+   * indispensable après un dépliage, qui saute les fiches déjà présentes.
+   *
+   * Lit `stateRef` et non `state` : appelée en rafale après une série
+   * d'ajouts, une fermeture figée manquerait les nœuds tout juste créés.
+   * N'écrit rien dans wb_links : on ne fait qu'afficher l'existant.
+   *
+   * @returns le nombre de flèches nouvellement tracées.
+   */
+  const revealLinks = useCallback(async (allLinks: WbLink[]) => {
+    const cur = stateRef.current;
+    const board = cur.board;
+    if (!board) return 0;
+    const supabase = supabaseRef.current;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return 0;
+
+    // Une même fiche peut être posée en plusieurs exemplaires.
+    const byEntry = new Map<string, WbBoardNode[]>();
+    for (const n of cur.nodes) {
+      if (!n.entry_id) continue;
+      const arr = byEntry.get(n.entry_id) ?? [];
+      arr.push(n);
+      byEntry.set(n.entry_id, arr);
+    }
+
+    const already = new Set([
+      ...cur.edges
+        .filter((e) => e.wb_link_id)
+        .map((e) => `${e.wb_link_id}::${e.from_node_id}::${e.to_node_id}`),
+      ...insertedEdges.current,
+    ]);
+
+    const payloads: {
+      board_id: string;
+      user_id: string;
+      from_node_id: string;
+      to_node_id: string;
+      wb_link_id: string;
+    }[] = [];
+
+    for (const link of allLinks) {
+      const froms = byEntry.get(link.from_entry_id);
+      const tos = byEntry.get(link.to_entry_id);
+      if (!froms || !tos) continue;
+      for (const f of froms) {
+        for (const t of tos) {
+          if (f.id === t.id) continue;
+          // Le sens de la flèche suit celui de la relation.
+          const key = `${link.id}::${f.id}::${t.id}`;
+          if (already.has(key)) continue;
+          already.add(key);
+          insertedEdges.current.add(key);
+          payloads.push({
+            board_id: board.id,
+            user_id: user.id,
+            from_node_id: f.id,
+            to_node_id: t.id,
+            wb_link_id: link.id,
+          });
+        }
+      }
+    }
+
+    if (payloads.length === 0) return 0;
+    const { data } = await supabase
+      .from("wb_board_edges")
+      .insert(payloads)
+      .select();
+    if (data) {
+      setState((s) => ({ ...s, edges: [...s.edges, ...(data as WbBoardEdge[])] }));
+    }
+    return payloads.length;
+  }, []);
+
   const materializeLinks = useCallback(
     async (node: WbBoardNode, allLinks: WbLink[]) => {
       const board = state.board;
@@ -608,11 +732,12 @@ export function useBoard(projectId: string) {
       if (!user) return;
 
       const others = state.nodes.filter((n) => n.entry_id && n.id !== node.id);
-      const already = new Set(
-        state.edges
+      const already = new Set([
+        ...state.edges
           .filter((e) => e.wb_link_id)
           .map((e) => `${e.wb_link_id}::${e.from_node_id}::${e.to_node_id}`),
-      );
+        ...insertedEdges.current,
+      ]);
 
       const payloads: {
         board_id: string;
@@ -639,6 +764,7 @@ export function useBoard(projectId: string) {
           const key = `${link.id}::${fromNode.id}::${toNode.id}`;
           if (already.has(key)) continue;
           already.add(key);
+          insertedEdges.current.add(key);
           payloads.push({
             board_id: board.id,
             user_id: user.id,
@@ -783,6 +909,7 @@ export function useBoard(projectId: string) {
   return {
     ...state,
     beginHistory,
+    asSingleAction,
     undo,
     redo,
     canUndo: historyDepth.undo > 0,
@@ -795,9 +922,11 @@ export function useBoard(projectId: string) {
     resizeNode,
     addNode,
     updateNode,
+    updateNodeQuiet,
     removeNodes,
     applyOrder,
     materializeLinks,
+    revealLinks,
     addTypedLink,
     addFreeEdge,
     setEdgeLabel,

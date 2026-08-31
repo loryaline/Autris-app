@@ -39,20 +39,49 @@ export function isMapEntry(entry: WbEntry | null | undefined): boolean {
   );
 }
 
+/**
+ * Une fiche personnage illustrée montre son portrait en grand, carré,
+ * au-dessus du nom : c'est le visage qui la fait reconnaître.
+ */
+export function isPortraitEntry(entry: WbEntry | null | undefined): boolean {
+  return entry?.category === "personnages" && !!entry.main_image_url;
+}
+
 /** Taille et profondeur par défaut d'une vignette à la dépose. */
 export function defaultNodeBox(entry: WbEntry | null | undefined) {
   // Les cartes arrivent grandes et EN DESSOUS du reste (z négatif),
   // pour qu'on puisse poser des vignettes par-dessus sans se battre.
-  return isMapEntry(entry)
-    ? { w: 460, h: 320, z: -10 }
-    : { w: 200, h: 116, z: 0 };
+  if (isMapEntry(entry)) return { w: 460, h: 320, z: -10 };
+  // Portrait : le carré fait toute la largeur, plus le bandeau du nom.
+  if (isPortraitEntry(entry)) return { w: 200, h: 252, z: 0 };
+  return { w: 200, h: 116, z: 0 };
 }
+
+/** Pas de grille du dépliage — plus large que la plus haute vignette. */
+export const LAYOUT_STEP = { x: 260, y: 320 };
 
 export interface Viewport {
   x: number;
   y: number;
   zoom: number;
 }
+
+/** Les quatre bords depuis lesquels on peut tirer un lien. */
+const LINK_PORTS = [
+  { side: "top", label: "haut", x: "50%", y: "0%" },
+  { side: "right", label: "droit", x: "100%", y: "50%" },
+  { side: "bottom", label: "bas", x: "50%", y: "100%" },
+  { side: "left", label: "gauche", x: "0%", y: "50%" },
+] as const;
+
+/**
+ * Taille à l'écran des poignées, en pixels — constante quel que soit le
+ * zoom. Elles vivent dans le plan transformé : sans compensation, elles
+ * deviendraient minuscules de loin et énormes de près. On divise donc
+ * leurs dimensions par le facteur de zoom.
+ */
+const PORT_PX = 12;
+const RESIZE_PX = 20;
 
 export function WbBoardCanvas({
   nodes,
@@ -77,6 +106,9 @@ export function WbBoardCanvas({
   onDeleteEdge,
   onSetEdgeWaypoint,
   onBeginHistory,
+  onHeightsChange,
+  onCanvasSizeChange,
+  dimmedIds,
   selectionToolbar,
 }: {
   nodes: WbBoardNode[];
@@ -105,6 +137,24 @@ export function WbBoardCanvas({
   onBeginHistory: () => void;
   /** Déplace le point par lequel passe la flèche (null = la redresser). */
   onSetEdgeWaypoint: (id: string, point: { t: number; o: number } | null) => void;
+  /**
+   * Hauteurs RÉELLES des vignettes, une fois rendues. Seule cette surface
+   * les connaît : une fiche épouse son contenu, sa hauteur stockée n'est
+   * qu'un point de départ. La mini-carte et l'export en ont besoin pour
+   * cadrer sur les mêmes boîtes que l'écran.
+   */
+  onHeightsChange?: (heights: Record<string, number>) => void;
+  /**
+   * Taille en pixels de la surface visible. Le parent ne peut que
+   * l'estimer ; ici c'est l'élément lui-même qui la donne.
+   */
+  onCanvasSizeChange?: (size: { w: number; h: number }) => void;
+  /**
+   * Objets mis en retrait par un filtre ou une recherche. Estompés, pas
+   * cachés : retirer une vignette couperait les flèches qui la traversent
+   * et donnerait un plateau faux plutôt qu'un plateau filtré.
+   */
+  dimmedIds?: Set<string>;
   /** Outils contextuels, posés au plus près de la sélection. */
   selectionToolbar?: React.ReactNode;
 }) {
@@ -117,6 +167,8 @@ export function WbBoardCanvas({
   >(null);
   // Flèche sélectionnée (Suppr la retire du plateau, jamais de la fiche)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  // Dernier appui, pour détecter nous-mêmes le double-clic (cf. startNodeDrag).
+  const lastDown = useRef<{ id: string; t: number }>({ id: "", t: 0 });
 
   /* ---- Hauteur RÉELLE des vignettes ----
    * Une vignette fiche s'étire selon son contenu : sa hauteur stockée
@@ -147,21 +199,43 @@ export function WbBoardCanvas({
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    onHeightsChange?.(heights);
+  }, [heights, onHeightsChange]);
+
   const observeNode = useCallback((el: HTMLDivElement | null) => {
     if (el) observerRef.current?.observe(el);
   }, []);
 
-  // Largeur de la surface, pour garder la barre contextuelle à l'écran.
+  // Taille de la surface — celle qui porte réellement la transformation.
+  // Sert à garder la barre contextuelle à l'écran, et à dire à la
+  // mini-carte quelle portion du plateau est visible. La mesurer ICI est
+  // la seule façon d'être juste : depuis le parent il faudrait retrancher
+  // la barre d'outils à l'estime, et toute dérive de mise en page
+  // fausserait le cadre de la mini-carte sans rien signaler.
   // ResizeObserver déclenche son rappel dès l'observation : pas besoin
   // d'une mesure initiale synchrone.
-  const [hostW, setHostW] = useState(0);
+  const [hostBox, setHostBox] = useState({ w: 0, h: 0 });
+  const hostW = hostBox.w;
   useEffect(() => {
     const el = hostRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setHostW(el.clientWidth));
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      setHostBox((prev) =>
+        Math.abs(prev.w - w) < 0.5 && Math.abs(prev.h - h) < 0.5
+          ? prev
+          : { w, h },
+      );
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (hostBox.w > 0) onCanvasSizeChange?.(hostBox);
+  }, [hostBox, onCanvasSizeChange]);
 
   /** Hauteur à utiliser pour la géométrie : mesurée si connue. */
   const nodeH = useCallback(
@@ -196,10 +270,21 @@ export function WbBoardCanvas({
       edge: WbBoardEdge;
       twin: WbBoardEdge | null;
       label: string;
+      /** Relation vraie dans les deux sens → une pointe à chaque bout. */
+      symmetric: boolean;
     }[] = [];
     const used = new Set<string>();
+    // Une même relation tracée deux fois entre les deux mêmes vignettes
+    // se superpose au pixel près : invisible à l'œil, mais l'étiquette
+    // s'affiche en double. On n'en garde qu'une.
+    const drawn = new Set<string>();
     for (const e of edges) {
       if (used.has(e.id)) continue;
+      if (e.wb_link_id) {
+        const key = `${e.wb_link_id}::${e.from_node_id}::${e.to_node_id}`;
+        if (drawn.has(key)) continue;
+        drawn.add(key);
+      }
       used.add(e.id);
       const et = typeOf(e);
       const twin = e.wb_link_id
@@ -218,6 +303,13 @@ export function WbBoardCanvas({
         edge: e,
         twin,
         label: tt && tt !== et ? `${et} / ${tt}` : (et ?? ""),
+        // Deux pointes = le MÊME fait se lit pareil des deux bords, pas
+        // « il existe aussi un lien en sens inverse ». « sœur » l'est :
+        // Cybèle sœur de Taram dit qu'ils sont frère et sœur. « père »
+        // ne l'est pas — son inverse est « fils », un autre fait — donc
+        // même fusionné avec son jumeau il garde UNE pointe, sinon on ne
+        // sait plus qui est le père.
+        symmetric: areReciprocal(et, et),
       });
     }
     return out;
@@ -377,6 +469,27 @@ export function WbBoardCanvas({
   function startNodeDrag(e: React.MouseEvent, node: WbBoardNode) {
     if (e.button !== 0) return;
     e.stopPropagation();
+
+    // Double-clic détecté à la main, sur le mousedown. L'événement
+    // `dblclick` du navigateur exige que les deux clics atteignent le
+    // MÊME élément : le contenu riche d'un texte (paragraphes, marques)
+    // et les re-rendus entre les deux clics le rendent capricieux. Le
+    // mousedown, lui, arrive toujours — c'est déjà lui qui porte le
+    // glisser et la sélection.
+    // L'horodatage est porté par l'événement lui-même : pas d'appel à
+    // une horloge, donc rien d'impur.
+    const now = e.timeStamp;
+    const isSecond =
+      lastDown.current.id === node.id && now - lastDown.current.t < 450;
+    lastDown.current = isSecond ? { id: "", t: 0 } : { id: node.id, t: now };
+    if (isSecond) {
+      e.preventDefault();
+      if (node.kind === "fiche" && node.entry_id) onOpenEntry(node.entry_id);
+      else if (node.kind === "postit" || node.kind === "texte")
+        onEditPostit(node);
+      else if (node.kind === "cadre") onRenameCadre(node);
+      return; // pas de glisser sur un double-clic
+    }
 
     // Un déplacement = UNE entrée d'historique, prise avant le premier
     // pixel — pas une par position intermédiaire.
@@ -556,7 +669,15 @@ export function WbBoardCanvas({
       {/* Liens — SVG dans le même plan que les objets */}
       <svg
         className="absolute inset-0 w-full h-full"
-        style={{ overflow: "visible", pointerEvents: "none" }}
+        style={{
+          overflow: "visible",
+          pointerEvents: "none",
+          // Au-dessus des objets : sans cela un cadre, qui couvre toute
+          // sa surface, masquait les flèches qu'il contient. Les traits
+          // s'arrêtent au bord des vignettes, donc rien ne se dessine
+          // par-dessus — seule la capture des clics change.
+          zIndex: 2,
+        }}
       >
         <defs>
           <marker
@@ -574,7 +695,7 @@ export function WbBoardCanvas({
         <g
           transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.zoom})`}
         >
-          {displayEdges.map(({ edge, twin, label }) => {
+          {displayEdges.map(({ edge, twin, label, symmetric }) => {
             const a = nodeById.get(edge.from_node_id);
             const b = nodeById.get(edge.to_node_id);
             if (!a || !b) return null;
@@ -640,8 +761,19 @@ export function WbBoardCanvas({
               ? `M ${g.x1} ${g.y1} Q ${cx} ${cy} ${g.x2} ${g.y2}`
               : `M ${g.x1} ${g.y1} L ${g.x2} ${g.y2}`;
 
+            // Une flèche suit le sort de ses extrémités : reliée à une
+            // vignette mise en retrait, elle s'estompe avec elle.
+            const dim =
+              dimmedIds?.has(edge.from_node_id) || dimmedIds?.has(edge.to_node_id);
+
             return (
-              <g key={edge.id}>
+              <g
+                key={edge.id}
+                style={{
+                  opacity: dim ? 0.12 : 1,
+                  transition: "opacity 140ms ease",
+                }}
+              >
                 {/* Zone de clic généreuse, invisible */}
                 <path
                   d={d}
@@ -675,7 +807,7 @@ export function WbBoardCanvas({
                   strokeDasharray={edge.wb_link_id ? undefined : "5 4"}
                   markerEnd="url(#board-arrow)"
                   // Relation réciproque : une pointe de chaque côté.
-                  markerStart={twin ? "url(#board-arrow)" : undefined}
+                  markerStart={symmetric ? "url(#board-arrow)" : undefined}
                   style={{ pointerEvents: "none" }}
                 />
                 {label && (
@@ -802,6 +934,7 @@ export function WbBoardCanvas({
         style={{
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
           transformOrigin: "0 0",
+          zIndex: 1,
         }}
       >
         {/* Tri par profondeur : les cartes (z négatif) passent dessous. */}
@@ -845,28 +978,24 @@ export function WbBoardCanvas({
                   selectNodes(new Set([node.id]));
                 }
               }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                if (node.kind === "fiche" && node.entry_id) onOpenEntry(node.entry_id);
-                else if (node.kind === "postit" || node.kind === "texte")
-                  onEditPostit(node);
-              }}
+              // Capture : le contenu d'un texte ou d'un post-it est du
+              // HTML riche (paragraphes, marques). En phase de bulle, ces
+              // enfants avalent le double-clic et l'objet ne s'ouvre
+              // jamais — exactement le piège déjà rencontré sur les cases
+              // du chapitrage.
               ref={observeNode}
               className="absolute group"
               style={{
                 left: node.x,
                 top: node.y,
                 width: node.w,
-                // Un cadre est un contenant : sa surface laisse passer les
-                // clics vers ce qu'il entoure (flèches, étiquettes,
-                // vignettes). Seuls son étiquette et sa poignée restent
-                // saisissables — c'est par là qu'on l'attrape.
-                ...(node.kind === "cadre" ? { pointerEvents: "none" as const } : {}),
                 // Une carte a une hauteur ferme (l'image la remplit) ;
                 // une fiche épouse strictement son contenu — sinon la
                 // boîte dépasse la vignette visible et laisse un vide.
                 ...(fixedHeight ? { height: node.h } : {}),
                 cursor: "grab",
+                opacity: dimmedIds?.has(node.id) ? 0.16 : 1,
+                transition: "opacity 140ms ease",
               }}
             >
               {node.kind === "cadre" ? (
@@ -891,6 +1020,7 @@ export function WbBoardCanvas({
                   selected={selected}
                   expanded={expandedId === node.id}
                   copies={copies}
+                  color={(node.style.color as string) ?? "var(--accent)"}
                 />
               )}
 
@@ -903,36 +1033,93 @@ export function WbBoardCanvas({
                   onMouseDown={(e) => startResize(e, node)}
                   title="Redimensionner"
                   aria-label="Redimensionner"
-                  className="absolute -right-1.5 -bottom-1.5 w-3.5 h-3.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity border-none"
+                  // Double flèche en diagonale, comme dans Photoshop : le
+                  // geste se lit sans légende, et rien ne l'apparente aux
+                  // points de liaison, ronds et dorés, posés sur les bords.
+                  className="absolute flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border-none bg-transparent z-10"
                   style={{
-                    background: "var(--accent)",
-                    boxShadow: "0 0 0 2px var(--bg)",
                     cursor: "nwse-resize",
+                    color: "var(--text-2)",
+                    // Même compensation que les points : taille constante
+                    // à l'écran quel que soit le zoom du plateau.
+                    left: "100%",
+                    top: "100%",
+                    width: RESIZE_PX / viewport.zoom,
+                    height: RESIZE_PX / viewport.zoom,
+                    marginLeft: -RESIZE_PX / 2 / viewport.zoom,
+                    marginTop: -RESIZE_PX / 2 / viewport.zoom,
                     // Le cadre laisse passer les clics : sa poignée, elle,
                     // doit rester saisissable.
                     pointerEvents: "auto",
                   }}
-                />
+                >
+                  <svg
+                    width={RESIZE_PX / viewport.zoom}
+                    height={RESIZE_PX / viewport.zoom}
+                    viewBox="0 0 14 14"
+                    fill="none"
+                  >
+                    {/* Halo sombre : la flèche reste lisible sur une image
+                        ou une forme claire. */}
+                    <g
+                      stroke="var(--bg)"
+                      strokeWidth="3.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {/* Diagonale haut-gauche → bas-droite : le même axe
+                          que le coin où vit la poignée, et que le curseur
+                          nwse-resize. Dans l'autre sens, la flèche
+                          contredisait le geste. */}
+                      <path d="M4 4L10 10M4 4V7.4M4 4H7.4M10 10V6.6M10 10H6.6" />
+                    </g>
+                    <g
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {/* Diagonale haut-gauche → bas-droite : le même axe
+                          que le coin où vit la poignée, et que le curseur
+                          nwse-resize. Dans l'autre sens, la flèche
+                          contredisait le geste. */}
+                      <path d="M4 4L10 10M4 4V7.4M4 4H7.4M10 10V6.6M10 10H6.6" />
+                    </g>
+                  </svg>
+                </button>
               )}
 
-              {/* Poignée de lien — sur tout objet. Entre deux fiches elle
-                  écrit une relation d'univers ; ailleurs, une flèche libre. */}
-              {node.kind !== "cadre" && (
-                <button
-                  type="button"
-                  onMouseDown={(e) => startLinking(e, node)}
-                  title={
-                    node.kind === "fiche"
-                      ? "Tirer un lien vers un autre objet"
-                      : "Tirer une flèche vers un autre objet"
-                  }
-                  className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair border-none"
-                  style={{
-                    background: "var(--accent)",
-                    boxShadow: "0 0 0 2px var(--bg)",
-                  }}
-                />
-              )}
+              {/* Points de liaison — un par côté, pour tirer depuis le
+                  bord le plus proche de sa cible. RONDS et dorés : à ne
+                  pas confondre avec la poignée de taille, carrée et
+                  neutre, qui vit dans le coin. */}
+              {node.kind !== "cadre" &&
+                LINK_PORTS.map((port) => (
+                  <button
+                    key={port.side}
+                    type="button"
+                    onMouseDown={(e) => startLinking(e, node)}
+                    title={
+                      node.kind === "fiche"
+                        ? "Tirer un lien vers un autre objet"
+                        : "Tirer une flèche vers un autre objet"
+                    }
+                    aria-label={`Tirer un lien depuis le bord ${port.label}`}
+                    className="absolute rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair border-none"
+                    style={{
+                      background: "var(--accent)",
+                      boxShadow: `0 0 0 ${2 / viewport.zoom}px var(--bg)`,
+                      // Dimensions divisées par le zoom : le point garde
+                      // la même taille à l'écran, de 20 % à 250 %.
+                      left: port.x,
+                      top: port.y,
+                      width: PORT_PX / viewport.zoom,
+                      height: PORT_PX / viewport.zoom,
+                      marginLeft: -PORT_PX / 2 / viewport.zoom,
+                      marginTop: -PORT_PX / 2 / viewport.zoom,
+                    }}
+                  />
+                ))}
             </div>
           );
         })}
@@ -1025,62 +1212,98 @@ function FicheBody({
   selected,
   expanded,
   copies,
+  color,
 }: {
   entry: WbEntry | null;
   selected: boolean;
   expanded: boolean;
   copies: number;
+  /** Couleur de la fiche — sert à trier l'univers à l'œil. */
+  color: string;
 }) {
   const cat = entry ? getCategoryDef(entry.category) : undefined;
+
+  // Un personnage se reconnaît à son visage, pas à son nom : on lui donne
+  // son portrait en grand, carré, au-dessus du nom. Les autres fiches
+  // gardent la vignette compacte — une pastille suffit à les situer.
+  const portrait =
+    entry?.category === "personnages" && !!entry.main_image_url;
+
+  const identity = (
+    <div className="min-w-0 flex-1">
+      <div
+        className="font-serif text-[15px] leading-tight truncate"
+        style={{ color: "var(--text-1)" }}
+        title={entry?.title}
+      >
+        {entry?.title ?? "Fiche introuvable"}
+      </div>
+      <div className="text-[10px] mt-0.5" style={{ color: "var(--text-4)" }}>
+        {cat?.label ?? "—"}
+        {copies > 1 && (
+          <span
+            className="ml-1.5 px-1 rounded"
+            style={{
+              background: `color-mix(in srgb, ${color} 18%, transparent)`,
+              color,
+            }}
+            title={`Cette fiche est posée ${copies} fois sur le plateau`}
+          >
+            ×{copies}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div
       className="w-full rounded-[var(--radius-md)] overflow-hidden"
       style={{
         background: "var(--bg-3)",
-        border: `1.5px solid ${selected ? "var(--accent)" : "var(--border-soft)"}`,
+        // La sélection garde l'accent : c'est un état de l'interface, pas
+        // une propriété de la fiche. Les deux ne doivent pas se confondre.
+        border: selected
+          ? "1.5px solid var(--accent)"
+          : `1.5px solid color-mix(in srgb, ${color} 40%, var(--border-soft))`,
         boxShadow: selected ? "0 0 0 3px var(--accent-bg)" : "var(--shadow-md)",
       }}
     >
-      <div style={{ height: 3, background: "var(--accent)" }} />
-      <div className="flex items-start gap-2 p-2.5">
-        <div
-          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[14px] overflow-hidden"
-          style={{ background: "var(--bg-2)", border: "1px solid var(--border-soft)" }}
-        >
-          {entry?.main_image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={entry.main_image_url}
-              alt=""
-              className="w-full h-full object-cover"
-              draggable={false}
-            />
-          ) : (
-            <span>{cat?.icon ?? "📄"}</span>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
+      <div style={{ height: 3, background: color }} />
+
+      {portrait ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={entry.main_image_url!}
+            alt={entry.title}
+            draggable={false}
+            className="w-full aspect-square object-cover block select-none"
+            style={{ background: "var(--bg-2)" }}
+          />
+          <div className="px-2.5 py-2">{identity}</div>
+        </>
+      ) : (
+        <div className="flex items-start gap-2 p-2.5">
           <div
-            className="font-serif text-[15px] leading-tight truncate"
-            style={{ color: "var(--text-1)" }}
-            title={entry?.title}
+            className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[14px] overflow-hidden"
+            style={{ background: "var(--bg-2)", border: "1px solid var(--border-soft)" }}
           >
-            {entry?.title ?? "Fiche introuvable"}
-          </div>
-          <div className="text-[10px] mt-0.5" style={{ color: "var(--text-4)" }}>
-            {cat?.label ?? "—"}
-            {copies > 1 && (
-              <span
-                className="ml-1.5 px-1 rounded"
-                style={{ background: "var(--accent-bg)", color: "var(--accent)" }}
-                title={`Cette fiche est posée ${copies} fois sur le plateau`}
-              >
-                ×{copies}
-              </span>
+            {entry?.main_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={entry.main_image_url}
+                alt=""
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
+            ) : (
+              <span>{cat?.icon ?? "📄"}</span>
             )}
           </div>
+          {identity}
         </div>
-      </div>
+      )}
 
       {/* Aperçu compact — déplié au clic simple */}
       {expanded && entry && (
@@ -1103,9 +1326,9 @@ function FicheBody({
                   key={t}
                   className="text-[9px] px-1.5 py-0.5 rounded-full"
                   style={{
-                    background: "var(--accent-bg)",
-                    color: "var(--accent)",
-                    border: "1px solid var(--accent-border)",
+                    background: `color-mix(in srgb, ${color} 15%, transparent)`,
+                    color,
+                    border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`,
                   }}
                 >
                   {t}

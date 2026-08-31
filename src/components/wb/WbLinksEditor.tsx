@@ -6,6 +6,7 @@ import type { WbEntry, WbLink } from "@/types/database";
 import {
   LINK_TYPES,
   LINK_TYPE_GROUPS,
+  customLinkTypes,
   areReciprocal,
   getCategoryDef,
 } from "@/lib/wb-constants";
@@ -31,6 +32,10 @@ export function WbLinksEditor({
   const [pickedType, setPickedType] = useState<string>(LINK_TYPES[0]);
   const [customType, setCustomType] = useState("");
   const [focused, setFocused] = useState(false);
+  // Pourquoi un ajout a été refusé — sans ça le clic ne fait « rien ».
+  const [notice, setNotice] = useState<string | null>(null);
+  // Les types inventés sur cette fiche, à reproposer plutôt qu'à ressaisir.
+  const ownTypes = useMemo(() => customLinkTypes(links), [links]);
   const supabase = createClient();
 
   const linkedEntryIds = useMemo(() => {
@@ -73,10 +78,16 @@ export function WbLinksEditor({
       return otherWay && areReciprocal(l.link_type, type);
     });
     if (already) {
+      setNotice(
+        `${target.title} est déjà relié — « ${type} » dans un sens et son ` +
+          `complément dans l'autre disent le même fait, une seule ` +
+          `relation suffit. La fiche d'en face l'affiche à sa manière.`,
+      );
       setQuery("");
       setCustomType("");
       return;
     }
+    setNotice(null);
 
     const { data, error } = await supabase
       .from("wb_links")
@@ -185,6 +196,15 @@ export function WbLinksEditor({
           onChange={(e) => setPickedType(e.target.value)}
           className="text-[11px] px-2 py-1.5 bg-bg-secondary border border-border rounded cursor-pointer"
         >
+          {ownTypes.length > 0 && (
+            <optgroup label="Vos types">
+              {ownTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </optgroup>
+          )}
           {LINK_TYPE_GROUPS.map((g) => (
             <optgroup key={g.label} label={g.label}>
               {g.types.map((t) => (
@@ -204,6 +224,20 @@ export function WbLinksEditor({
           />
         )}
       </div>
+
+      {/* Refus expliqué : sans ça, cliquer semblait ne rien faire. */}
+      {notice && (
+        <div className="text-[11px] leading-snug text-text-secondary bg-bg-secondary border border-border rounded px-2 py-1.5 mb-3 flex items-start gap-2">
+          <span className="flex-1">{notice}</span>
+          <button
+            onClick={() => setNotice(null)}
+            className="text-text-tertiary hover:text-text-primary cursor-pointer shrink-0"
+            title="Fermer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Liste groupée */}
       {grouped.length === 0 ? (
@@ -233,10 +267,15 @@ export function WbLinksEditor({
                     // ne dit rien des sentiments d'Alina. Une relation
                     // réciproque (sœur / frère) se lit dans les deux sens ;
                     // une relation à sens unique doit dire lequel.
-                    const reciprocal = pair.length > 1;
                     const outgoing = pair[0].from_entry_id === entry.id;
-                    const symmetric =
-                      reciprocal || areReciprocal(types[0] ?? null, types[0] ?? null);
+                    // Deux liens en base pour un seul fait (héritage) :
+                    // les retirer tous les deux d'un coup.
+                    const paired = pair.length > 1;
+                    // Symétrique = le même mot des deux bords, pas « il
+                    // existe un lien en face ». Une paire père/fils est
+                    // réciproque sans l'être : sans ce distinguo elle
+                    // s'afficherait « père / fils » sans dire qui est qui.
+                    const symmetric = areReciprocal(types[0] ?? null, types[0] ?? null);
 
                     const sentence = symmetric
                       ? `${me} — ${label} — ${them}`
@@ -285,7 +324,7 @@ export function WbLinksEditor({
                           onClick={() => pair.forEach((l) => removeLink(l.id))}
                           className="text-text-quaternary hover:text-red-500 cursor-pointer leading-none opacity-0 group-hover:opacity-100 transition-opacity px-1"
                           title={
-                            reciprocal
+                            paired
                               ? "Retirer la relation (des deux côtés)"
                               : "Retirer le lien"
                           }

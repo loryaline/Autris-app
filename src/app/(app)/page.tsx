@@ -479,16 +479,21 @@ export default async function DashboardPage() {
 
       {/* === Statistiques === */}
       <div className="rd-stat-grid">
+        {/* Le chiffre est un CUMUL depuis toujours ; la légende, la semaine
+            écoulée. Sans « au total » collé à la valeur, les deux lignes se
+            lisaient d'un trait — « 120 409 — cette semaine » — et le total
+            passait pour la production de la semaine. */}
         <StatCard
           label="Mots écrits"
           value={totalWords.toLocaleString("fr-FR")}
+          suffix="au total"
           caption={
             weekWords > 0 ? (
               <>
                 <span className="up">▲ + {weekWords.toLocaleString("fr-FR")}</span> cette semaine
               </>
             ) : (
-              "— cette semaine"
+              "aucun mot cette semaine"
             )
           }
         />
