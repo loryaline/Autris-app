@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.6.2] — 2026-08-31
+
+### Corrections
+
+- **La carte « Projets actifs » ne promet plus un tri qui n'existe pas.** Un projet n'a pas d'état d'activité dans Autris — seuls les romans en ont un. Elle s'appelle désormais « Projets », et signale en légende les projets terminés, c'est-à-dire ceux dont tous les romans sont au statut *terminé* ou *publié*.
+- **La répartition des romans par étape était fausse.** Elle filtrait sur trois statuts inexistants (`en_cours`, `redaction`, `relecture`) et laissait donc la plupart des romans hors de tout décompte. Elle s'appuie maintenant sur les vraies valeurs : rédaction (*à écrire*, *premier jet*) et réécriture (*révision*, *réécriture*, *correction*).
+
+---
+
 ## [0.6.1] — 2026-08-31
 
 ### Corrections

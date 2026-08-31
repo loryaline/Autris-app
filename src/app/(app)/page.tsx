@@ -371,13 +371,28 @@ export default async function DashboardPage() {
   // traverse correctement la frontière entre mois.
   const weekWords = weekWordsTotal;
 
-  // Novels split by status (rédaction / réécriture / relecture…) — light summary
-  const novelsRedac = allNovels.filter((n: { status?: string }) =>
-    n.status === "en_cours" || n.status === "redaction" || !n.status
+  // Répartition des romans par étape. Les valeurs viennent de
+  // NovelStatus : a_ecrire, premier_jet, revision, reecriture, correction,
+  // termine, publie. Le filtre précédent cherchait « en_cours »,
+  // « redaction » et « relecture », qui n'existent nulle part — la carte
+  // ne comptait donc presque rien.
+  const REDACTION_STATUSES = ["a_ecrire", "premier_jet"];
+  const REECRITURE_STATUSES = ["revision", "reecriture", "correction"];
+  const FINI_STATUSES = ["termine", "publie"];
+
+  const novelsRedac = allNovels.filter(
+    (n: { status?: string }) => !n.status || REDACTION_STATUSES.includes(n.status),
   ).length;
   const novelsReecr = allNovels.filter((n: { status?: string }) =>
-    n.status === "reecriture" || n.status === "relecture"
+    REECRITURE_STATUSES.includes(n.status ?? ""),
   ).length;
+
+  // Un projet est terminé quand tous ses romans le sont — un projet sans
+  // roman ne l'est pas : il n'a rien à finir.
+  const projetsTermines = (projects ?? []).filter((p) => {
+    const ns = (p as { novels?: { status?: string }[] }).novels ?? [];
+    return ns.length > 0 && ns.every((n) => FINI_STATUSES.includes(n.status ?? ""));
+  }).length;
 
   // Jours d'écriture du mois (au moins un mot écrit).
   const writingDaysCount = monthActivity.filter((d) => d.wordsDisplay > 0).length;
@@ -502,10 +517,18 @@ export default async function DashboardPage() {
           value={String(allNovels.length)}
           caption={`${novelsRedac} rédaction · ${novelsReecr} réécriture`}
         />
+        {/* Pas « Projets actifs » : un projet n'a pas d'état d'activité
+            dans Autris — seuls les romans en ont un (novels.is_active).
+            « Terminé », en revanche, se déduit : tous les romans du projet
+            au statut termine ou publie. */}
         <StatCard
-          label="Projets actifs"
+          label="Projets"
           value={String(projects?.length ?? 0)}
-          caption={`+ ${wbCount ?? 0} fiches univers`}
+          caption={
+            projetsTermines > 0
+              ? `${projetsTermines} terminé${projetsTermines > 1 ? "s" : ""} · + ${wbCount ?? 0} fiches univers`
+              : `+ ${wbCount ?? 0} fiches univers`
+          }
         />
         <StatCard
           label="Jours d'écriture"
