@@ -835,7 +835,7 @@ export function WbClient({
             ) : /* Grid */
             categoryEntries.length === 0 ? (
               <div className="text-center py-20 text-text-tertiary text-[13px] font-serif italic">
-                Aucune fiche dans cette catégorie.
+                Aucune fiche dans cette catégorie. Le bouton « Nouvelle fiche », en haut à droite, en crée une.
                 {activeCategory === "univers_monde" ? (
                   <div className="mt-4 flex flex-wrap justify-center gap-1.5 not-italic font-sans">
                     {UNIVERS_SUBTYPES.map((s) => (

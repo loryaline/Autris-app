@@ -229,7 +229,7 @@ export function Sidebar({
 
         {filtered.length === 0 && (
           <div className="rd-empty">
-            {q ? `Aucun résultat pour « ${query} »` : "Aucun projet"}
+            {q ? `Aucun résultat pour « ${query} »` : "Aucun projet. Créez-en un depuis le tableau de bord."}
           </div>
         )}
 

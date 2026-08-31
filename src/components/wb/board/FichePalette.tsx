@@ -177,7 +177,7 @@ export function FichePalette({
             style={{ color: "var(--text-4)" }}
           >
             {usable.length === 0
-              ? "Aucune fiche pour l'instant. Ouvrez la bibliothèque pour en créer."
+              ? "Aucune fiche pour l'instant. Élargissez le panneau jusqu'à la bibliothèque pour en créer une."
               : "Aucune fiche ne correspond."}
           </div>
         ) : (

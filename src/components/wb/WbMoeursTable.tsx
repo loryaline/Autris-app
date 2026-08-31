@@ -40,7 +40,7 @@ export function WbMoeursTable({
         Aucune fiche Pays à comparer.
         <br />
         <span className="text-text-quaternary">
-          Crée plusieurs fiches Pays pour voir leur comparatif ici.
+          Créez au moins deux fiches Pays — catégorie Univers &amp; Monde — pour voir leur comparatif ici.
         </span>
       </div>
     );

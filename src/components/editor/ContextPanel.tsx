@@ -1498,7 +1498,7 @@ function WorldTabBody({
         if (catKeys.length === 0) {
           return (
             <div className="text-[11px] italic text-text-quaternary">
-              Aucune fiche dans le World Building de ce projet.
+              Aucune fiche dans le World Building de ce projet. Ouvrez le World Building depuis la barre latérale pour bâtir votre univers.
             </div>
           );
         }
@@ -1570,7 +1570,7 @@ function WorldTabBody({
                     (entries.length === 0 ? (
                       <div className="world-empty">
                         {wbScope === "linked"
-                          ? "Aucune fiche liée."
+                          ? "Aucune fiche liée. Les liens se posent depuis la fiche elle-même."
                           : "Aucune fiche dans cette catégorie."}
                       </div>
                     ) : (

@@ -104,7 +104,7 @@ export function WbLinksEditor({
       console.error(error);
       appToast(
         `Le lien vers ${target.title || "cette fiche"} n'a pas pu être ` +
-          `enregistré. Vérifie ta connexion et réessaie.`,
+          `enregistré. Vérifiez votre connexion et réessayez.`,
         { danger: true },
       );
       return;

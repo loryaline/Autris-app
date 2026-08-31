@@ -27,6 +27,26 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.6.6] — 2026-08-31
+
+### Ajouts
+
+- **Les gestes du plateau sont écrits quelque part.** Un bouton « ? » ouvre la liste : déplacer, zoomer, lasso, double-clic pour ouvrir une fiche, tirer un lien depuis un bord, annuler. Ces gestes existaient depuis le début sans que rien ne les signale — celle qui ne les connaissait pas ne pouvait pas les découvrir. Le panneau rappelle aussi ce que dit une flèche : deux pointes se lisent dans les deux sens, une seule pointe part du sujet.
+- **Un plateau créé s'ouvre avec un mot d'accueil.** Seul le tout premier en recevait un ; les suivants s'ouvraient sur une surface infinie et muette.
+
+### Changements
+
+- **La barre du plateau tient en deux familles.** Les cinq boutons de création — post-it, cadre, texte, forme, image — sont réunis derrière un seul « Ajouter », avec ce que chacun fait écrit à côté. Le reste de la barre sert désormais uniquement à regarder le plateau : chercher, filtrer, recentrer, exporter.
+- **« Les liens manquants » quitte le menu « Déplier ».** Elle ne dépliait rien : elle ne pose aucune fiche et agit sur le plateau entier. Elle rejoint la barre, avec le recentrage et l'export.
+- **Onze états vides disent quoi faire.** « Aucune fiche », « Aucun projet », « Aucun chapitre » s'arrêtaient au constat, au moment précis où l'on a le plus besoin d'être guidée.
+- **L'application ne tutoie plus par endroits.** Quatre textes disaient « tu » quand tout le reste vouvoie. Seule exception, volontaire : « Qu'est-ce que tu ne m'as dit sur toi ? » s'adresse au personnage, pas à l'autrice.
+
+### Corrections
+
+- **La palette de couleurs ne sort plus de l'écran.** La barre contextuelle se calait en supposant une largeur fixe ; les sept pastilles ajoutées en 0.6.0 l'avaient fait plus que doubler. Elle se mesure désormais.
+
+---
+
 ## [0.6.5] — 2026-08-31
 
 ### Ajouts

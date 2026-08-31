@@ -252,7 +252,7 @@ export function BoardFinder({
               className="px-3 pb-1 text-[11.5px]"
               style={{ color: "var(--text-4)" }}
             >
-              Aucune fiche sur ce plateau.
+              Aucune fiche posée : rien à filtrer pour l&apos;instant.
             </div>
           ) : (
             <div className="flex flex-wrap gap-1 px-2.5 pb-1">
