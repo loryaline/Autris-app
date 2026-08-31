@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.6.7] — 2026-08-31
+
+### Retraits
+
+- Le panneau des gestes n'explique plus ce que dit une flèche : une flèche se lit sans mode d'emploi. Il ne liste que les gestes, qui eux ne se devinent pas.
+
+---
+
 ## [0.6.6] — 2026-08-31
 
 ### Ajouts
