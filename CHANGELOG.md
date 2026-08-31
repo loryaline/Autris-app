@@ -31,7 +31,7 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouts
 
-- **Les gestes du plateau sont écrits quelque part.** Un bouton « ? » ouvre la liste : déplacer, zoomer, lasso, double-clic pour ouvrir une fiche, tirer un lien depuis un bord, annuler. Ces gestes existaient depuis le début sans que rien ne les signale — celle qui ne les connaissait pas ne pouvait pas les découvrir. Le panneau rappelle aussi ce que dit une flèche : deux pointes se lisent dans les deux sens, une seule pointe part du sujet.
+- **Les gestes du plateau sont écrits quelque part.** Un bouton « ? » ouvre la liste : déplacer, zoomer, lasso, double-clic pour ouvrir une fiche, tirer un lien depuis un bord, annuler. Ces gestes existaient depuis le début sans que rien ne les signale — celle qui ne les connaissait pas ne pouvait pas les découvrir.
 - **Un plateau créé s'ouvre avec un mot d'accueil.** Seul le tout premier en recevait un ; les suivants s'ouvraient sur une surface infinie et muette.
 
 ### Changements

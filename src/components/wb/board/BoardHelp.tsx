@@ -146,19 +146,6 @@ export function BoardHelp({ onClose }: { onClose: () => void }) {
             </div>
           ))}
 
-          <p
-            className="text-[11.5px] leading-snug pt-1"
-            style={{
-              color: "var(--text-4)",
-              borderTop: "1px solid var(--border-soft)",
-              paddingTop: "12px",
-            }}
-          >
-            Une flèche à <strong>deux pointes</strong> se lit dans les deux
-            sens — « adelphe », « ami », « mariés » disent le même fait de
-            chaque bord. Une flèche à <strong>une seule pointe</strong> part
-            du sujet : « parent » désigne celui d&apos;où elle sort.
-          </p>
         </div>
       </div>
     </>
