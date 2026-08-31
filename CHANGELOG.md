@@ -31,7 +31,7 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ### Retraits
 
-- **Les onglets « Post-its » et « Gantt » quittent la Planification.** Ni l'un ni l'autre n'a jamais existé autrement que sous la forme d'un écran « arrive bientôt ». Les post-its ont trouvé leur place sur le plateau du World Building, sur une surface libre, à côté des fiches et des liens — en garder un second ici obligerait à choisir où l'on brainstorme. Une frise des jalons reste à construire ; l'onglet reviendra le jour où il y aura quelque chose derrière. Un favori pointant vers l'un de ces onglets rouvre désormais le chapitrage.
+- **L'onglet « Post-its » quitte la Planification.** Il n'a jamais existé autrement que sous la forme d'un écran « arrive bientôt ». Les post-its ont trouvé leur place sur le plateau du World Building, sur une surface libre, à côté des fiches et des liens — en garder un second ici obligerait à choisir où l'on brainstorme. Un favori pointant vers cet onglet rouvre désormais le chapitrage. **Gantt reste** : une frise des jalons dans le temps n'existe nulle part ailleurs.
 
 ---
 

@@ -294,7 +294,9 @@ export function PlanningClient({
       ? "Chapitrage"
       : activeView === "outline"
         ? "Scènes"
-        : "Synopsis";
+        : activeView === "synopsis"
+          ? "Synopsis"
+          : "Gantt";
 
   return (
     <div className="flex h-full">
@@ -558,6 +560,15 @@ export function PlanningClient({
 
         {activeView === "synopsis" && (
           <SynopsisView novelId={novelId} initialSynopses={synopses} />
+        )}
+
+        {activeView === "gantt" && (
+          <div className="flex-1 flex items-center justify-center text-text-quaternary text-[14px]">
+            <div className="text-center">
+              <div className="text-[32px] mb-2">📊</div>
+              <div>Le Gantt arrive bientôt</div>
+            </div>
+          </div>
         )}
 
       </div>
