@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { appConfirm } from "@/lib/app-confirm";
 
+// Trois vues, toutes réelles. Post-its et Gantt ont été retirés : ils
+// n'ont jamais existé autrement que sous forme d'écran « arrive bientôt ».
+// Les post-its vivent désormais sur le plateau du World Building ; une
+// frise des jalons reste à construire, et l'onglet reviendra le jour où
+// il y aura quelque chose derrière.
 const VIEWS = [
   { key: "tableau", label: "Chapitrage", icon: "▦" },
   { key: "outline", label: "Scènes", icon: "☰" },
   { key: "synopsis", label: "Synopsis", icon: "✒" },
-  { key: "postits", label: "Post-its", icon: "▪" },
-  { key: "gantt", label: "Gantt", icon: "▬" },
 ] as const;
 
 export type PlanningView = (typeof VIEWS)[number]["key"];

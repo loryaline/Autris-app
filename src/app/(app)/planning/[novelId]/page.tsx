@@ -4,7 +4,9 @@ import { PlanningClient } from "./planning-client";
 import { getNarrativeMethod } from "@/lib/narrative-methods";
 import { personaPrefs } from "@/lib/persona";
 
-const PLANNING_VIEWS = ["tableau", "outline", "synopsis", "postits", "gantt"];
+// « postits » et « gantt » ont été retirés : un lien enregistré vers l'un
+// de ces onglets retombe sur le chapitrage plutôt que sur un écran vide.
+const PLANNING_VIEWS = ["tableau", "outline", "synopsis"];
 
 export default async function PlanningPage({
   params,
