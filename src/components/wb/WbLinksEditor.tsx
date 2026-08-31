@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { appToast } from "@/lib/app-toast";
 import type { WbEntry, WbLink } from "@/types/database";
 import {
   LINK_TYPES,
@@ -101,6 +102,11 @@ export function WbLinksEditor({
       .single();
     if (error || !data) {
       console.error(error);
+      appToast(
+        `Le lien vers ${target.title || "cette fiche"} n'a pas pu être ` +
+          `enregistré. Vérifie ta connexion et réessaie.`,
+        { danger: true },
+      );
       return;
     }
     onLinkAdded(data as WbLink);
@@ -232,7 +238,7 @@ export function WbLinksEditor({
           <button
             onClick={() => setNotice(null)}
             className="text-text-tertiary hover:text-text-primary cursor-pointer shrink-0"
-            title="Fermer"
+            title="Fermer" aria-label="Fermer"
           >
             ✕
           </button>
@@ -324,6 +330,10 @@ export function WbLinksEditor({
                           onClick={() => pair.forEach((l) => removeLink(l.id))}
                           className="text-text-quaternary hover:text-red-500 cursor-pointer leading-none opacity-0 group-hover:opacity-100 transition-opacity px-1"
                           title={
+                            paired
+                              ? "Retirer la relation (des deux côtés)"
+                              : "Retirer le lien"
+                          } aria-label={
                             paired
                               ? "Retirer la relation (des deux côtés)"
                               : "Retirer le lien"

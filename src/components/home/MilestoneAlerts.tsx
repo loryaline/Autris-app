@@ -210,7 +210,7 @@ export function MilestoneAlerts({ items }: { items: MilestoneAlertItem[] }) {
         <button
           onClick={handleDismiss}
           className="text-[11px] text-text-tertiary hover:text-text-primary px-1.5 py-0.5 cursor-pointer bg-transparent border-none"
-          title="Fermer pour aujourd'hui"
+          title="Fermer pour aujourd'hui" aria-label="Fermer pour aujourd'hui"
         >
           ✕
         </button>

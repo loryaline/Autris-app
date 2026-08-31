@@ -71,7 +71,7 @@ export function WbGroupsEditor({
             <button
               onClick={() => remove(g)}
               className="text-[11px] hover:text-red-500 cursor-pointer leading-none"
-              title="Retirer"
+              title="Retirer" aria-label="Retirer"
             >
               ×
             </button>

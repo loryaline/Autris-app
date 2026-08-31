@@ -148,7 +148,7 @@ function ChapterRow({
           {canDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
-              title="Supprimer"
+              title="Supprimer" aria-label="Supprimer"
               className="w-4 h-4 flex items-center justify-center text-[10px] text-text-tertiary hover:text-red hover:bg-red-bg rounded cursor-pointer border-none bg-transparent"
             >
               ✕
@@ -223,7 +223,7 @@ export function StructurePanel({
         <span className="font-serif italic text-[16px] text-text-primary">Chapitres</span>
         <button
           onClick={onAddChapter}
-          title="Ajouter un chapitre"
+          title="Ajouter un chapitre" aria-label="Ajouter un chapitre"
           className="w-6 h-6 flex items-center justify-center text-[16px] leading-none text-text-quaternary hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-bg)] rounded-full cursor-pointer border-none bg-transparent transition-colors"
         >
           +

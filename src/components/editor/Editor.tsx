@@ -609,7 +609,7 @@ export function NovelEditor({
             )}
             <button
               onClick={handleExportNovel}
-              title="Exporter le roman en Word (.docx)"
+              title="Exporter le roman en Word (.docx)" aria-label="Exporter le roman en Word (.docx)"
               className="rd-icon-btn"
             >
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -624,7 +624,7 @@ export function NovelEditor({
             </button>
             <button
               onClick={() => setShowLeftPanel((v) => !v)}
-              title={showLeftPanel ? "Masquer la structure" : "Afficher la structure"}
+              title={showLeftPanel ? "Masquer la structure" : "Afficher la structure"} aria-label={showLeftPanel ? "Masquer la structure" : "Afficher la structure"}
               className={`rd-icon-btn ${showLeftPanel ? "" : "opacity-50"}`}
             >
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -634,7 +634,7 @@ export function NovelEditor({
             </button>
             <button
               onClick={() => setShowRightPanel((v) => !v)}
-              title={showRightPanel ? "Masquer le contexte" : "Afficher le contexte"}
+              title={showRightPanel ? "Masquer le contexte" : "Afficher le contexte"} aria-label={showRightPanel ? "Masquer le contexte" : "Afficher le contexte"}
               className={`rd-icon-btn ${showRightPanel ? "" : "opacity-50"}`}
             >
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none">

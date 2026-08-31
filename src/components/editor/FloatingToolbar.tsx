@@ -215,7 +215,7 @@ export function FloatingToolbar({ editor }: { editor: Editor | null }) {
                 d.id === "top" || d.id === "bottom" ? "horizontal" : "vertical",
               );
             }}
-            title={`Ancrer : ${d.id}`}
+            title={`Ancrer : ${d.id}`} aria-label={`Ancrer : ${d.id}`}
           >
             {d.label}
           </button>

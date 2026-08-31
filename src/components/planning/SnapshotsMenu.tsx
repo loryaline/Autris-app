@@ -388,7 +388,7 @@ export function SnapshotsMenu({
                       <button
                         onClick={() => handleView(s)}
                         disabled={busy === s.id}
-                        title="Consulter (lecture seule)"
+                        title="Consulter (lecture seule)" aria-label="Consulter (lecture seule)"
                         className="rd-icon-btn"
                       >
                         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -399,7 +399,7 @@ export function SnapshotsMenu({
                       <button
                         onClick={() => setConfirmRestore(s)}
                         disabled={busy === s.id}
-                        title="Restaurer cette version"
+                        title="Restaurer cette version" aria-label="Restaurer cette version"
                         className="rd-icon-btn"
                       >
                         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -409,7 +409,7 @@ export function SnapshotsMenu({
                       <button
                         onClick={() => handleDelete(s)}
                         disabled={busy === s.id}
-                        title="Supprimer cette version"
+                        title="Supprimer cette version" aria-label="Supprimer cette version"
                         className="rd-icon-btn"
                       >
                         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -478,7 +478,7 @@ export function SnapshotsMenu({
                 <div className="text-[14px] font-medium text-text-primary">{viewing.name}</div>
                 <div className="text-[11.5px] text-text-tertiary mt-0.5">Lecture seule</div>
               </div>
-              <button onClick={() => setViewing(null)} className="rd-icon-btn" title="Fermer">
+              <button onClick={() => setViewing(null)} className="rd-icon-btn" title="Fermer" aria-label="Fermer">
                 ×
               </button>
             </div>

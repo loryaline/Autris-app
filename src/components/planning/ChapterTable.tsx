@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, type Dispatch, type SetStateAction } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { appConfirm } from "@/lib/app-confirm";
+import { appToast } from "@/lib/app-toast";
 import type { ChapterStatus } from "@/types/database";
 import type { ChapterData as ChapterRow, CustomColumn, CellValue } from "@/app/(app)/planning/[novelId]/planning-client";
 import { RichEditableCell, computeClickOffset } from "./RichEditableCell";
@@ -613,6 +614,10 @@ export function ChapterTable({
       if (error) {
         // Souvent : migration column_widths pas encore passée en base.
         console.error("[chapitrage] save column_widths failed:", error);
+        appToast(
+          "La largeur des colonnes n'a pas pu être enregistrée : elle " +
+            "reprendra sa taille au prochain chargement.",
+        );
       }
     };
     document.addEventListener("mousemove", onMove);
@@ -949,14 +954,40 @@ export function ChapterTable({
   const handleDeleteChapter = useCallback(
     async (chapterId: string) => {
       const supabase = supabaseRef.current;
-      // Optimistic : on retire localement avant le retour serveur
-      setChapters((prev) => prev.filter((c) => c.id !== chapterId));
+      // Optimiste : on retire localement avant le retour serveur, pour que
+      // la ligne disparaisse sans attendre. En cas d'échec il FAUT la
+      // remettre — sinon le chapitre semble supprimé, reste en base, et
+      // réapparaît au prochain chargement sans qu'on comprenne pourquoi.
+      let removed: ChapterRow | undefined;
+      let atIndex = -1;
+      setChapters((prev) => {
+        atIndex = prev.findIndex((c) => c.id === chapterId);
+        removed = prev[atIndex];
+        return prev.filter((c) => c.id !== chapterId);
+      });
+
       const { error } = await supabase
         .from("chapters")
         .delete()
         .eq("id", chapterId);
+
       if (error) {
         console.error("[chapitrage] delete chapter failed:", error);
+        if (removed) {
+          const back = removed;
+          const at = atIndex;
+          setChapters((prev) => {
+            if (prev.some((c) => c.id === back.id)) return prev;
+            const next = [...prev];
+            next.splice(at < 0 ? next.length : at, 0, back);
+            return next;
+          });
+        }
+        appToast(
+          `« ${removed?.title || "Ce chapitre"} » n'a pas pu être supprimé. ` +
+            `Il a été remis dans le tableau.`,
+          { danger: true },
+        );
       }
     },
     [setChapters],
@@ -1395,7 +1426,7 @@ export function ChapterTable({
                           e.stopPropagation();
                           setConfirmDeleteCol({ id: col.customId!, name: col.label });
                         }}
-                        title="Supprimer cette colonne personnalisée"
+                        title="Supprimer cette colonne personnalisée" aria-label="Supprimer cette colonne personnalisée"
                         className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-text-quaternary hover:text-[#e89494] hover:bg-white/[0.04] cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none"
                       >
                         <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
@@ -1763,7 +1794,7 @@ export function ChapterTable({
                         anchor: { top: r.bottom + 4, left: r.left },
                       });
                     }}
-                    title="Options de la ligne · glisser pour réordonner"
+                    title="Options de la ligne · glisser pour réordonner" aria-label="Options de la ligne · glisser pour réordonner"
                     className="absolute left-0 top-1 bottom-1 w-3.5 flex items-center justify-center rounded-sm opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab z-10 border-none"
                     style={{
                       background:
@@ -1916,7 +1947,7 @@ export function ChapterTable({
             {/* Add row — "+" discret après la dernière ligne */}
             <button
               onClick={handleAddChapter}
-              title="Ajouter un chapitre"
+              title="Ajouter un chapitre" aria-label="Ajouter un chapitre"
               className="w-full py-2.5 flex items-center justify-center text-text-quaternary hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-bg)]/40 cursor-pointer transition-colors border-none bg-transparent group"
             >
               <span className="w-6 h-6 rounded-full border border-dashed border-white/[0.12] group-hover:border-[var(--color-accent-border)] flex items-center justify-center text-[13px] leading-none transition-colors">

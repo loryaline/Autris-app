@@ -186,7 +186,7 @@ export function WbEntryDetail({
                     disabled={!prev}
                     onClick={() => prev && onSelectEntry(prev.id)}
                     className="w-7 h-7 rounded-[var(--radius-sm)] bg-bg-secondary border border-white/[0.06] text-text-tertiary hover:text-text-primary hover:border-white/[0.1] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
-                    title={prev?.title || "Fiche précédente"}
+                    title={prev?.title || "Fiche précédente"} aria-label={prev?.title || "Fiche précédente"}
                   >
                     <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
                       <path d="M8.5 3.5L5 7L8.5 10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -196,7 +196,7 @@ export function WbEntryDetail({
                     disabled={!next}
                     onClick={() => next && onSelectEntry(next.id)}
                     className="w-7 h-7 rounded-[var(--radius-sm)] bg-bg-secondary border border-white/[0.06] text-text-tertiary hover:text-text-primary hover:border-white/[0.1] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
-                    title={next?.title || "Fiche suivante"}
+                    title={next?.title || "Fiche suivante"} aria-label={next?.title || "Fiche suivante"}
                   >
                     <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
                       <path d="M5.5 3.5L9 7L5.5 10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -271,7 +271,7 @@ export function WbEntryDetail({
               <button
                 onClick={() => setMenuOpen((v) => !v)}
                 className="w-8 h-8 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.06] text-text-tertiary hover:text-text-primary hover:border-white/[0.1] cursor-pointer flex items-center justify-center"
-                title="Plus d'options"
+                title="Plus d'options" aria-label="Plus d'options"
               >
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor">
                   <circle cx="3" cy="7" r="1.2" />

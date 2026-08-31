@@ -252,7 +252,7 @@ function SceneRow({
       <button
         onClick={() => setShowConfirm(true)}
         className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center text-[12px] text-text-quaternary hover:text-red-400 cursor-pointer shrink-0 transition-opacity"
-        title="Supprimer la scène"
+        title="Supprimer la scène" aria-label="Supprimer la scène"
       >
         ✕
       </button>

@@ -27,6 +27,22 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.6.5] — 2026-08-31
+
+### Ajouts
+
+- **Les pannes se voient enfin.** Jusqu'ici, un enregistrement raté s'arrêtait sans rien dire : l'image ne s'affichait pas, le lien n'apparaissait pas, et rien ne permettait de distinguer une panne de réseau d'un refus délibéré. Sept endroits parlent désormais, par un message éphémère en bas de l'écran — ajout d'un lien, image de fiche, moodboard, galerie, suppression de chapitre, largeur de colonne, import de manuscrit.
+- **Un filet de tests.** 47 tests unitaires sur la logique du World Building, lancés par `npm test`. Ils couvrent la réciprocité des relations, les décalages de génération, les types personnalisés, les noms de fichiers d'export et les filtres du plateau — c'est-à-dire précisément le raisonnement dont une erreur ne se voit pas à l'œil.
+
+### Corrections
+
+- **Un chapitre dont la suppression échoue revient dans le tableau.** Il disparaissait de l'écran sans attendre le serveur et n'était jamais remis : le chapitre restait en base et réapparaissait au chargement suivant, sans explication.
+- **52 boutons à icône ont un nom.** Ils ne portaient qu'une infobulle, qui ne s'affiche jamais au toucher et n'est pas lue de façon fiable par un lecteur d'écran.
+- **Le retour au tableau de bord depuis les paramètres d'un projet ne recharge plus l'application.**
+- L'échec de lecture d'un manuscrit importé n'invite plus à « regarder la console du navigateur » : il dit quels formats sont lus et quoi tenter.
+
+---
+
 ## [0.6.4] — 2026-08-31
 
 ### Corrections

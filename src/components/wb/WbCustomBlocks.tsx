@@ -265,7 +265,7 @@ function BlockToolbar({
       <button
         onClick={onMoveUp}
         disabled={isFirst}
-        title="Monter"
+        title="Monter" aria-label="Monter"
         className="w-6 h-6 flex items-center justify-center text-text-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed rounded hover:bg-white/[0.04] cursor-pointer"
       >
         ↑
@@ -273,7 +273,7 @@ function BlockToolbar({
       <button
         onClick={onMoveDown}
         disabled={isLast}
-        title="Descendre"
+        title="Descendre" aria-label="Descendre"
         className="w-6 h-6 flex items-center justify-center text-text-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed rounded hover:bg-white/[0.04] cursor-pointer"
       >
         ↓
@@ -282,7 +282,7 @@ function BlockToolbar({
         onClick={async () => {
           if (await appConfirm("Supprimer ce bloc ?", { confirmLabel: "Supprimer" })) onDelete();
         }}
-        title="Supprimer le bloc"
+        title="Supprimer le bloc" aria-label="Supprimer le bloc"
         className="w-6 h-6 flex items-center justify-center text-text-quaternary hover:text-red rounded hover:bg-red-bg/40 cursor-pointer"
       >
         ✕
@@ -339,7 +339,7 @@ function TextBlockBody({
             {block.labels.length > 1 && (
               <button
                 onClick={() => removeEntry(i)}
-                title="Supprimer cette entrée"
+                title="Supprimer cette entrée" aria-label="Supprimer cette entrée"
                 className="text-[11px] text-text-quaternary hover:text-red px-1 cursor-pointer"
               >
                 −
@@ -448,7 +448,7 @@ function TableBlockBody({
                     {block.columns.length > 1 && (
                       <button
                         onClick={() => removeColumn(ci)}
-                        title="Supprimer la colonne"
+                        title="Supprimer la colonne" aria-label="Supprimer la colonne"
                         className="text-[11px] text-text-quaternary hover:text-red px-1.5 cursor-pointer"
                       >
                         −
@@ -477,7 +477,7 @@ function TableBlockBody({
                     type="button"
                     onClick={() => removeRow(ri)}
                     className="w-7 h-7 text-text-quaternary hover:text-[var(--color-accent)] transition-colors cursor-pointer"
-                    title="Supprimer la ligne"
+                    title="Supprimer la ligne" aria-label="Supprimer la ligne"
                   >
                     ×
                   </button>
