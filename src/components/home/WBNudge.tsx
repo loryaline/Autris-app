@@ -57,7 +57,7 @@ export function WBNudge({ daysSinceWB }: { daysSinceWB: number }) {
       <button
         onClick={handleDismiss}
         className="text-[11px] text-text-tertiary hover:text-text-primary px-1.5 py-0.5 cursor-pointer"
-        title="Fermer jusqu'à la semaine prochaine"
+        title="Fermer jusqu'à la semaine prochaine" aria-label="Fermer jusqu'à la semaine prochaine"
       >
         ✕
       </button>

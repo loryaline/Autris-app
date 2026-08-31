@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { appConfirm } from "@/lib/app-confirm";
@@ -198,15 +199,18 @@ export function ProjectSettings({ project }: { project: ProjectData }) {
     <div className="max-w-[600px] mx-auto py-8 px-4">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <a
+        {/* Link, pas <a> : un <a> rechargeait toute l'application pour
+            revenir au tableau de bord. */}
+        <Link
           href="/"
           className="text-text-tertiary hover:text-primary transition-colors"
           title="Retour au dashboard"
+          aria-label="Retour au dashboard"
         >
           <svg width="16" height="16" viewBox="0 0 12 12" fill="none">
             <path d="M8 2L4 6l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-        </a>
+        </Link>
         <div>
           <h1 className="text-[18px] font-semibold text-text-primary">{project.title}</h1>
           <div className="text-[13px] text-text-tertiary">Paramètres du projet</div>

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { appToast } from "@/lib/app-toast";
 import { appConfirm } from "@/lib/app-confirm";
 
 export function WbMainImage({
@@ -40,6 +41,10 @@ export function WbMainImage({
       .upload(path, file, { cacheControl: "3600", upsert: false });
     if (error) {
       console.error(error);
+      appToast(
+        "L'image n'a pas pu être envoyée. Vérifie sa taille et ta connexion.",
+        { danger: true },
+      );
       setBusy(false);
       return;
     }

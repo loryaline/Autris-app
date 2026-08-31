@@ -317,7 +317,7 @@ function BubbleMenu({
         tabIndex={-1}
         onClick={() => editor.chain().focus().toggleBold().run()}
         className={btn(editor.isActive("bold"))}
-        title="Gras (Ctrl+B)"
+        title="Gras (Ctrl+B)" aria-label="Gras (Ctrl+B)"
       >
         <span className="font-bold">B</span>
       </button>
@@ -325,7 +325,7 @@ function BubbleMenu({
         tabIndex={-1}
         onClick={() => editor.chain().focus().toggleItalic().run()}
         className={btn(editor.isActive("italic"))}
-        title="Italique (Ctrl+I)"
+        title="Italique (Ctrl+I)" aria-label="Italique (Ctrl+I)"
       >
         <span className="italic">I</span>
       </button>
@@ -333,7 +333,7 @@ function BubbleMenu({
         tabIndex={-1}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         className={btn(editor.isActive("underline"))}
-        title="Souligné (Ctrl+U)"
+        title="Souligné (Ctrl+U)" aria-label="Souligné (Ctrl+U)"
       >
         <span className="underline">U</span>
       </button>
@@ -341,7 +341,7 @@ function BubbleMenu({
         tabIndex={-1}
         onClick={() => editor.chain().focus().toggleStrike().run()}
         className={btn(editor.isActive("strike"))}
-        title="Barré"
+        title="Barré" aria-label="Barré"
       >
         <span className="line-through">S</span>
       </button>
@@ -357,7 +357,7 @@ function BubbleMenu({
             setShowHighlight(false);
           }}
           className={btn(showTextColor)}
-          title="Couleur du texte"
+          title="Couleur du texte" aria-label="Couleur du texte"
         >
           <span style={{ color: editor.getAttributes("textStyle").color ?? "currentColor" }}>A</span>
         </button>
@@ -372,7 +372,7 @@ function BubbleMenu({
                   else editor.chain().focus().setColor(c.value).run();
                   setShowTextColor(false);
                 }}
-                title={c.name}
+                title={c.name} aria-label={c.name}
                 className="w-6 h-6 rounded border border-white/[0.08] flex items-center justify-center text-[12px] font-bold cursor-pointer hover:ring-1 hover:ring-primary"
                 style={{ color: c.value ?? "var(--color-text-primary)" }}
               >
@@ -392,7 +392,7 @@ function BubbleMenu({
             setShowTextColor(false);
           }}
           className={btn(showHighlight)}
-          title="Surlignage"
+          title="Surlignage" aria-label="Surlignage"
         >
           <span
             className="inline-block w-3 h-3 rounded-sm border border-white/[0.10]"
@@ -410,7 +410,7 @@ function BubbleMenu({
                   else editor.chain().focus().setHighlight({ color: c.value }).run();
                   setShowHighlight(false);
                 }}
-                title={c.name}
+                title={c.name} aria-label={c.name}
                 className="w-6 h-6 rounded border border-white/[0.08] cursor-pointer hover:ring-1 hover:ring-primary"
                 style={{ background: c.value ?? "transparent" }}
               />

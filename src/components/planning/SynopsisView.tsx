@@ -226,7 +226,7 @@ export function SynopsisView({
                   setRenaming(true);
                 }
               }}
-              title={isActive ? "Double-clic pour renommer" : s.title}
+              title={isActive ? "Double-clic pour renommer" : s.title} aria-label={isActive ? "Double-clic pour renommer" : s.title}
               className={`h-6 px-2.5 rounded-[var(--radius-sm)] text-[12px] whitespace-nowrap cursor-pointer transition-colors ${
                 isActive
                   ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent-border)]"
@@ -240,7 +240,7 @@ export function SynopsisView({
         <button
           onClick={() => addSynopsis(false)}
           disabled={busy}
-          title="Nouveau synopsis"
+          title="Nouveau synopsis" aria-label="Nouveau synopsis"
           className="h-6 w-6 shrink-0 rounded-[var(--radius-sm)] text-[14px] leading-none text-text-tertiary hover:text-[var(--color-accent)] hover:bg-white/[0.04] cursor-pointer transition-colors disabled:opacity-50"
         >
           +

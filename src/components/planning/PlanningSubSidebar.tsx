@@ -355,7 +355,7 @@ export function PlanningSubSidebar({
                     <button
                       onClick={() => deleteMilestone(m.id)}
                       className="text-[11.5px] px-2 py-1.5 bg-red-500/10 text-red-400 rounded-[var(--radius-sm)] cursor-pointer hover:bg-red-500/20"
-                      title="Supprimer"
+                      title="Supprimer" aria-label="Supprimer"
                     >
                       🗑
                     </button>

@@ -796,7 +796,7 @@ export function ContextPanel({
                             {/* Delete */}
                             <button
                               onClick={() => deleteScene(scene.id)}
-                              title="Supprimer"
+                              title="Supprimer" aria-label="Supprimer"
                               className="shrink-0 w-5 h-5 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[11px] text-text-quaternary hover:text-[#e89494] cursor-pointer border-none bg-transparent transition-opacity"
                             >
                               ✕
@@ -1175,7 +1175,7 @@ export function ContextPanel({
                                           setRenamingVersionId(v.id);
                                         }}
                                         className="text-[10px] text-text-tertiary hover:text-text-primary cursor-pointer border border-border rounded px-1.5 py-0.5 bg-transparent transition-colors"
-                                        title="Renommer"
+                                        title="Renommer" aria-label="Renommer"
                                       >
                                         ✎
                                       </button>
@@ -1184,7 +1184,7 @@ export function ContextPanel({
                                           if (await appConfirm("Supprimer cette version ?", { confirmLabel: "Supprimer" })) deleteVersion(v.id);
                                         }}
                                         className="text-[10px] text-text-tertiary hover:text-red cursor-pointer border border-border rounded px-1.5 py-0.5 bg-transparent transition-colors"
-                                        title="Supprimer"
+                                        title="Supprimer" aria-label="Supprimer"
                                       >
                                         🗑
                                       </button>

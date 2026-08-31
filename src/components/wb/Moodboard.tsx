@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { appToast } from "@/lib/app-toast";
 import { appConfirm } from "@/lib/app-confirm";
 import type { WbEntry } from "@/types/database";
 
@@ -29,6 +30,9 @@ export function Moodboard({
     setUploading(true);
 
     const newEntries: WbEntry[] = [];
+    // Un envoi par lot peut échouer partiellement : on nomme les fichiers
+    // recalés plutôt que de les laisser manquer en silence.
+    const failed: string[] = [];
     for (const file of Array.from(files)) {
       if (!file.type.startsWith("image/")) continue;
       const ext = file.name.split(".").pop() ?? "jpg";
@@ -40,6 +44,7 @@ export function Moodboard({
         .upload(path, file, { cacheControl: "3600", upsert: false });
       if (upErr) {
         console.error("Upload error", upErr);
+        failed.push(file.name);
         continue;
       }
       const { data: pub } = supabase.storage.from("wb-images").getPublicUrl(path);
@@ -54,12 +59,24 @@ export function Moodboard({
         })
         .select()
         .single();
-      if (insErr || !inserted) continue;
+      if (insErr || !inserted) {
+        console.error(insErr);
+        failed.push(file.name);
+        continue;
+      }
       newEntries.push(inserted as WbEntry);
     }
     onEntriesChange([...newEntries, ...entries]);
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (failed.length > 0) {
+      appToast(
+        failed.length === 1
+          ? `« ${failed[0]} » n'a pas pu être ajouté au moodboard.`
+          : `${failed.length} images n'ont pas pu être ajoutées : ${failed.join(", ")}.`,
+        { danger: true },
+      );
+    }
   }
 
   async function handleDelete(id: string) {
@@ -158,7 +175,7 @@ export function Moodboard({
                   <button
                     onClick={() => handleDelete(e.id)}
                     className="w-6 h-6 bg-bg-primary/90 border border-border rounded text-[11px] text-text-tertiary hover:text-red-500 cursor-pointer"
-                    title="Supprimer"
+                    title="Supprimer" aria-label="Supprimer"
                   >
                     ×
                   </button>

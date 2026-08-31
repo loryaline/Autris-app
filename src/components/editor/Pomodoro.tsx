@@ -293,7 +293,7 @@ export function Pomodoro({ defaultDuration }: { defaultDuration: number }) {
       {/* Bouton chevron / settings */}
       <button
         onClick={() => setShowMenu((v) => !v)}
-        title="Durée du pomodoro"
+        title="Durée du pomodoro" aria-label="Durée du pomodoro"
         className="ml-1 h-6 w-5 flex items-center justify-center rounded text-text-quaternary hover:text-text-primary hover:bg-bg-hover transition-colors cursor-pointer"
       >
         <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -305,7 +305,7 @@ export function Pomodoro({ defaultDuration }: { defaultDuration: number }) {
       {session && (
         <button
           onClick={stop}
-          title="Arrêter le pomodoro"
+          title="Arrêter le pomodoro" aria-label="Arrêter le pomodoro"
           className="ml-0.5 h-6 w-5 flex items-center justify-center rounded text-text-quaternary hover:text-red hover:bg-red-bg transition-colors cursor-pointer"
         >
           <svg width="8" height="8" viewBox="0 0 8 8" fill="none">

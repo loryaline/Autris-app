@@ -39,9 +39,14 @@ export function ImportManuscriptDialog({
       setFileName(file.name);
     } catch (e) {
       console.error("[import manuscript] parse failed", e);
+      // Renvoyer l'autrice à la console du navigateur ne l'aide pas :
+      // on dit ce qui est lisible et ce qu'elle peut faire à la place.
       setError(
-        (e instanceof Error ? e.message : "Erreur de lecture du fichier.") +
-          " Regardez la console du navigateur pour plus de détails."
+        (e instanceof Error && e.message
+          ? e.message
+          : "Ce fichier n'a pas pu être lu.") +
+          " Autris lit les .docx, les .pdf et le texte brut — si le fichier " +
+          "vient d'un autre logiciel, un export en .docx passe généralement.",
       );
     } finally {
       setParsing(false);
@@ -242,7 +247,7 @@ export function ImportManuscriptDialog({
                     {i > 0 && (
                       <button
                         onClick={() => mergeIntoPrevious(i)}
-                        title="Fusionner avec le chapitre précédent"
+                        title="Fusionner avec le chapitre précédent" aria-label="Fusionner avec le chapitre précédent"
                         className="text-[11px] text-text-tertiary hover:text-text-primary px-1"
                       >
                         ↑
@@ -250,7 +255,7 @@ export function ImportManuscriptDialog({
                     )}
                     <button
                       onClick={() => removeChapter(i)}
-                      title="Supprimer"
+                      title="Supprimer" aria-label="Supprimer"
                       className="text-[11px] text-text-tertiary hover:text-red-600 px-1"
                     >
                       ✕

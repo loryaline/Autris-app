@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { appToast } from "@/lib/app-toast";
 
 const MAX_IMAGES = 10;
 
@@ -37,6 +38,7 @@ export function WbGallery({
     const remaining = MAX_IMAGES - value.length;
     const picked = Array.from(files).slice(0, remaining);
     const uploaded: string[] = [];
+    const failed: string[] = [];
     for (const file of picked) {
       if (!file.type.startsWith("image/")) continue;
       const ext = file.name.split(".").pop() ?? "jpg";
@@ -48,6 +50,7 @@ export function WbGallery({
         .upload(path, file, { cacheControl: "3600", upsert: false });
       if (error) {
         console.error(error);
+        failed.push(file.name);
         continue;
       }
       const { data: pub } = supabase.storage.from("wb-images").getPublicUrl(path);
@@ -56,6 +59,14 @@ export function WbGallery({
     if (uploaded.length > 0) await persist([...value, ...uploaded]);
     setBusy(false);
     if (inputRef.current) inputRef.current.value = "";
+    if (failed.length > 0) {
+      appToast(
+        failed.length === 1
+          ? `« ${failed[0]} » n'a pas pu être envoyée.`
+          : `${failed.length} images n'ont pas pu être envoyées : ${failed.join(", ")}.`,
+        { danger: true },
+      );
+    }
   }
 
   async function removeAt(idx: number) {
@@ -139,7 +150,7 @@ export function WbGallery({
               <button
                 onClick={() => removeAt(idx)}
                 className="absolute top-1 right-1 w-5 h-5 bg-bg-primary/90 border border-border rounded text-[10px] text-text-tertiary hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                title="Retirer"
+                title="Retirer" aria-label="Retirer"
               >
                 ×
               </button>

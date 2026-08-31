@@ -220,7 +220,7 @@ export function Sidebar({
             <button
               className="rd-search-clear"
               onClick={() => setQuery("")}
-              title="Effacer"
+              title="Effacer" aria-label="Effacer"
             >
               ×
             </button>

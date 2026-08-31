@@ -326,7 +326,7 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
                           <button
                             type="button"
                             onClick={() => removeAttachment(a.id)}
-                            title="Retirer"
+                            title="Retirer" aria-label="Retirer"
                             className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white text-[11px] leading-none cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             ×
