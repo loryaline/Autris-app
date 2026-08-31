@@ -248,6 +248,17 @@ export function WbBoardCanvas({
   // fausserait le cadre de la mini-carte sans rien signaler.
   // ResizeObserver déclenche son rappel dès l'observation : pas besoin
   // d'une mesure initiale synchrone.
+  // Largeur RÉELLE de la barre contextuelle. Elle change avec la
+  // sélection — une fiche seule ouvre une palette de couleurs, un
+  // post-it non — donc une demi-largeur devinée la fait déborder de
+  // l'écran ou coller au bord. On la mesure.
+  const [toolbarW, setToolbarW] = useState(0);
+  const measureToolbar = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const w = el.getBoundingClientRect().width;
+    setToolbarW((prev) => (Math.abs(prev - w) < 0.5 ? prev : w));
+  }, []);
+
   const [hostBox, setHostBox] = useState({ w: 0, h: 0 });
   const hostW = hostBox.w;
   useEffect(() => {
@@ -1177,14 +1188,24 @@ export function WbBoardCanvas({
           const bottom = maxY * viewport.zoom + viewport.y;
 
           const above = top > 56;
+          const half = (toolbarW || 180) / 2;
 
           return (
             <div
+              ref={measureToolbar}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               className="absolute z-40 flex items-center gap-0.5 px-1.5 py-1 rounded-[var(--radius-md)] shadow-xl"
               style={{
-                left: hostW ? Math.min(Math.max(cx, 90), hostW - 90) : cx,
+                // Marge = sa vraie demi-largeur, pas une valeur devinée :
+                // la palette de couleurs d'une fiche l'allonge de plus du
+                // double, et elle sortait de l'écran près des bords.
+                left: hostW
+                  ? Math.min(
+                      Math.max(cx, half + 8),
+                      Math.max(half + 8, hostW - half - 8),
+                    )
+                  : cx,
                 top: above ? top - 10 : bottom + 10,
                 transform: `translate(-50%, ${above ? "-100%" : "0"})`,
                 background: "var(--bg-3)",

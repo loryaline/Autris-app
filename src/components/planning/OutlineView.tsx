@@ -551,7 +551,7 @@ export function OutlineView({
 
         {sorted.length === 0 && (
           <div className="text-center py-12 text-text-quaternary italic font-serif">
-            Aucun chapitre pour le moment. Ajoute-les depuis le Chapitrage.
+            Aucun chapitre pour le moment. Ajoutez-les depuis le Chapitrage, premier onglet de la Planification.
           </div>
         )}
       </div>

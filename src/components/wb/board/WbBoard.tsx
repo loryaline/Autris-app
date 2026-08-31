@@ -17,6 +17,7 @@ import {
 } from "./WbBoardCanvas";
 import { LinkTypePicker } from "./LinkTypePicker";
 import { BoardMiniMap } from "./BoardMiniMap";
+import { BoardHelp } from "./BoardHelp";
 import {
   BoardFinder,
   EMPTY_FILTER,
@@ -165,6 +166,50 @@ function ToolButton({
   );
 }
 
+/** Une entrée du menu « Ajouter » : une icône, un nom, ce que ça fait. */
+function AddItem({
+  label,
+  hint,
+  children,
+  onClick,
+  disabled = false,
+}: {
+  label: string;
+  hint: string;
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left cursor-pointer bg-transparent border-none hover:bg-white/[0.05] disabled:opacity-50 disabled:cursor-default"
+    >
+      <span
+        className="w-5 flex items-center justify-center shrink-0"
+        style={{ color: "var(--text-3)" }}
+      >
+        {children}
+      </span>
+      <span className="min-w-0">
+        <span
+          className="block text-[12.5px] leading-tight"
+          style={{ color: "var(--text-1)" }}
+        >
+          {label}
+        </span>
+        <span
+          className="block text-[10.5px] leading-tight mt-0.5"
+          style={{ color: "var(--text-4)" }}
+        >
+          {hint}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 const POSTIT_COLORS = [
   "#E8C77A",
   "#E8A87C",
@@ -211,7 +256,8 @@ export function WbBoard({
   // la première frappe, et la réinjecter (au clic sur une couleur, par
   // exemple) effacerait le texte en cours de saisie.
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
-  const [showShapeMenu, setShowShapeMenu] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [showExpandMenu, setShowExpandMenu] = useState(false);
   // Message fugace : dire ce qui vient de se passer quand le plateau,
   // lui, ne bouge pas — « rien n'est apparu » ne doit jamais rester
@@ -797,7 +843,6 @@ export function WbBoard({
       // Une forme sert le plus souvent de fond : elle se glisse dessous.
       z: zBounds().min - 1,
     });
-    setShowShapeMenu(false);
   }
 
   async function handleAddCadre() {
@@ -1012,107 +1057,158 @@ export function WbBoard({
           )}
         </div>
 
-        <button
-          onClick={handleAddPostit}
-          title="Ajouter un post-it"
-          className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] text-[12px] cursor-pointer transition-colors"
-          style={{
-            background: "var(--bg-3)",
-            border: "1px solid var(--border-soft)",
-            color: "var(--text-2)",
-          }}
-        >
-          <span
-            className="w-2.5 h-2.5 rounded-[2px]"
-            style={{ background: POSTIT_COLORS[0] }}
-          />
-          Post-it
-        </button>
-
-        <ToolButton
-          onClick={handleAddCadre}
-          title="Ajouter un cadre — il emporte ce qu'il contient"
-        >
-          <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-            <rect
-              x="2"
-              y="4"
-              width="10"
-              height="8"
-              rx="1"
-              stroke="currentColor"
-              strokeWidth="1.3"
-              strokeDasharray="2.5 2"
-            />
-            <path d="M2 2.5H7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-          </svg>
-          Cadre
-        </ToolButton>
-
-        <ToolButton onClick={handleAddTexte} title="Ajouter un texte libre">
-          <span className="font-serif text-[13px] leading-none">T</span>
-          Texte
-        </ToolButton>
-
-        {/* Formes */}
+        {/* Ajouter — un seul bouton pour les cinq objets qu'on pose.
+            Auparavant chacun avait le sien : la barre gagnait une entrée à
+            chaque livraison et n'en perdait jamais. Ici, « créer » tient en
+            un point d'entrée, et le reste de la barre sert à REGARDER le
+            plateau (chercher, filtrer, zoomer, exporter). */}
         <div className="relative">
           <ToolButton
-            onClick={() => setShowShapeMenu((v) => !v)}
-            title="Ajouter une forme"
-            active={showShapeMenu}
+            onClick={() => setShowAddMenu((v) => !v)}
+            title="Ajouter un objet sur le plateau"
+            active={showAddMenu}
           >
             <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-              <rect x="2" y="2.5" width="10" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+              <path
+                d="M7 2.5v9M2.5 7h9"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
-            Forme
+            Ajouter
           </ToolButton>
-          {showShapeMenu && (
+
+          {showAddMenu && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowShapeMenu(false)} />
               <div
-                className="absolute top-full left-0 mt-1 z-50 p-1 rounded-[var(--radius-md)] shadow-xl flex gap-1"
-                style={{ background: "var(--bg-3)", border: "1px solid var(--border-soft)" }}
+                className="fixed inset-0 z-40"
+                onClick={() => setShowAddMenu(false)}
+              />
+              <div
+                className="absolute top-full left-0 mt-1 z-50 w-[212px] py-1.5 rounded-[var(--radius-md)] shadow-2xl"
+                style={{
+                  background: "var(--bg-3)",
+                  border: "1px solid var(--border-soft)",
+                }}
               >
-                {(
-                  [
-                    { k: "rect", label: "Rectangle", r: "2" },
-                    { k: "round", label: "Rectangle arrondi", r: "5" },
-                    { k: "ellipse", label: "Ellipse", r: "999" },
-                  ] as const
-                ).map((s) => (
-                  <button
-                    key={s.k}
-                    onClick={() => handleAddForme(s.k)}
-                    title={s.label}
-                    aria-label={s.label}
-                    className="w-8 h-8 flex items-center justify-center rounded cursor-pointer bg-transparent border-none hover:bg-white/[0.06] text-text-tertiary hover:text-[var(--color-accent)]"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      {s.k === "ellipse" ? (
-                        <ellipse cx="8" cy="8" rx="6" ry="4.5" stroke="currentColor" strokeWidth="1.4" />
-                      ) : (
-                        <rect x="2" y="3.5" width="12" height="9" rx={s.r} stroke="currentColor" strokeWidth="1.4" />
-                      )}
-                    </svg>
-                  </button>
-                ))}
+                <AddItem
+                  label="Post-it"
+                  hint="Une note libre, en texte riche"
+                  onClick={() => {
+                    setShowAddMenu(false);
+                    handleAddPostit();
+                  }}
+                >
+                  <span
+                    className="w-3.5 h-3.5 rounded-[2px]"
+                    style={{ background: POSTIT_COLORS[0] }}
+                  />
+                </AddItem>
+
+                <AddItem
+                  label="Cadre"
+                  hint="Il emporte ce qu'il contient"
+                  onClick={() => {
+                    setShowAddMenu(false);
+                    handleAddCadre();
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect
+                      x="2"
+                      y="4"
+                      width="10"
+                      height="8"
+                      rx="1"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeDasharray="2.5 2"
+                    />
+                    <path
+                      d="M2 2.5H7"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </AddItem>
+
+                <AddItem
+                  label="Texte"
+                  hint="Un titre, une annotation"
+                  onClick={() => {
+                    setShowAddMenu(false);
+                    handleAddTexte();
+                  }}
+                >
+                  <span className="font-serif text-[14px] leading-none">T</span>
+                </AddItem>
+
+                <AddItem
+                  label="Image"
+                  hint={uploading ? "Envoi en cours…" : "Depuis votre ordinateur"}
+                  disabled={uploading}
+                  onClick={() => {
+                    setShowAddMenu(false);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="2" y="3" width="10" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+                    <circle cx="5" cy="6" r="1" fill="currentColor" />
+                    <path
+                      d="M2.5 9.5L5.5 7L8 9L10 7.8L11.5 9"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </AddItem>
+
+                {/* Les formes n'ont plus de sous-menu : trois icônes tiennent
+                    sur une ligne, et un menu dans un menu se manque à la souris. */}
+                <div className="my-1 border-t border-white/[0.06]" />
+                <div
+                  className="px-3 pt-1 pb-1 text-[10px] uppercase"
+                  style={{ letterSpacing: "0.13em", color: "var(--text-4)" }}
+                >
+                  Formes
+                </div>
+                <div className="flex gap-1 px-2.5 pb-1.5">
+                  {(
+                    [
+                      { k: "rect", label: "Rectangle", r: "2" },
+                      { k: "round", label: "Rectangle arrondi", r: "5" },
+                      { k: "ellipse", label: "Ellipse", r: "999" },
+                    ] as const
+                  ).map((s) => (
+                    <button
+                      key={s.k}
+                      onClick={() => {
+                        setShowAddMenu(false);
+                        handleAddForme(s.k);
+                      }}
+                      title={s.label}
+                      aria-label={s.label}
+                      className="w-9 h-9 flex items-center justify-center rounded cursor-pointer bg-transparent border-none hover:bg-white/[0.06] text-text-tertiary hover:text-[var(--color-accent)]"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        {s.k === "ellipse" ? (
+                          <ellipse cx="8" cy="8" rx="6" ry="4.5" stroke="currentColor" strokeWidth="1.4" />
+                        ) : (
+                          <rect x="2" y="3.5" width="12" height="9" rx={s.r} stroke="currentColor" strokeWidth="1.4" />
+                        )}
+                      </svg>
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}
         </div>
 
-        <ToolButton
-          onClick={() => fileInputRef.current?.click()}
-          title="Ajouter une image"
-          disabled={uploading}
-        >
-          <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-            <rect x="2" y="3" width="10" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
-            <circle cx="5" cy="6" r="1" fill="currentColor" />
-            <path d="M2.5 9.5L5.5 7L8 9L10 7.8L11.5 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          {uploading ? "Envoi…" : "Image"}
-        </ToolButton>
         <input
           ref={fileInputRef}
           type="file"
@@ -1150,6 +1246,22 @@ export function WbBoard({
           />
         </div>
 
+        {/* Actions du PLATEAU ENTIER — à distinguer de « Déplier », qui
+            agit autour d'une fiche. « Les liens manquants » vivait dans ce
+            menu-là par commodité alors qu'elle ne déplie rien : sa place
+            est ici, avec le recentrage et l'export. */}
+        <ToolButton
+          onClick={revealExisting}
+          title="Tracer les relations entre les fiches déjà posées, sans rien ajouter au plateau"
+        >
+          <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+            <circle cx="3.5" cy="3.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+            <circle cx="10.5" cy="10.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M4.9 4.9L9.1 9.1" stroke="currentColor" strokeWidth="1.2" strokeDasharray="1.6 1.4" strokeLinecap="round" />
+          </svg>
+          Liens manquants
+        </ToolButton>
+
         <div className="ml-auto flex items-center gap-1.5">
           <BoardFinder
             nodes={board.nodes}
@@ -1165,6 +1277,18 @@ export function WbBoard({
           <span className="text-[11px]" style={{ color: "var(--text-4)" }}>
             {Math.round(viewport.zoom * 100)} %
           </span>
+          <button
+            onClick={() => setShowHelp(true)}
+            title="Les gestes du plateau"
+            className="rd-icon-btn"
+            aria-label="Les gestes du plateau"
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="7" r="5.2" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M5.6 5.4a1.5 1.5 0 1 1 1.9 1.7v1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <circle cx="7.4" cy="10" r="0.65" fill="currentColor" />
+            </svg>
+          </button>
           <button
             onClick={handleExportImage}
             title="Enregistrer le plateau en image (PNG)"
@@ -1735,6 +1859,8 @@ export function WbBoard({
         </div>
       )}
 
+      {showHelp && <BoardHelp onClose={() => setShowHelp(false)} />}
+
       {/* Menu Déplier */}
       {showExpandMenu && selectedNode?.entry_id && (
         <>
@@ -1768,16 +1894,6 @@ export function WbBoard({
               onClick={() => {
                 setShowExpandMenu(false);
                 expandRelations(selectedNode);
-              }}
-            />
-
-            <div className="my-1 border-t border-white/[0.06]" />
-            <ExpandOption
-              title="Les liens manquants"
-              desc="Sans rien poser : trace les relations entre fiches déjà présentes."
-              onClick={() => {
-                setShowExpandMenu(false);
-                revealExisting();
               }}
             />
 

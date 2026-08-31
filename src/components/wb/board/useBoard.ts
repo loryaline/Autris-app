@@ -20,9 +20,18 @@ import type {
  * Créer un lien typé écrit en revanche dans wb_links — asymétrie voulue.
  */
 
-/** Post-it d'accueil du tout premier plateau. */
+/**
+ * Post-it d'accueil, posé sur CHAQUE plateau neuf.
+ *
+ * Un plateau vide est une surface infinie sans le moindre repère : c'est
+ * le moment le plus intimidant de l'application, et rien n'y disait
+ * comment commencer. Seul le tout premier plateau recevait ce filet ;
+ * ceux créés ensuite s'ouvraient muets.
+ */
 const WELCOME_POSTIT = {
-  html: "<p>Commence à brainstormer ton univers ici !</p>",
+  html:
+    "<p>Glissez vos fiches depuis le panneau de droite, " +
+    "puis reliez-les en tirant depuis leurs bords.</p>",
   color: "#E8C77A",
 };
 
@@ -178,11 +187,30 @@ export function useBoard(projectId: string) {
         .single();
       if (error || !data) return null;
       const created = data as WbBoard;
+
+      // Le même filet que le plateau principal : un plateau neuf s'ouvrait
+      // entièrement vide, sans un mot sur la façon d'y poser quoi que ce soit.
+      const { data: hello } = await supabase
+        .from("wb_board_nodes")
+        .insert({
+          board_id: created.id,
+          user_id: user.id,
+          kind: "postit",
+          x: -110,
+          y: -70,
+          w: 220,
+          h: 140,
+          content: { html: WELCOME_POSTIT.html },
+          style: { color: WELCOME_POSTIT.color },
+        })
+        .select()
+        .single();
+
       setState((s) => ({
         ...s,
         boards: [...s.boards, created],
         board: created,
-        nodes: [],
+        nodes: hello ? [hello as WbBoardNode] : [],
         edges: [],
       }));
       return created;

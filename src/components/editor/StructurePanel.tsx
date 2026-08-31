@@ -234,7 +234,7 @@ export function StructurePanel({
       <div className="flex-1 px-2">
         {sorted.length === 0 ? (
           <div className="text-[12px] text-text-quaternary italic px-2">
-            Aucun chapitre
+            Aucun chapitre. Le bouton « + » ci-dessus en ajoute un.
           </div>
         ) : (
           sorted.map((chapter, idx) => (

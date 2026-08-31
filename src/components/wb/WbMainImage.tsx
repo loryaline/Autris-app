@@ -42,7 +42,7 @@ export function WbMainImage({
     if (error) {
       console.error(error);
       appToast(
-        "L'image n'a pas pu être envoyée. Vérifie sa taille et ta connexion.",
+        "L'image n'a pas pu être envoyée. Vérifiez sa taille et votre connexion.",
         { danger: true },
       );
       setBusy(false);

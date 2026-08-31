@@ -79,7 +79,7 @@ export function WbHome({
             </h1>
             <div className="mt-2.5 text-[12.5px] text-text-tertiary font-serif italic">
               {totalFiches === 0
-                ? "Aucune fiche pour l'instant. Choisis une catégorie pour commencer à bâtir ton univers."
+                ? "Aucune fiche pour l'instant. Choisissez une catégorie pour commencer à bâtir votre univers."
                 : totalFiches === 1
                   ? "1 fiche esquissée — c'est un début."
                   : `${totalFiches} fiches esquissées. Plonge dans une catégorie pour continuer.`}
