@@ -14,77 +14,23 @@ const IconList = () => (
   </svg>
 );
 
+export interface EditorTool {
+  id: string;
+  title: string;
+  active?: boolean;
+  onClick: () => void;
+  render: React.ReactNode;
+}
+
 /**
- * Barre d'outils flottante de l'éditeur — redesign phase 4.
+ * Les actions de mise en forme, en trois groupes.
  *
- * Quatre ancres (haut / bas / gauche / droite) + position libre par
- * glisser-déposer. Câblée sur l'instance TipTap fournie. Les boutons
- * utilisent onMouseDown + preventDefault pour ne pas perdre la sélection.
+ * Extraites du composant pour que la barre flottante du bureau et la
+ * barre du téléphone montrent exactement les mêmes outils : deux listes
+ * parallèles auraient divergé à la première addition.
  */
-export function FloatingToolbar({ editor }: { editor: Editor | null }) {
-  const [dock, setDock] = useState<Dock>("left");
-  const [pos, setPos] = useState({ x: 80, y: 80 });
-  const [minimized, setMinimized] = useState(false);
-  // Orientation conservée lors du glisser-déposer : déplacer la barre
-  // ne change plus sa direction (une barre verticale reste verticale).
-  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
-    "vertical",
-  );
-
-  const horizontal = orientation === "horizontal";
-
-  function onPointerDown(e: React.PointerEvent) {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const ox = pos.x;
-    const oy = pos.y;
-    const onMove = (ev: PointerEvent) => {
-      setDock("free");
-      setPos({ x: ox + (ev.clientX - startX), y: oy + (ev.clientY - startY) });
-    };
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  }
-
-  if (!editor) return null;
-
-  // Réduite : une pastille flottante près du bouton de feedback (bug).
-  if (minimized) {
-    return (
-      <button
-        type="button"
-        className="ft-mini"
-        title="Afficher la barre d'outils"
-        aria-label="Afficher la barre d'outils"
-        onClick={() => setMinimized(false)}
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <rect x="2" y="6" width="14" height="6" rx="3" stroke="currentColor" strokeWidth="1.3" />
-          <circle cx="5.5" cy="9" r="1" fill="currentColor" />
-          <circle cx="9" cy="9" r="1" fill="currentColor" />
-          <circle cx="12.5" cy="9" r="1" fill="currentColor" />
-        </svg>
-      </button>
-    );
-  }
-
-  const run = (fn: () => void) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    fn();
-  };
-
-  const tools: {
-    id: string;
-    title: string;
-    active?: boolean;
-    onClick: () => void;
-    render: React.ReactNode;
-  }[][] = [
+export function editorTools(editor: Editor): EditorTool[][] {
+  return [
     [
       {
         id: "bold",
@@ -168,6 +114,73 @@ export function FloatingToolbar({ editor }: { editor: Editor | null }) {
       },
     ],
   ];
+}
+
+/**
+ * Barre d'outils flottante de l'éditeur — redesign phase 4.
+ *
+ * Quatre ancres (haut / bas / gauche / droite) + position libre par
+ * glisser-déposer. Câblée sur l'instance TipTap fournie. Les boutons
+ * utilisent onMouseDown + preventDefault pour ne pas perdre la sélection.
+ */
+export function FloatingToolbar({ editor }: { editor: Editor | null }) {
+  const [dock, setDock] = useState<Dock>("left");
+  const [pos, setPos] = useState({ x: 80, y: 80 });
+  const [minimized, setMinimized] = useState(false);
+  // Orientation conservée lors du glisser-déposer : déplacer la barre
+  // ne change plus sa direction (une barre verticale reste verticale).
+  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
+    "vertical",
+  );
+
+  const horizontal = orientation === "horizontal";
+
+  function onPointerDown(e: React.PointerEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const ox = pos.x;
+    const oy = pos.y;
+    const onMove = (ev: PointerEvent) => {
+      setDock("free");
+      setPos({ x: ox + (ev.clientX - startX), y: oy + (ev.clientY - startY) });
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  if (!editor) return null;
+
+  // Réduite : une pastille flottante près du bouton de feedback (bug).
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="ft-mini"
+        title="Afficher la barre d'outils"
+        aria-label="Afficher la barre d'outils"
+        onClick={() => setMinimized(false)}
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <rect x="2" y="6" width="14" height="6" rx="3" stroke="currentColor" strokeWidth="1.3" />
+          <circle cx="5.5" cy="9" r="1" fill="currentColor" />
+          <circle cx="9" cy="9" r="1" fill="currentColor" />
+          <circle cx="12.5" cy="9" r="1" fill="currentColor" />
+        </svg>
+      </button>
+    );
+  }
+
+  const run = (fn: () => void) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    fn();
+  };
+
+  const tools = editorTools(editor);
 
   const dockOptions: { id: Dock; label: string }[] = [
     { id: "top", label: "↑" },

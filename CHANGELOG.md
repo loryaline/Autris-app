@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.7.2] — 2026-08-31
+
+### Changements
+
+- **La barre de mise en forme change de nature sur téléphone.** Celle du bureau flotte, se déplace au glisser, s'ancre à quatre bords et se réduit en pastille — aucun de ces gestes n'existe au doigt, et elle se disputerait la place avec le clavier. Sur téléphone, une barre fixe se pose **juste au-dessus du clavier**, la seule position qui ne demande pas de viser. Elle n'apparaît que pendant la frappe : au repos, elle rendrait le rail des panneaux inaccessible.
+- Les deux barres montrent **exactement les mêmes outils**, dans le même ordre, depuis une source unique — deux listes parallèles auraient divergé à la première addition. Sur téléphone elles défilent horizontalement plutôt que d'être triées : décider lesquelles sont « essentielles » créerait deux vocabulaires pour une seule fonction.
+
+---
+
 ## [0.7.1] — 2026-08-31
 
 ### Ajouts

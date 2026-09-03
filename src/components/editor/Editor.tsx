@@ -9,6 +9,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import { createClient } from "@/lib/supabase/client";
 import { FloatingToolbar } from "./FloatingToolbar";
+import { MobileFormatBar } from "./MobileFormatBar";
 import { StatusBar } from "./StatusBar";
 import { StructurePanel } from "./StructurePanel";
 import { ContextPanel } from "./ContextPanel";
@@ -720,7 +721,14 @@ export function NovelEditor({
 
         {/* Zone papier — barre flottante + feuille */}
         <div className={`editor-paper${focusMode ? " focus" : ""}`}>
-          <FloatingToolbar editor={editor} />
+          {/* Deux barres, jamais ensemble : la flottante se déplace et
+              s'ancre, gestes qui n'existent pas au doigt ; celle du
+              téléphone se cale au-dessus du clavier. Mêmes outils. */}
+          {isPhone ? (
+            <MobileFormatBar editor={editor} />
+          ) : (
+            <FloatingToolbar editor={editor} />
+          )}
 
           <button
             className="focus-btn"
