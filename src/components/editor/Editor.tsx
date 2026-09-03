@@ -900,7 +900,8 @@ export function NovelEditor({
           )}
           {railOpen && railOpen !== "chapitres" && (
             <ContextPanel
-              initialTab={railOpen}
+              tab={railOpen}
+              hideTabs
               wordCount={activeChapter?.word_count ?? 0}
               paragraphCount={paragraphCount}
               charCount={charCount}

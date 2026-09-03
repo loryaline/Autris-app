@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.7.5] — 2026-08-31
+
+### Corrections
+
+- **Changer de panneau depuis le rail marche enfin du premier coup.** Le panneau restant monté, l'onglet demandé n'était lu qu'à la première ouverture : passer d'« Infos » à « Univers » ne changeait rien, il fallait refermer puis rouvrir. Le rail pilote désormais l'onglet plutôt que de suggérer une valeur de départ.
+- **Les onglets du panneau disparaissent sur téléphone.** Le rail du bas *est* la barre d'onglets : la doubler juste au-dessus faisait deux rangées pour le même choix, sur l'écran où la place manque le plus.
+
+---
+
 ## [0.7.4] — 2026-08-31
 
 ### Corrections
