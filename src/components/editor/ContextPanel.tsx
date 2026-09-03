@@ -112,7 +112,8 @@ export function ContextPanel({
   onStatusChange,
   wbEntries,
   projectId,
-  initialTab,
+  tab,
+  hideTabs = false,
   onSnapshot,
   onRestoreVersion,
 }: {
@@ -126,14 +127,25 @@ export function ContextPanel({
   onStatusChange: () => void;
   wbEntries: WbEntryLite[];
   projectId: string;
-  /** Onglet ouvert au montage — le rail du téléphone s'en sert. */
-  initialTab?: TabKey;
+  /** Onglet imposé de l'extérieur — le rail du téléphone s'en sert. */
+  tab?: TabKey;
+  /** Masque la barre d'onglets : le rail du téléphone la remplace. */
+  hideTabs?: boolean;
   onSnapshot: (name?: string) => void;
   onRestoreVersion: (content: string, wordCount: number) => void;
 }) {
-  // Le rail du téléphone ouvre directement l'onglet touché : sans ça,
-  // chaque ouverture repartirait d'« Infos » et demanderait un geste de plus.
-  const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? "info");
+  /* ---- Onglet courant : interne, ou imposé par le rail ----
+   *
+   * Au bureau, le panneau gère son onglet lui-même. Sur téléphone, c'est
+   * le rail du bas qui le désigne : `tab` devient alors la source de
+   * vérité, et le panneau la suit.
+   *
+   * Une valeur initiale ne suffisait pas : le panneau reste monté quand on
+   * passe d'une entrée du rail à une autre, `useState` ignorait donc la
+   * nouvelle valeur, et il fallait fermer puis rouvrir pour arriver au bon
+   * endroit. Piloter la prop règle ça sans synchroniser deux états. */
+  const [ownTab, setOwnTab] = useState<TabKey>("info");
+  const activeTab = tab ?? ownTab;
   const [scenes, setScenes] = useState<SceneItem[]>([]);
   const [chapterFields, setChapterFields] = useState<ChapterFields>({
     synopsis: null, themes: [], plot_elements: null,
@@ -553,12 +565,20 @@ export function ContextPanel({
 
   return (
     <div className="h-full border-l border-white/[0.05] bg-bg-secondary flex flex-col">
-      {/* Tabs — onglets à soulignement */}
-      <div className="flex items-center gap-5 px-5 pt-4 border-b border-white/[0.05] shrink-0">
+      {/* Tabs — onglets à soulignement.
+          Masqués quand le panneau est ouvert depuis le rail du téléphone :
+          ce rail EST la barre d'onglets, la doubler juste au-dessus ferait
+          deux rangées pour le même choix, et prendrait la place du contenu
+          sur l'écran où il y en a le moins. */}
+      <div
+        className={`items-center gap-5 px-5 pt-4 border-b border-white/[0.05] shrink-0 ${
+          hideTabs ? "hidden" : "flex"
+        }`}
+      >
         {tabs.map((t) => (
           <button
             key={t.key}
-            onClick={() => setActiveTab(t.key)}
+            onClick={() => setOwnTab(t.key)}
             className={`relative pb-2.5 text-[12.5px] cursor-pointer bg-transparent border-none transition-colors ${
               activeTab === t.key
                 ? "text-[var(--color-accent)] font-medium"
