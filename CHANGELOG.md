@@ -27,6 +27,19 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.7.3] — 2026-08-31
+
+### Ajouts
+
+- **Un bouton pour fermer le clavier**, épinglé à droite de la barre de mise en forme. Sans lui, quitter l'écriture demandait de toucher « à côté » du texte — or dès que le chapitre remplit l'écran, il n'y a plus de « à côté » : tout est du texte, et le toucher garde le clavier. Le rail des panneaux devenait inatteignable. Les outils défilent, cette sortie non.
+
+### Changements
+
+- **Le pomodoro disparaît de l'éditeur sur téléphone.** Il occupe la largeur d'un titre de chapitre, sur un écran où le fil d'Ariane n'a déjà pas la place de se lire. C'est un outil de séance de travail, pas de mobilité.
+- **« sauvegardé » devient une coche sur téléphone**, et « sauvegarde… » trois points. Même information, cinq fois moins de place — le mot complet reste au bureau, et l'intitulé reste lisible par une synthèse vocale.
+
+---
+
 ## [0.7.2] — 2026-08-31
 
 ### Changements

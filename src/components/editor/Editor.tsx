@@ -605,13 +605,34 @@ export function NovelEditor({
             </>
           )}
           <div className="ml-auto flex items-center gap-2">
-            <Pomodoro defaultDuration={pomoDuration} />
-            <span className="w-px h-4 bg-white/[0.08]" />
+            {/* Le pomodoro prend la largeur d'un titre de chapitre : sur
+                375 px, le fil d'Ariane n'a déjà pas la place de se lire.
+                C'est un outil de séance de travail, pas de mobilité. */}
+            {!isPhone && (
+              <>
+                <Pomodoro defaultDuration={pomoDuration} />
+                <span className="w-px h-4 bg-white/[0.08]" />
+              </>
+            )}
+            {/* Une coche suffit à dire que c'est enregistré : le mot entier
+                coûte cinq fois plus de place pour la même information. */}
             {syncStatus === "saved" && (
-              <span className="text-[11px] font-medium text-teal-dark bg-teal-bg px-1.5 py-0.5 rounded">sauvegardé</span>
+              <span
+                className="text-[11px] font-medium text-teal-dark bg-teal-bg px-1.5 py-0.5 rounded"
+                title={isPhone ? "Sauvegardé" : undefined}
+                aria-label={isPhone ? "Sauvegardé" : undefined}
+              >
+                {isPhone ? "✓" : "sauvegardé"}
+              </span>
             )}
             {syncStatus === "saving" && (
-              <span className="text-[11px] font-medium text-primary bg-primary-bg px-1.5 py-0.5 rounded">sauvegarde…</span>
+              <span
+                className="text-[11px] font-medium text-primary bg-primary-bg px-1.5 py-0.5 rounded"
+                title={isPhone ? "Sauvegarde en cours" : undefined}
+                aria-label={isPhone ? "Sauvegarde en cours" : undefined}
+              >
+                {isPhone ? "…" : "sauvegarde…"}
+              </span>
             )}
             {/* Trois boutons qui n'ont plus d'objet sur téléphone : les
                 deux suivants pilotent des panneaux latéraux qui n'existent
@@ -670,13 +691,34 @@ export function NovelEditor({
             </>
           )}
           <div className="ml-auto flex items-center gap-2">
-            <Pomodoro defaultDuration={pomoDuration} />
-            <span className="w-px h-4 bg-white/[0.08]" />
+            {/* Le pomodoro prend la largeur d'un titre de chapitre : sur
+                375 px, le fil d'Ariane n'a déjà pas la place de se lire.
+                C'est un outil de séance de travail, pas de mobilité. */}
+            {!isPhone && (
+              <>
+                <Pomodoro defaultDuration={pomoDuration} />
+                <span className="w-px h-4 bg-white/[0.08]" />
+              </>
+            )}
+            {/* Une coche suffit à dire que c'est enregistré : le mot entier
+                coûte cinq fois plus de place pour la même information. */}
             {syncStatus === "saved" && (
-              <span className="text-[11px] font-medium text-teal-dark bg-teal-bg px-1.5 py-0.5 rounded">sauvegardé</span>
+              <span
+                className="text-[11px] font-medium text-teal-dark bg-teal-bg px-1.5 py-0.5 rounded"
+                title={isPhone ? "Sauvegardé" : undefined}
+                aria-label={isPhone ? "Sauvegardé" : undefined}
+              >
+                {isPhone ? "✓" : "sauvegardé"}
+              </span>
             )}
             {syncStatus === "saving" && (
-              <span className="text-[11px] font-medium text-primary bg-primary-bg px-1.5 py-0.5 rounded">sauvegarde…</span>
+              <span
+                className="text-[11px] font-medium text-primary bg-primary-bg px-1.5 py-0.5 rounded"
+                title={isPhone ? "Sauvegarde en cours" : undefined}
+                aria-label={isPhone ? "Sauvegarde en cours" : undefined}
+              >
+                {isPhone ? "…" : "sauvegarde…"}
+              </span>
             )}
             <button
               onClick={() => setFocusMode(false)}
