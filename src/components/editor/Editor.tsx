@@ -612,6 +612,12 @@ export function NovelEditor({
             {syncStatus === "saving" && (
               <span className="text-[11px] font-medium text-primary bg-primary-bg px-1.5 py-0.5 rounded">sauvegarde…</span>
             )}
+            {/* Trois boutons qui n'ont plus d'objet sur téléphone : les
+                deux suivants pilotent des panneaux latéraux qui n'existent
+                pas à cette largeur — le rail du bas les remplace — et un
+                export .docx se récupère sur l'ordinateur où on l'ouvrira. */}
+            {!isPhone && (
+              <>
             <button
               onClick={handleExportNovel}
               title="Exporter le roman en Word (.docx)" aria-label="Exporter le roman en Word (.docx)"
@@ -647,6 +653,8 @@ export function NovelEditor({
                 <path d="M8.5 2V12" stroke="currentColor" strokeWidth="1.2" />
               </svg>
             </button>
+              </>
+            )}
           </div>
         </div>
       ) : (
