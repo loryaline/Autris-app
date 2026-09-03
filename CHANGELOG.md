@@ -27,6 +27,22 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.7.0] — 2026-08-31
+
+### Ajouts
+
+- **Le socle des versions mobile et tablette.** Autris ne suppose plus un grand écran et une souris. Rien ne change au bureau ; ce qui change, c'est ce qui devient possible ensuite.
+- **Une barre de navigation en bas sur téléphone** — Accueil, Écrire, Projets — plutôt qu'une barre latérale de 240 px qui ne laisserait rien à lire, et plutôt qu'un tiroir qui mettrait chaque destination à deux gestes. Elle tient compte de la barre d'accueil des iPhone récents.
+- **Un anneau de focus au clavier.** Il n'en existait aucun : au Tab, on ne voyait pas où l'on était. Vrai au bureau, et vrai sur un iPad avec clavier.
+- **Des cibles de 44 px là où le doigt sert.** Les boutons à icône font 28 px — sous le seuil où l'on vise juste au doigt. Le bureau garde sa densité : la règle ne s'applique que si l'écran est tactile.
+
+### Changements
+
+- **La barre latérale se superpose au contenu sur tablette** au lieu de le comprimer, et démarre repliée sur toute largeur de tablette. À 834 px, lui céder 240 px mettait la lecture à l'étroit pour un arbre qu'on ne consulte que par intermittence.
+- La hauteur de la barre latérale passe de  à  : sur iOS,  compte une barre d'adresse qui n'est pas là, et le bas de la colonne passait hors écran.
+
+---
+
 ## [0.6.7] — 2026-08-31
 
 ### Retraits

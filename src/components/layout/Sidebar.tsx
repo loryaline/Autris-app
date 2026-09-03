@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { TABLET_MAX, useViewport } from "@/lib/useViewport";
 
 /* ---- Icônes (reprises du redesign) ---- */
 const IconHome = () => (
@@ -82,15 +83,20 @@ export function Sidebar({
 
   // Repliage global de la sidebar. null = pas encore hydraté (on ne
   // rend rien pour éviter un mismatch SSR). Persistance localStorage,
-  // repliage auto sous 900px de large si aucune préférence enregistrée.
+  // repliage auto sur tablette et téléphone si aucune préférence.
   const [sidebarHidden, setSidebarHidden] = useState<boolean | null>(null);
+  const { isPhone, isTablet } = useViewport();
   useEffect(() => {
     let init = false;
     try {
       const stored = localStorage.getItem("autris.sidebar.collapsed");
       if (stored === "1") init = true;
       else if (stored === "0") init = false;
-      else if (typeof window !== "undefined" && window.innerWidth < 900) init = true;
+      // Sans préférence enregistrée, elle démarre repliée sur toute
+      // largeur de tablette : à ces tailles elle se superpose au contenu,
+      // et s'ouvrir seule au chargement masquerait la page demandée.
+      else if (typeof window !== "undefined" && window.innerWidth <= TABLET_MAX)
+        init = true;
     } catch {
       /* localStorage indisponible */
     }
@@ -140,8 +146,27 @@ export function Sidebar({
   // éviter un flash de sidebar visible avant de la replier).
   if (sidebarHidden === null || sidebarHidden) return null;
 
+  // Sur téléphone, la barre latérale ne s'affiche jamais : 240 px fixes
+  // sur un écran de 375 laisseraient 135 px pour lire. La BottomNav prend
+  // le relais.
+  if (isPhone) return null;
+
+  // Sur tablette, elle se superpose au contenu au lieu de le comprimer :
+  // à 834 px, lui céder 240 px rendrait la lecture d'une fiche à l'étroit
+  // alors qu'on ne consulte l'arbre que par intermittence.
   return (
-    <aside className="rd-sidebar w-[240px] shrink-0">
+    <>
+      {isTablet && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40"
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent("autris:sidebar-toggle"))
+          }
+        />
+      )}
+    <aside
+      className={`rd-sidebar w-[240px] shrink-0${isTablet ? " fixed inset-y-0 left-0 z-40" : ""}`}
+    >
       {/* Brand + bouton pour replier la sidebar depuis l'intérieur */}
       <div className="rd-brand" style={{ position: "relative" }}>
         <Link href="/" className="rd-brand-mark" aria-label="Accueil Autris">
@@ -334,5 +359,6 @@ export function Sidebar({
         </div>
       </Link>
     </aside>
+    </>
   );
 }
