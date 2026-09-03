@@ -27,6 +27,19 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.7.1] — 2026-08-31
+
+### Ajouts
+
+- **L'éditeur devient utilisable sur téléphone.** Ses deux panneaux — la structure du roman à gauche, le contexte du chapitre à droite — n'avaient pas de place en colonnes sur 375 px : ils disparaissaient, et l'on ne pouvait même plus changer de chapitre. Ils reviennent par un **rail en bas de l'écran** : Chapitres, Infos, Scènes, Univers.
+- **Une entrée touchée déplie la page entière.** Un panneau de 280 px superposé à un écran de 375 serait illisible, alors qu'une liste de chapitres ou de scènes se lit très bien en pleine page. On consulte, on ferme, on retourne au texte — et choisir un chapitre referme tout seul.
+
+### Changements
+
+- La feuille d'écriture se colle aux bords sur téléphone : 64 px de marge sur 375 px de large, c'était un tiers de la largeur perdu.
+
+---
+
 ## [0.7.0] — 2026-08-31
 
 ### Ajouts
