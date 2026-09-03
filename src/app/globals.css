@@ -555,7 +555,9 @@ body {
   background: var(--bg-2);
   border-right: 1px solid var(--border-soft);
   display: flex; flex-direction: column;
-  height: 100vh;
+  /* dvh et non vh : sur iOS, 100vh compte la barre d'adresse même quand
+     elle est rétractée, et le bas de la colonne passe hors écran. */
+  height: 100dvh;
   overflow-y: auto;
 }
 .rd-brand {
@@ -1676,4 +1678,36 @@ body {
   font-size: 10.5px; font-style: italic; color: var(--text-4);
   padding: 6px 8px; border: 1px dashed var(--border-soft);
   border-radius: var(--r-sm);
+}
+
+
+/* ============================================================
+   Doigt et clavier — socle des versions tablette et mobile
+   ============================================================ */
+
+/* Là où le doigt est disponible, les cibles montent à 44 px : en dessous,
+   on rate le bouton une fois sur trois. On n'élargit PAS au bureau, où la
+   souris vise au pixel et où la densité est un atout.
+   On teste any-pointer et non pointer : un iPad avec clavier a un
+   trackpad et se déclare pointer: fine, alors que l'écran reste
+   tactile à tout moment. */
+@media (any-pointer: coarse) {
+  .rd-icon-btn,
+  .rd-tree-add,
+  .rd-nav-item,
+  .rd-search-clear {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Le focus clavier n'avait aucun style : au Tab, on ne voyait pas où l'on
+   était. Vrai au bureau, et vrai sur un iPad avec clavier.
+   On vise :focus-visible et non :focus — le navigateur ne le pose
+   qu'après une navigation au clavier, jamais après un clic. Un anneau
+   qui apparaîtrait à chaque clic de souris serait vite insupportable. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
