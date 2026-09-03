@@ -112,6 +112,7 @@ export function ContextPanel({
   onStatusChange,
   wbEntries,
   projectId,
+  initialTab,
   onSnapshot,
   onRestoreVersion,
 }: {
@@ -125,10 +126,14 @@ export function ContextPanel({
   onStatusChange: () => void;
   wbEntries: WbEntryLite[];
   projectId: string;
+  /** Onglet ouvert au montage — le rail du téléphone s'en sert. */
+  initialTab?: TabKey;
   onSnapshot: (name?: string) => void;
   onRestoreVersion: (content: string, wordCount: number) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<TabKey>("info");
+  // Le rail du téléphone ouvre directement l'onglet touché : sans ça,
+  // chaque ouverture repartirait d'« Infos » et demanderait un geste de plus.
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? "info");
   const [scenes, setScenes] = useState<SceneItem[]>([]);
   const [chapterFields, setChapterFields] = useState<ChapterFields>({
     synopsis: null, themes: [], plot_elements: null,

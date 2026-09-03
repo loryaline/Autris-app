@@ -12,6 +12,8 @@ import { FloatingToolbar } from "./FloatingToolbar";
 import { StatusBar } from "./StatusBar";
 import { StructurePanel } from "./StructurePanel";
 import { ContextPanel } from "./ContextPanel";
+import { EditorMobileRail, type RailKey } from "./EditorMobileRail";
+import { useViewport } from "@/lib/useViewport";
 import { Pomodoro } from "./Pomodoro";
 
 interface ChapterData {
@@ -76,6 +78,9 @@ export function NovelEditor({
   const [focusMode, setFocusMode] = useState(false);
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
+  // Téléphone : les colonnes cèdent la place à un rail en bas d'écran.
+  const { isPhone } = useViewport();
+  const [railOpen, setRailOpen] = useState<RailKey | null>(null);
   const [leftWidth, setLeftWidth] = useState(155);
   const [rightWidth, setRightWidth] = useState(320);
   const [localChapters, setLocalChapters] = useState(chapters);
@@ -684,7 +689,7 @@ export function NovelEditor({
       {/* Main area */}
       <div className="flex flex-1 min-h-0">
         {/* Structure panel — hidden in focus mode */}
-        {!focusMode && showLeftPanel && (
+        {!isPhone && !focusMode && showLeftPanel && (
           <>
             <div style={{ width: leftWidth }} className="shrink-0">
               <StructurePanel
@@ -756,7 +761,7 @@ export function NovelEditor({
         </div>
 
         {/* Context panel — hidden in focus mode */}
-        {!focusMode && showRightPanel && (
+        {!isPhone && !focusMode && showRightPanel && (
           <>
             <div
               onMouseDown={handleResizeRight}
@@ -788,6 +793,60 @@ export function NovelEditor({
         wordGoal={wordGoal}
         syncStatus={syncStatus}
       />
+
+      {/* Téléphone : les deux panneaux latéraux reviennent par un rail en
+          bas d'écran, chaque entrée dépliant la page entière. Le contenu
+          n'est monté qu'à l'ouverture — inutile de charger les scènes et
+          les fiches liées tant qu'on écrit. */}
+      {isPhone && !focusMode && (
+        <EditorMobileRail
+          open={railOpen}
+          onOpen={setRailOpen}
+          onClose={() => setRailOpen(null)}
+          title={
+            railOpen === "chapitres"
+              ? novelTitle
+              : (activeChapter?.title ?? "Chapitre")
+          }
+        >
+          {railOpen === "chapitres" && (
+            <StructurePanel
+              novelTitle={novelTitle}
+              chapters={localChapters}
+              activeChapterId={activeChapterId}
+              onChapterSelect={(id) => {
+                handleChapterSelect(id);
+                // On referme : le geste voulait choisir un chapitre, pas
+                // rester dans la liste.
+                setRailOpen(null);
+              }}
+              onAddChapter={handleAddChapter}
+              onRenameChapter={handleRenameChapter}
+              onDeleteChapter={handleDeleteChapter}
+              onMoveChapter={handleMoveChapter}
+            />
+          )}
+          {railOpen && railOpen !== "chapitres" && (
+            <ContextPanel
+              initialTab={railOpen}
+              wordCount={activeChapter?.word_count ?? 0}
+              paragraphCount={paragraphCount}
+              charCount={charCount}
+              charCountNoSpaces={charCountNoSpaces}
+              chapterStatus={activeChapter?.status ?? "a_ecrire"}
+              chapterId={activeChapterId}
+              novelId={novelId}
+              onStatusChange={() =>
+                activeChapterId && handleStatusChange(activeChapterId)
+              }
+              wbEntries={wbEntries}
+              projectId={projectId}
+              onSnapshot={handleManualSnapshot}
+              onRestoreVersion={handleRestoreVersion}
+            />
+          )}
+        </EditorMobileRail>
+      )}
     </div>
   );
 }

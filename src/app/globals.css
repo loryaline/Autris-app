@@ -1360,6 +1360,15 @@ body {
 }
 .editor-paper.focus .editor-scroll { padding: 70px 0 110px; }
 
+/* Téléphone : le rail des panneaux est en position fixe en bas d'écran.
+   Sans cette réserve, il recouvrirait les dernières lignes du chapitre —
+   celles qu'on est justement en train d'écrire. La feuille se colle aussi
+   aux bords : 64 px de marge sur 375 px de large, c'est un tiers perdu. */
+@media (max-width: 767px) {
+  .editor-scroll { padding: 16px 0 calc(70px + env(safe-area-inset-bottom, 0px)); }
+  .paper-sheet { width: calc(100% - 24px); }
+}
+
 .paper-sheet {
   width: min(680px, calc(100% - 64px));
   margin: 0 auto;
