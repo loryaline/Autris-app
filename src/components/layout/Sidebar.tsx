@@ -6,6 +6,18 @@ import { useEffect, useState } from "react";
 import { TABLET_MAX, useViewport } from "@/lib/useViewport";
 
 /* ---- Icônes (reprises du redesign) ---- */
+const IconBulb = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <path
+      d="M4.8 8.6a3.2 3.2 0 1 1 4.4 0c-.45.45-.68.9-.75 1.5H5.55c-.07-.6-.3-1.05-.75-1.5z"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+    <path d="M5.8 12h2.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+);
+
 const IconHome = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
     <path d="M2 6L7 2L12 6V11.5C12 11.78 11.78 12 11.5 12H8.5V8.5H5.5V12H2.5C2.22 12 2 11.78 2 11.5V6Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
@@ -204,6 +216,13 @@ export function Sidebar({
         <Link href="/" className={`rd-nav-item${pathname === "/" ? " active" : ""}`}>
           <IconHome />
           <span>Accueil</span>
+        </Link>
+        <Link
+          href="/idees"
+          className={`rd-nav-item${pathname.startsWith("/idees") ? " active" : ""}`}
+        >
+          <IconBulb />
+          <span>Idées</span>
         </Link>
       </div>
 
