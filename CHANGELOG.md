@@ -39,7 +39,7 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 ### Changements
 
 - **La barre latérale se superpose au contenu sur tablette** au lieu de le comprimer, et démarre repliée sur toute largeur de tablette. À 834 px, lui céder 240 px mettait la lecture à l'étroit pour un arbre qu'on ne consulte que par intermittence.
-- La hauteur de la barre latérale passe de  à  : sur iOS,  compte une barre d'adresse qui n'est pas là, et le bas de la colonne passait hors écran.
+- La hauteur de la barre latérale passe de `100vh` à `100dvh` : sur iOS, `100vh` compte une barre d'adresse qui n'est pas là, et le bas de la colonne passait hors écran.
 
 ---
 
