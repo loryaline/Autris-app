@@ -567,7 +567,7 @@ export function NovelEditor({
     <div className="flex flex-col h-full">
       {/* Breadcrumb top bar */}
       {!focusMode ? (
-        <div className="h-10 bg-bg-primary border-b border-white/[0.04] flex items-center px-4 gap-2 shrink-0">
+        <div className="h-10 bg-bg-primary border-b border-white/[0.04] flex items-center flex-nowrap px-4 gap-2 shrink-0 overflow-hidden">
           <Link
             href="/"
             onClick={(e) => { if (!canNavigateHome) e.preventDefault(); }}
@@ -582,21 +582,31 @@ export function NovelEditor({
               <path d="M2 6l4-4 4 4M3 5.5V10h2.5V7.5h1V10H9V5.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Link>
-          <Link href="/" className={`text-[12.5px] no-underline ${canNavigateHome ? "text-text-tertiary hover:text-[var(--color-accent)]" : "text-text-quaternary pointer-events-none"}`}>
-            {projectTitle}
-          </Link>
-          <span className="mx-1 text-text-quaternary/60 text-[11px]">/</span>
-          <span className="text-[12.5px] text-text-tertiary">{novelTitle}</span>
+          {/* Projet et roman sortent du fil sur téléphone : trois niveaux
+              enroulaient la ligne dans une barre de hauteur fixe, et le
+              titre du chapitre — le seul qui dise où l'on écrit — passait
+              hors champ. Le roman reste accessible par le rail. */}
+          {!isPhone && (
+            <>
+              <Link href="/" className={`text-[12.5px] no-underline shrink-0 ${canNavigateHome ? "text-text-tertiary hover:text-[var(--color-accent)]" : "text-text-quaternary pointer-events-none"}`}>
+                {projectTitle}
+              </Link>
+              <span className="mx-1 text-text-quaternary/60 text-[11px] shrink-0">/</span>
+              <span className="text-[12.5px] text-text-tertiary shrink-0">{novelTitle}</span>
+            </>
+          )}
           {activeChapter && (
             <>
-              <span className="mx-1 text-text-quaternary/60 text-[11px]">/</span>
-              <span className="text-[12.5px] text-text-primary font-medium">
+              {!isPhone && (
+                <span className="mx-1 text-text-quaternary/60 text-[11px] shrink-0">/</span>
+              )}
+              <span className="text-[12.5px] text-text-primary font-medium truncate min-w-0">
                 {activeChapter.title}
               </span>
               <button
                 onClick={() => activeChapterId && handleStatusChange(activeChapterId)}
                 title="Cliquer pour changer le statut"
-                className="ml-2 inline-flex items-center gap-1.5 h-6 pl-1.5 pr-2.5 rounded-full cursor-pointer transition-colors"
+                className="ml-2 inline-flex items-center gap-1.5 h-6 pl-1.5 pr-2.5 rounded-full cursor-pointer transition-colors shrink-0"
                 style={{ background: statusBadge.bg, border: `1px solid ${statusBadge.border}`, color: statusBadge.text }}
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusBadge.dot }} />
@@ -604,7 +614,7 @@ export function NovelEditor({
               </button>
             </>
           )}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 shrink-0">
             {/* Le pomodoro prend la largeur d'un titre de chapitre : sur
                 375 px, le fil d'Ariane n'a déjà pas la place de se lire.
                 C'est un outil de séance de travail, pas de mobilité. */}
@@ -690,7 +700,7 @@ export function NovelEditor({
               </span>
             </>
           )}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 shrink-0">
             {/* Le pomodoro prend la largeur d'un titre de chapitre : sur
                 375 px, le fil d'Ariane n'a déjà pas la place de se lire.
                 C'est un outil de séance de travail, pas de mobilité. */}
