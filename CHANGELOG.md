@@ -36,6 +36,7 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ### Changements
 
+- **Trois boutons de la barre de l'éditeur disparaissent sur téléphone.** Deux pilotaient les panneaux latéraux, qui n'existent pas à cette largeur — le rail les remplace. Le troisième exportait le roman en Word : on le récupère sur l'ordinateur où on l'ouvrira.
 - La feuille d'écriture se colle aux bords sur téléphone : 64 px de marge sur 375 px de large, c'était un tiers de la largeur perdu.
 
 ---
