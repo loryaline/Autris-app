@@ -264,3 +264,21 @@ export interface Scene {
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * Une idée, dans la boîte de réception.
+ *
+ * `project_id` est facultatif et ne cloisonne rien : la boîte se lit par
+ * `user_id` seul, pour qu'une idée sans projet reste consultable de
+ * partout. Le rattachement sert à s'y retrouver, pas à ranger.
+ */
+export interface Idea {
+  id: string;
+  user_id: string;
+  project_id: string | null;
+  body: string;
+  /** Rangée sans être perdue : hors de la boîte, pas de l'univers. */
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

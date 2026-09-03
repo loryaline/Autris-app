@@ -19,17 +19,6 @@ import { useViewport } from "@/lib/useViewport";
  * fait 240 px fixes, il n'en resterait pas assez pour lire.
  */
 
-const IconHome = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <path
-      d="M3.5 8.5L10 3.5l6.5 5M5 7.8V16h10V7.8"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 const IconPen = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -40,6 +29,18 @@ const IconPen = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
     />
+  </svg>
+);
+
+const IconBulb = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <path
+      d="M7 12.5a4.5 4.5 0 1 1 6 0c-.6.6-.9 1.2-1 2H8c-.1-.8-.4-1.4-1-2z"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinejoin="round"
+    />
+    <path d="M8.3 17h3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
   </svg>
 );
 
@@ -64,8 +65,16 @@ export function BottomNav({ activeNovelId }: { activeNovelId: string | null }) {
   // volerait de la place au texte, qui est la raison d'être de l'écran.
   if (pathname.startsWith("/editor/")) return null;
 
+  // Trois destinations, dans l'ordre de ce qu'on fait en mobilité : on
+  // note d'abord — c'est la raison d'être de cette surface — on écrit
+  // ensuite, et on retrouve ses projets si besoin.
   const items = [
-    { href: "/", label: "Accueil", icon: <IconHome />, active: pathname === "/" },
+    {
+      href: "/idees",
+      label: "Idées",
+      icon: <IconBulb />,
+      active: pathname.startsWith("/idees"),
+    },
     {
       href: activeNovelId ? `/editor/${activeNovelId}` : "/",
       label: "Écrire",
@@ -74,10 +83,10 @@ export function BottomNav({ activeNovelId }: { activeNovelId: string | null }) {
       disabled: !activeNovelId,
     },
     {
-      href: "/?projets=1",
+      href: "/",
       label: "Projets",
       icon: <IconStack />,
-      active: pathname.startsWith("/project/"),
+      active: pathname === "/" || pathname.startsWith("/project/"),
     },
   ];
 
