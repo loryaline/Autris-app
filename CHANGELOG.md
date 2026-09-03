@@ -31,7 +31,7 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouts
 
-- **La boîte à idées.** Une idée arrive rarement à son heure : dans le métro, sous la douche, à deux heures du matin. Elle finissait dans les notes du téléphone, dans un carnet, ou nulle part. Un champ, un bouton — pas de titre, pas de catégorie, pas de projet obligatoire : une idée qu'il faut classer avant de l'écrire est une idée perdue. Entrée pour noter, Maj+Entrée pour une nouvelle ligne. Nécessite la migration .
+- **La boîte à idées.** Une idée arrive rarement à son heure : dans le métro, sous la douche, à deux heures du matin. Elle finissait dans les notes du téléphone, dans un carnet, ou nulle part. Un champ, un bouton — pas de titre, pas de catégorie, pas de projet obligatoire : une idée qu'il faut classer avant de l'écrire est une idée perdue. Entrée pour noter, Maj+Entrée pour une nouvelle ligne. Nécessite la migration `migration-ideas.sql`.
 - **Une idée sans projet se consulte de partout.** La boîte se lit par utilisatrice, jamais par projet : rattacher un projet sert à s'y retrouver quand la boîte grossit, jamais à cloisonner. Une idée notée sans savoir à quel roman elle appartient reste visible où qu'on aille.
 - **Ranger n'est pas supprimer.** Une idée rangée sort de la boîte à trier sans quitter Autris, et se remet à trier d'un geste. La suppression définitive existe, séparément, avec confirmation.
 - **« Idées » devient la première entrée de la barre du téléphone**, avant « Écrire » et « Projets » — c'est la raison d'être de cette surface. Elle rejoint aussi la barre latérale au bureau.
