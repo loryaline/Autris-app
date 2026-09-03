@@ -38,6 +38,8 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ### Changements
 
+- **Le sélecteur de thème ne s'affiche plus sur téléphone.** Ses deux variantes sont posées en bas de l'écran, exactement où vit la barre de navigation — et sur 375 px, une pastille flottante de plus mange une place qu'il n'y a pas. Le thème choisi ailleurs continue de s'appliquer.
+- **Le bouton de retour bêta remonte au-dessus de la barre de navigation** sur téléphone, où il se serait retrouvé dessous.
 - **La barre latérale se superpose au contenu sur tablette** au lieu de le comprimer, et démarre repliée sur toute largeur de tablette. À 834 px, lui céder 240 px mettait la lecture à l'étroit pour un arbre qu'on ne consulte que par intermittence.
 - La hauteur de la barre latérale passe de `100vh` à `100dvh` : sur iOS, `100vh` compte une barre d'adresse qui n'est pas là, et le bas de la colonne passait hors écran.
 

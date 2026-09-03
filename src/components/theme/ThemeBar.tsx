@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useViewport } from "@/lib/useViewport";
 
 /**
  * Sélecteur de thème flottant — redesign phase 1.
@@ -29,6 +30,7 @@ function readAttr(name: "theme" | "mode"): string | null {
 }
 
 export function ThemeBar() {
+  const { isPhone } = useViewport();
   // null tant que non-hydraté → on ne rend rien côté serveur pour
   // éviter un mismatch (le vrai état vit sur <html>, pas dans React).
   const [theme, setTheme] = useState<ThemeId | null>(null);
@@ -91,6 +93,11 @@ export function ThemeBar() {
   }, [minimized]);
 
   if (theme === null || mode === null || minimized === null) return null;
+
+  // Pas sur téléphone : les deux variantes sont posées en bas de l'écran,
+  // exactement où vit la barre de navigation. Et sur 375 px, une pastille
+  // flottante de plus mange une place qu'il n'y a pas.
+  if (isPhone) return null;
 
   // Réduite : pastille flottante près du bouton de feedback.
   if (minimized) {

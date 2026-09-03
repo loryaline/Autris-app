@@ -208,7 +208,7 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
         onClick={() => setOpen(true)}
         title="Signaler un bug ou laisser un retour"
         aria-label="Feedback"
-        className="fixed bottom-4 right-4 z-30 w-11 h-11 rounded-full bg-bg-tertiary/80 backdrop-blur border border-white/[0.10] text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] hover:bg-bg-tertiary cursor-pointer transition-colors flex items-center justify-center shadow-lg"
+        className="fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] right-4 md:bottom-4 z-30 w-11 h-11 rounded-full bg-bg-tertiary/80 backdrop-blur border border-white/[0.10] text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] hover:bg-bg-tertiary cursor-pointer transition-colors flex items-center justify-center shadow-lg"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
           <path
