@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.7.4] — 2026-08-31
+
+### Corrections
+
+- **La barre de l'éditeur ne se déforme plus sur téléphone.** Le fil d'Ariane comptait trois niveaux — projet, roman, chapitre — qui enroulaient la ligne dans une barre de hauteur fixe : le titre du chapitre, seul à dire où l'on écrit, passait hors champ. Sur téléphone il ne reste que le chapitre, tronqué s'il est long ; le roman reste accessible par le rail. La pastille de statut et le bloc de droite ne se laissent plus comprimer.
+
+---
+
 ## [0.7.3] — 2026-08-31
 
 ### Ajouts
