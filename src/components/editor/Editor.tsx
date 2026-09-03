@@ -582,24 +582,28 @@ export function NovelEditor({
               <path d="M2 6l4-4 4 4M3 5.5V10h2.5V7.5h1V10H9V5.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Link>
-          {/* Projet et roman sortent du fil sur téléphone : trois niveaux
-              enroulaient la ligne dans une barre de hauteur fixe, et le
-              titre du chapitre — le seul qui dise où l'on écrit — passait
-              hors champ. Le roman reste accessible par le rail. */}
+          {/* Seul le PROJET sort du fil sur téléphone : trois niveaux
+              enroulaient la ligne dans une barre de hauteur fixe. Le roman
+              et le chapitre restent, et se tronquent plutôt que de pousser
+              le reste hors champ — le roman en premier, puisque c'est le
+              chapitre qui dit où l'on écrit. */}
           {!isPhone && (
             <>
               <Link href="/" className={`text-[12.5px] no-underline shrink-0 ${canNavigateHome ? "text-text-tertiary hover:text-[var(--color-accent)]" : "text-text-quaternary pointer-events-none"}`}>
                 {projectTitle}
               </Link>
               <span className="mx-1 text-text-quaternary/60 text-[11px] shrink-0">/</span>
-              <span className="text-[12.5px] text-text-tertiary shrink-0">{novelTitle}</span>
             </>
           )}
+          <span
+            className={`text-[12.5px] text-text-tertiary ${isPhone ? "truncate min-w-0 max-w-[38%]" : "shrink-0"}`}
+            title={isPhone ? novelTitle : undefined}
+          >
+            {novelTitle}
+          </span>
           {activeChapter && (
             <>
-              {!isPhone && (
-                <span className="mx-1 text-text-quaternary/60 text-[11px] shrink-0">/</span>
-              )}
+              <span className="mx-1 text-text-quaternary/60 text-[11px] shrink-0">/</span>
               <span className="text-[12.5px] text-text-primary font-medium truncate min-w-0">
                 {activeChapter.title}
               </span>
