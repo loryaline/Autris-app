@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useViewport } from "@/lib/useViewport";
 import { appConfirm } from "@/lib/app-confirm";
 import { appToast } from "@/lib/app-toast";
 import type { Idea } from "@/types/database";
@@ -52,6 +53,9 @@ export function IdeasClient({
   const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [projectFilter, setProjectFilter] = useState<string>("");
+  // Note dont les actions sont dépliées (téléphone uniquement).
+  const [openActions, setOpenActions] = useState<string | null>(null);
+  const { isPhone } = useViewport();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const visible = useMemo(
@@ -219,14 +223,19 @@ export function IdeasClient({
       </div>
 
       {/* Filtres */}
+      {/* Deux rangées sur téléphone plutôt qu'une seule qui déborde : le
+          menu des projets prend toute la largeur, les deux états se
+          partagent la suivante. `ml-auto` poussait tout à droite jusqu'à
+          renvoyer les boutons à la ligne en escalier. */}
       <div
-        className="flex items-center gap-2 flex-wrap pb-3 mb-3"
+        className="flex gap-2 pb-3 mb-3 flex-col sm:flex-row sm:items-center"
         style={{ borderBottom: "1px solid var(--border-soft)" }}
       >
         <select
           value={projectFilter}
           onChange={(e) => setProjectFilter(e.target.value)}
-          className="h-8 px-2 rounded text-[12px] cursor-pointer"
+          aria-label="Filtrer par projet"
+          className="h-9 sm:h-8 px-2 rounded text-[12px] cursor-pointer w-full sm:w-auto"
           style={{
             background: "var(--bg-2)",
             border: "1px solid var(--border-soft)",
@@ -241,10 +250,10 @@ export function IdeasClient({
           ))}
         </select>
 
-        <span className="ml-auto flex items-center gap-2">
+        <span className="flex items-center gap-2 sm:ml-auto">
           <button
             onClick={() => setShowArchived(false)}
-            className="h-8 px-3 rounded text-[12px] cursor-pointer"
+            className="h-9 sm:h-8 px-3 rounded text-[12px] cursor-pointer flex-1 sm:flex-none"
             style={{
               background: !showArchived ? "var(--accent-bg)" : "transparent",
               border: `1px solid ${!showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
@@ -255,7 +264,7 @@ export function IdeasClient({
           </button>
           <button
             onClick={() => setShowArchived(true)}
-            className="h-8 px-3 rounded text-[12px] cursor-pointer"
+            className="h-9 sm:h-8 px-3 rounded text-[12px] cursor-pointer flex-1 sm:flex-none"
             style={{
               background: showArchived ? "var(--accent-bg)" : "transparent",
               border: `1px solid ${showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
@@ -297,6 +306,14 @@ export function IdeasClient({
               >
                 {idea.body}
               </p>
+              {/* Pied de note.
+                  Sur téléphone, il ne porte QUE ce qui se lit : la date et
+                  le projet. Les actions — rattacher, ranger, supprimer —
+                  passent derrière un bouton unique qui les déplie sur
+                  place. Les poser toutes sur cette ligne demandait, à
+                  44 px la cible tactile, plus de largeur qu'un téléphone
+                  n'en a : elles repartaient à la ligne en escalier, et le
+                  menu des projets répétait la pastille juste à côté. */}
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <span className="text-[11px]" style={{ color: "var(--text-4)" }}>
                   {frenchDate(idea.created_at)}
@@ -312,18 +329,79 @@ export function IdeasClient({
                     {projectName(idea.project_id)}
                   </span>
                 )}
-                <span className="ml-auto flex items-center gap-1">
+
+                {isPhone ? (
+                  <button
+                    onClick={() =>
+                      setOpenActions((cur) => (cur === idea.id ? null : idea.id))
+                    }
+                    aria-expanded={openActions === idea.id}
+                    title="Actions"
+                    aria-label="Actions sur cette idée"
+                    className="ml-auto rd-icon-btn"
+                  >
+                    ⋯
+                  </button>
+                ) : (
+                  <span className="ml-auto flex items-center gap-1">
+                    {projects.length > 0 && (
+                      <select
+                        value={idea.project_id ?? ""}
+                        onChange={(e) => assign(idea, e.target.value)}
+                        title="Rattacher à un projet"
+                        aria-label="Rattacher à un projet"
+                        className="h-7 px-1.5 rounded text-[11px] cursor-pointer"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid var(--border-soft)",
+                          color: "var(--text-3)",
+                        }}
+                      >
+                        <option value="">Sans projet</option>
+                        {projects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.title}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <button
+                      onClick={() => toggleArchive(idea)}
+                      title={idea.archived_at ? "Remettre à trier" : "Ranger"}
+                      aria-label={idea.archived_at ? "Remettre à trier" : "Ranger"}
+                      className="rd-icon-btn"
+                    >
+                      {idea.archived_at ? "↩" : "✓"}
+                    </button>
+                    <button
+                      onClick={() => remove(idea)}
+                      title="Supprimer définitivement"
+                      aria-label="Supprimer définitivement"
+                      className="rd-icon-btn"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
+              </div>
+
+              {/* Actions dépliées — téléphone. Des libellés, pas des
+                  glyphes : une coche seule ne dit pas ce qu'elle range. */}
+              {isPhone && openActions === idea.id && (
+                <div
+                  className="mt-2.5 pt-2.5 flex flex-col gap-2"
+                  style={{ borderTop: "1px solid var(--border-soft)" }}
+                >
                   {projects.length > 0 && (
                     <select
                       value={idea.project_id ?? ""}
                       onChange={(e) => assign(idea, e.target.value)}
-                      title="Rattacher à un projet"
                       aria-label="Rattacher à un projet"
-                      className="h-7 px-1.5 rounded text-[11px] cursor-pointer"
+                      className="h-10 px-2 rounded text-[13px] w-full cursor-pointer"
                       style={{
-                        background: "transparent",
+                        background: "var(--bg-3)",
                         border: "1px solid var(--border-soft)",
-                        color: "var(--text-3)",
+                        color: "var(--text-2)",
                       }}
                     >
                       <option value="">Sans projet</option>
@@ -334,24 +412,38 @@ export function IdeasClient({
                       ))}
                     </select>
                   )}
-                  <button
-                    onClick={() => toggleArchive(idea)}
-                    title={idea.archived_at ? "Remettre à trier" : "Ranger"}
-                    aria-label={idea.archived_at ? "Remettre à trier" : "Ranger"}
-                    className="rd-icon-btn"
-                  >
-                    {idea.archived_at ? "↩" : "✓"}
-                  </button>
-                  <button
-                    onClick={() => remove(idea)}
-                    title="Supprimer définitivement"
-                    aria-label="Supprimer définitivement"
-                    className="rd-icon-btn"
-                  >
-                    ✕
-                  </button>
-                </span>
-              </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        toggleArchive(idea);
+                        setOpenActions(null);
+                      }}
+                      className="flex-1 h-10 rounded text-[13px] cursor-pointer"
+                      style={{
+                        background: "var(--bg-3)",
+                        border: "1px solid var(--border-soft)",
+                        color: "var(--text-2)",
+                      }}
+                    >
+                      {idea.archived_at ? "Remettre à trier" : "Ranger"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        remove(idea);
+                        setOpenActions(null);
+                      }}
+                      className="h-10 px-4 rounded text-[13px] cursor-pointer"
+                      style={{
+                        background: "transparent",
+                        border: "1px solid var(--border-soft)",
+                        color: "var(--danger, #e05555)",
+                      }}
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
