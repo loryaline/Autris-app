@@ -61,9 +61,11 @@ export function BottomNav({ activeNovelId }: { activeNovelId: string | null }) {
   const { isPhone } = useViewport();
 
   if (!isPhone) return null;
-  // L'éditeur occupe tout l'écran : une barre de navigation par-dessus
-  // volerait de la place au texte, qui est la raison d'être de l'écran.
+  // Les surfaces d'écriture occupent tout l'écran : une barre de
+  // navigation par-dessus volerait de la place au texte, qui est la
+  // raison d'être de ces écrans. On en sort par leur propre retour.
   if (pathname.startsWith("/editor/")) return null;
+  if (/^\/idees\/.+/.test(pathname)) return null;
 
   // Trois destinations, dans l'ordre de ce qu'on fait en mobilité : on
   // note d'abord — c'est la raison d'être de cette surface — on écrit

@@ -27,6 +27,19 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.9.0] — 2026-08-31
+
+### Changements
+
+- **La boîte à idées passe au modèle des applications de notes : deux écrans, pas un.** Elle était bâtie comme un formulaire web — un champ de saisie posé en haut, une liste en dessous. Les corrections successives déplaçaient les filtres et aplatissaient les cartes sans jamais toucher à cette structure.
+- **La liste occupe l'écran**, et un bouton « + » flottant ouvre une note **en plein écran**, clavier déjà ouvert.
+- **Toucher une note l'ouvre**, en plein écran et modifiable. C'est la vraie conséquence du changement : une idée n'était pas corrigeable une fois écrite, la question ne se pose plus.
+- **Plus rien à valider.** Le texte s'enregistre tout seul, et une note neuve n'est créée en base qu'à la première frappe — ouvrir puis revenir ne laisse aucune note vide derrière soi.
+- **Une seule action reste sur la ligne : ranger.** C'est le geste répété de cet écran, dont la raison d'être est le tri ; ouvrir la note pour ça demanderait trois gestes au lieu d'un. Rattacher un projet et supprimer vivent dans la note.
+- La barre de navigation s'efface sur l'écran de note, comme dans l'éditeur de roman : on en sort par sa propre flèche de retour.
+
+---
+
 ## [0.8.4] — 2026-08-31
 
 ### Changements

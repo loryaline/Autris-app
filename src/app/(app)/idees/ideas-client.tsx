@@ -1,29 +1,30 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { useViewport } from "@/lib/useViewport";
 import { appToast } from "@/lib/app-toast";
 import type { Idea } from "@/types/database";
 
 /**
- * La boîte à idées.
+ * La boîte à idées — l'écran de LISTE.
  *
- * Un champ, un bouton. Pas de titre, pas de catégorie, pas de projet
- * obligatoire : une idée qu'on doit classer avant de l'écrire est une
- * idée perdue. Tout le reste vient après, ou jamais.
+ * Deux écrans, pas un : ici on parcourt, on cherche, on range. Écrire se
+ * fait ailleurs, en plein écran (voir NoteEditor). Un champ de saisie posé
+ * au-dessus d'une liste est un formulaire web ; une liste plus un bouton
+ * « + » qui ouvre une page, c'est ce que fait toute application de notes —
+ * et ça règle au passage la question de la modification, puisque ouvrir
+ * une note c'est l'éditer.
  *
- * Volontairement sans conversion vers une fiche ou un chapitre : la
- * correspondance de champs ne pourrait être qu'approximative, et
- * produirait des fiches à moitié remplies. On relit son idée à côté de ce
- * qu'on écrit, et on décide soi-même.
+ * Une seule action reste sur la ligne : ranger. C'est le geste répété de
+ * cet écran — sa raison d'être est le tri — et ouvrir la note pour ça
+ * demanderait trois gestes au lieu d'un. Tout le reste vit dans la note.
  */
 
 function frenchDate(iso: string): string {
   const d = new Date(iso);
   const today = new Date();
-  const sameDay = d.toDateString() === today.toDateString();
-  if (sameDay) {
+  if (d.toDateString() === today.toDateString()) {
     return `aujourd'hui à ${d.toLocaleTimeString("fr-FR", {
       hour: "2-digit",
       minute: "2-digit",
@@ -48,23 +49,10 @@ export function IdeasClient({
 }) {
   const supabase = createClient();
   const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  const [projectFilter, setProjectFilter] = useState<string>("");
-  // Note dont les actions sont dépliées (téléphone uniquement).
-  const [openActions, setOpenActions] = useState<string | null>(null);
+  const [projectFilter, setProjectFilter] = useState("");
   const [query, setQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  // Notes dépliées : une idée longue est repliée par défaut.
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const { isPhone, isTablet, hasTouch } = useViewport();
-  /* Téléphone ET tablette : à 834 px en portrait, une note ne peut pas
-   * plus porter un menu déroulant et deux boutons de 44 px qu'à 375. Le
-   * seuil utile n'est pas « petit écran » mais « écran où la ligne
-   * d'actions ne tient pas ». */
-  const compact = isPhone || isTablet;
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -79,41 +67,6 @@ export function IdeasClient({
   const projectName = (id: string | null) =>
     id ? (projects.find((p) => p.id === id)?.title ?? null) : null;
 
-  async function capture() {
-    const body = draft.trim();
-    if (!body || busy) return;
-    setBusy(true);
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-      setBusy(false);
-      return;
-    }
-    const { data, error } = await supabase
-      .from("ideas")
-      .insert({
-        user_id: userData.user.id,
-        body,
-        // Le filtre courant sert de raccourci : si on regarde un projet,
-        // l'idée y atterrit. Sinon elle n'appartient à rien, et c'est bien.
-        project_id: projectFilter || null,
-      })
-      .select()
-      .single();
-    setBusy(false);
-    if (error || !data) {
-      console.error(error);
-      appToast(
-        "L'idée n'a pas pu être enregistrée. Vérifiez votre connexion — le " +
-          "texte est toujours dans le champ.",
-        { danger: true },
-      );
-      return;
-    }
-    setIdeas((prev) => [data as Idea, ...prev]);
-    setDraft("");
-    inputRef.current?.focus();
-  }
-
   async function toggleArchive(idea: Idea) {
     const next = idea.archived_at ? null : new Date().toISOString();
     setIdeas((prev) =>
@@ -125,7 +78,6 @@ export function IdeasClient({
       .eq("id", idea.id);
     if (error) {
       console.error(error);
-      // Remise en place : l'écran ne doit pas mentir sur ce qui est rangé.
       setIdeas((prev) =>
         prev.map((i) =>
           i.id === idea.id ? { ...i, archived_at: idea.archived_at } : i,
@@ -136,71 +88,11 @@ export function IdeasClient({
     }
     if (next) {
       appToast("Idée rangée.", {
-        action: { label: "Annuler", onClick: () => toggleArchive({ ...idea, archived_at: next }) },
+        action: {
+          label: "Annuler",
+          onClick: () => toggleArchive({ ...idea, archived_at: next }),
+        },
       });
-    }
-  }
-
-  async function assign(idea: Idea, projectId: string) {
-    const value = projectId || null;
-    setIdeas((prev) =>
-      prev.map((i) => (i.id === idea.id ? { ...i, project_id: value } : i)),
-    );
-    const { error } = await supabase
-      .from("ideas")
-      .update({ project_id: value })
-      .eq("id", idea.id);
-    if (error) {
-      console.error(error);
-      setIdeas((prev) =>
-        prev.map((i) =>
-          i.id === idea.id ? { ...i, project_id: idea.project_id } : i,
-        ),
-      );
-      appToast("Le projet n'a pas pu être enregistré.", { danger: true });
-    }
-  }
-
-  /**
-   * Supprimer sans demander, mais en offrant de revenir.
-   *
-   * Une confirmation modale à chaque suppression, c'est un obstacle avant
-   * chaque geste juste pour couvrir le geste rare qui était une erreur.
-   * On supprime, on le dit, et on propose d'annuler — l'idée est alors
-   * réinsérée avec son identifiant d'origine, donc rien n'est perdu.
-   */
-  async function remove(idea: Idea) {
-    setIdeas((prev) => prev.filter((i) => i.id !== idea.id));
-    const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
-    if (error) {
-      console.error(error);
-      setIdeas((prev) => [idea, ...prev]);
-      appToast("L'idée n'a pas pu être supprimée : elle est toujours là.", {
-        danger: true,
-      });
-      return;
-    }
-    appToast("Idée supprimée.", {
-      duration: 8000,
-      action: { label: "Annuler", onClick: () => restore(idea) },
-    });
-  }
-
-  /** Réinsère une idée supprimée, avec son identifiant d'origine. */
-  async function restore(idea: Idea) {
-    setIdeas((prev) => [idea, ...prev]);
-    const { error } = await supabase.from("ideas").insert({
-      id: idea.id,
-      user_id: idea.user_id,
-      project_id: idea.project_id,
-      body: idea.body,
-      archived_at: idea.archived_at,
-      created_at: idea.created_at,
-    });
-    if (error) {
-      console.error(error);
-      setIdeas((prev) => prev.filter((i) => i.id !== idea.id));
-      appToast("L'idée n'a pas pu être rétablie.", { danger: true });
     }
   }
 
@@ -209,11 +101,6 @@ export function IdeasClient({
 
   return (
     <div className="max-w-[720px] mx-auto px-4 py-4 md:py-8">
-      {/* En-tête : le titre, et TOUT le tri derrière un seul bouton.
-          Le tri vivait entre la saisie et la liste, c'est-à-dire sur le
-          chemin qu'on emprunte dix fois par jour pour noter en dix
-          secondes — alors qu'on ne trie qu'à l'occasion. Il monte donc
-          d'un cran et se replie. */}
       <div className="flex items-center gap-2 mb-3">
         <h1
           className="font-serif text-[22px] md:text-[30px] flex-1 m-0"
@@ -231,92 +118,16 @@ export function IdeasClient({
         >
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
             <circle cx="7" cy="7" r="4.2" stroke="currentColor" strokeWidth="1.4" />
-            <path d="M10.2 10.2L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <path
+              d="M10.2 10.2L14 14"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
       </div>
 
-      <p
-        className="text-[13px] mb-4 hidden md:block"
-        style={{ color: "var(--text-3)" }}
-      >
-        Notez maintenant, triez plus tard. Une idée qu&apos;il faut classer
-        avant de l&apos;écrire est une idée perdue.
-      </p>
-
-      {/* Capture */}
-      <div className="mb-3">
-        <div className={compact ? "flex items-start gap-2" : ""}>
-          <textarea
-            ref={inputRef}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              if (compact) {
-                const el = e.currentTarget;
-                el.style.height = "auto";
-                el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-              }
-            }}
-            onKeyDown={(e) => {
-              // Entrée n'envoie QU'AU CLAVIER physique.
-              //
-              // Un clavier de téléphone n'a pas de Maj+Entrée : envoyer sur
-              // Entrée rendait toute idée de plus d'une ligne impossible à
-              // écrire. Sur tactile, Entrée fait ce qu'elle dit.
-              if (!hasTouch && e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                capture();
-              }
-            }}
-            rows={compact ? 1 : 3}
-            placeholder="Une scène, un nom, une réplique…"
-            className="w-full text-[14px] px-3 py-2.5 rounded-[var(--radius-md)]"
-            style={{
-              background: "var(--bg-2)",
-              border: "1px solid var(--border-soft)",
-              color: "var(--text-1)",
-              minHeight: compact ? 44 : 84,
-              resize: compact ? "none" : "vertical",
-            }}
-          />
-          {compact && (
-            <button
-              onClick={capture}
-              disabled={!draft.trim() || busy}
-              aria-label="Noter cette idée"
-              className="shrink-0 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer border-none disabled:opacity-40 disabled:cursor-default"
-              style={{
-                background: "var(--accent)",
-                color: "#1a1410",
-                minWidth: 62,
-                height: 44,
-              }}
-            >
-              {busy ? "…" : "Noter"}
-            </button>
-          )}
-        </div>
-        {!compact && (
-          <div className="flex items-center gap-2 mt-2">
-            <button
-              onClick={capture}
-              disabled={!draft.trim() || busy}
-              className="h-9 px-4 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer border-none disabled:opacity-40 disabled:cursor-default"
-              style={{ background: "var(--accent)", color: "#1a1410" }}
-            >
-              {busy ? "Enregistrement…" : "Noter"}
-            </button>
-            {!hasTouch && (
-              <span className="text-[11px]" style={{ color: "var(--text-4)" }}>
-                Entrée pour noter · Maj+Entrée pour une nouvelle ligne
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Chercher et trier — dépliés à la demande */}
       {showFilters && (
         <div
           className="flex flex-col gap-2 mb-3 pb-3"
@@ -384,205 +195,104 @@ export function IdeasClient({
         </div>
       )}
 
-      {/* La liste.
-          Des lignes séparées par un filet, pas des cartes encadrées : une
-          carte coûte une bordure, un fond, deux rembourrages et une marge
-          — soit près de 50 px par idée, pour ne rien dire de plus. En
-          lignes, on voit deux fois plus de notes sans rien perdre. */}
       {visible.length === 0 ? (
-        <p
-          className="text-[13px] py-10 text-center"
-          style={{ color: "var(--text-4)" }}
-        >
-          {showArchived
-            ? "Rien de rangé pour l'instant."
-            : query || projectFilter
-              ? "Aucune idée ne correspond."
-              : "La boîte est vide. Le champ ci-dessus attend votre première idée."}
-        </p>
+        <div className="py-16 text-center">
+          <p className="text-[13.5px] m-0" style={{ color: "var(--text-4)" }}>
+            {showArchived
+              ? "Rien de rangé pour l'instant."
+              : query || projectFilter
+                ? "Aucune idée ne correspond."
+                : "La boîte est vide."}
+          </p>
+          {!showArchived && !query && !projectFilter && (
+            <Link
+              href="/idees/nouvelle"
+              className="inline-block mt-3 text-[13px]"
+              style={{ color: "var(--accent)" }}
+            >
+              Écrire la première
+            </Link>
+          )}
+        </div>
       ) : (
         <ul className="list-none p-0 m-0">
-          {visible.map((idea) => {
-            const ouvert = expanded.has(idea.id);
-            return (
-              <li
-                key={idea.id}
-                className="py-3"
-                style={{
-                  borderTop: "1px solid var(--border-soft)",
-                  opacity: idea.archived_at ? 0.55 : 1,
-                }}
-              >
-                <div className="flex items-start gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-[14px] leading-snug m-0 whitespace-pre-wrap"
-                      style={{
-                        color: "var(--text-1)",
-                        ...(ouvert
-                          ? {}
-                          : {
-                              display: "-webkit-box",
-                              WebkitLineClamp: 3,
-                              WebkitBoxOrient: "vertical" as const,
-                              overflow: "hidden",
-                            }),
-                      }}
-                    >
-                      {idea.body}
-                    </p>
-                    {idea.body.length > 150 && (
-                      <button
-                        onClick={() =>
-                          setExpanded((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(idea.id)) next.delete(idea.id);
-                            else next.add(idea.id);
-                            return next;
-                          })
-                        }
-                        className="mt-0.5 text-[12px] cursor-pointer bg-transparent border-none p-0"
-                        style={{ color: "var(--accent)" }}
-                      >
-                        {ouvert ? "Replier" : "Lire la suite"}
-                      </button>
+          {visible.map((idea) => (
+            <li
+              key={idea.id}
+              style={{
+                borderTop: "1px solid var(--border-soft)",
+                opacity: idea.archived_at ? 0.55 : 1,
+              }}
+            >
+              <div className="flex items-start gap-2">
+                {/* La ligne entière ouvre la note : sur un écran tactile,
+                    une cible de la largeur de la page ne se rate pas. */}
+                <Link
+                  href={`/idees/${idea.id}`}
+                  className="flex-1 min-w-0 py-3 no-underline block"
+                >
+                  <span
+                    className="text-[14px] leading-snug block"
+                    style={{
+                      color: "var(--text-1)",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {idea.body || "Note vide"}
+                  </span>
+                  <span
+                    className="flex items-center gap-1.5 mt-1 text-[11px]"
+                    style={{ color: "var(--text-4)" }}
+                  >
+                    <span>{frenchDate(idea.created_at)}</span>
+                    {projectName(idea.project_id) && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span style={{ color: "var(--accent)" }}>
+                          {projectName(idea.project_id)}
+                        </span>
+                      </>
                     )}
-                    <div
-                      className="flex items-center gap-1.5 mt-1 text-[11px]"
-                      style={{ color: "var(--text-4)" }}
-                    >
-                      <span>{frenchDate(idea.created_at)}</span>
-                      {projectName(idea.project_id) && (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <span style={{ color: "var(--accent)" }}>
-                            {projectName(idea.project_id)}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                  </span>
+                </Link>
 
-                  {compact ? (
-                    <button
-                      onClick={() =>
-                        setOpenActions((cur) =>
-                          cur === idea.id ? null : idea.id,
-                        )
-                      }
-                      aria-expanded={openActions === idea.id}
-                      title="Actions"
-                      aria-label="Actions sur cette idée"
-                      className="rd-icon-btn shrink-0"
-                    >
-                      ⋯
-                    </button>
-                  ) : (
-                    <span className="flex items-center gap-1 shrink-0">
-                      {projects.length > 0 && (
-                        <select
-                          value={idea.project_id ?? ""}
-                          onChange={(e) => assign(idea, e.target.value)}
-                          title="Rattacher à un projet"
-                          aria-label="Rattacher à un projet"
-                          className="h-7 px-1.5 rounded text-[11px] cursor-pointer"
-                          style={{
-                            background: "transparent",
-                            border: "1px solid var(--border-soft)",
-                            color: "var(--text-3)",
-                          }}
-                        >
-                          <option value="">Sans projet</option>
-                          {projects.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.title}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      <button
-                        onClick={() => toggleArchive(idea)}
-                        title={idea.archived_at ? "Remettre à trier" : "Ranger"}
-                        aria-label={
-                          idea.archived_at ? "Remettre à trier" : "Ranger"
-                        }
-                        className="rd-icon-btn"
-                      >
-                        {idea.archived_at ? "↩" : "✓"}
-                      </button>
-                      <button
-                        onClick={() => remove(idea)}
-                        title="Supprimer"
-                        aria-label="Supprimer"
-                        className="rd-icon-btn"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-                </div>
-
-                {/* Actions dépliées — des libellés, pas des glyphes : une
-                    coche seule ne dit pas ce qu'elle range. */}
-                {compact && openActions === idea.id && (
-                  <div className="mt-2.5 flex flex-col gap-2">
-                    {projects.length > 0 && (
-                      <select
-                        value={idea.project_id ?? ""}
-                        onChange={(e) => assign(idea, e.target.value)}
-                        aria-label="Rattacher à un projet"
-                        className="h-10 px-2 rounded text-[13px] w-full cursor-pointer"
-                        style={{
-                          background: "var(--bg-2)",
-                          border: "1px solid var(--border-soft)",
-                          color: "var(--text-2)",
-                        }}
-                      >
-                        <option value="">Sans projet</option>
-                        {projects.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.title}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          toggleArchive(idea);
-                          setOpenActions(null);
-                        }}
-                        className="flex-1 h-10 rounded text-[13px] cursor-pointer"
-                        style={{
-                          background: "var(--bg-2)",
-                          border: "1px solid var(--border-soft)",
-                          color: "var(--text-2)",
-                        }}
-                      >
-                        {idea.archived_at ? "Remettre à trier" : "Ranger"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          remove(idea);
-                          setOpenActions(null);
-                        }}
-                        className="h-10 px-4 rounded text-[13px] cursor-pointer"
-                        style={{
-                          background: "transparent",
-                          border: "1px solid var(--border-soft)",
-                          color: "var(--danger, #e05555)",
-                        }}
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </li>
-            );
-          })}
+                <button
+                  onClick={() => toggleArchive(idea)}
+                  title={idea.archived_at ? "Remettre à trier" : "Ranger"}
+                  aria-label={idea.archived_at ? "Remettre à trier" : "Ranger"}
+                  className="rd-icon-btn shrink-0 self-center"
+                >
+                  {idea.archived_at ? "↩" : "✓"}
+                </button>
+              </div>
+            </li>
+          ))}
         </ul>
       )}
+
+      {/* Écrire : un bouton, une page.
+          Posé au-dessus de la barre de navigation du téléphone, sinon il
+          se retrouverait dessous. */}
+      <Link
+        href="/idees/nouvelle"
+        title="Écrire une idée"
+        aria-label="Écrire une idée"
+        className="fixed right-4 z-40 flex items-center justify-center rounded-full no-underline shadow-lg"
+        style={{
+          bottom: "calc(84px + env(safe-area-inset-bottom, 0px))",
+          width: 56,
+          height: 56,
+          background: "var(--accent)",
+          color: "#1a1410",
+          fontSize: 26,
+          lineHeight: 1,
+        }}
+      >
+        +
+      </Link>
     </div>
   );
 }
