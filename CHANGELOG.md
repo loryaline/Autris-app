@@ -27,6 +27,16 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.8.4] — 2026-08-31
+
+### Changements
+
+- **La boîte à idées devient une liste, pas une pile de cartes.** Chaque idée était encadrée : une bordure, un fond, deux rembourrages et une marge — près de 50 px par note pour ne rien dire de plus. En lignes séparées d'un filet, on voit **huit notes au lieu de quatre**, et la liste coule au lieu de s'empiler.
+- **Chercher et trier montent dans l'en-tête, repliés.** Ils vivaient entre la saisie et la liste, c'est-à-dire sur le chemin qu'on emprunte dix fois par jour pour noter en dix secondes — alors qu'on ne trie qu'à l'occasion. Un bouton loupe les déplie, et signale d'un liseré doré qu'un filtre est actif.
+- Les notes longues sont repliées à **trois lignes** plutôt que six : l'aperçu sert à reconnaître une idée, pas à la relire.
+
+---
+
 ## [0.8.3] — 2026-08-31
 
 ### Corrections
