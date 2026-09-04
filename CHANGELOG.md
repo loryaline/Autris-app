@@ -27,6 +27,20 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.8.3] — 2026-08-31
+
+### Corrections
+
+- **Écrire une idée de plus d'une ligne redevient possible sur téléphone.** Entrée envoyait la note, et le retour à la ligne demandait Maj+Entrée — une combinaison qui n'existe pas sur un clavier tactile. Entrée n'envoie désormais qu'au clavier physique ; au doigt, elle fait ce qu'elle dit, et c'est le bouton qui envoie.
+
+### Ajouts
+
+- **Une recherche dans les idées**, à partir de neuf notes. En dessous, elle occuperait une rangée au-dessus d'une liste qu'on lit d'un coup d'œil.
+- **Annuler après coup, au lieu de confirmer avant.** Ranger et supprimer se font sans question, et la pastille propose « Annuler » — huit secondes pour la suppression. Une idée supprimée puis rétablie retrouve son identifiant d'origine. Une confirmation modale à chaque geste était un obstacle permanent pour couvrir l'erreur rare.
+- **Les notes longues sont repliées à six lignes**, avec « Lire la suite ». Une idée de vingt lignes occupait tout l'écran et cachait les suivantes, alors que la valeur de cette page est de voir d'un coup ce qu'on a noté.
+
+---
+
 ## [0.8.2] — 2026-08-31
 
 ### Corrections
