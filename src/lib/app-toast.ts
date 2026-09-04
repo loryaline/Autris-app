@@ -43,7 +43,18 @@ function stack(): HTMLElement {
 
 export function appToast(
   message: string,
-  opts?: { danger?: boolean; duration?: number },
+  opts?: {
+    danger?: boolean;
+    duration?: number;
+    /**
+     * Action offerte dans la pastille — « Annuler », le plus souvent.
+     *
+     * Une confirmation bloque AVANT et fait douter ; une annulation
+     * propose APRÈS et ne coûte rien tant qu'on ne s'est pas trompé.
+     * C'est ce que fait toute application où l'on range vite.
+     */
+    action?: { label: string; onClick: () => void };
+  },
 ): void {
   if (typeof document === "undefined" || !message) return;
 
@@ -108,7 +119,29 @@ export function appToast(
     timer = setTimeout(dismiss, 1600);
   });
 
-  box.append(text, close);
+  if (opts?.action) {
+    const act = document.createElement("button");
+    act.type = "button";
+    act.textContent = opts.action.label;
+    act.style.cssText = [
+      "flex:none",
+      "background:none",
+      "border:none",
+      "padding:0 4px",
+      "cursor:pointer",
+      "font-family:inherit",
+      "font-size:12.5px",
+      "font-weight:600",
+      "color:var(--accent, #d9a25f)",
+    ].join(";");
+    act.addEventListener("click", () => {
+      opts.action!.onClick();
+      dismiss();
+    });
+    box.append(text, act, close);
+  } else {
+    box.append(text, close);
+  }
   stack().append(box);
 
   requestAnimationFrame(() => {

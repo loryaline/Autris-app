@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useViewport } from "@/lib/useViewport";
-import { appConfirm } from "@/lib/app-confirm";
 import { appToast } from "@/lib/app-toast";
 import type { Idea } from "@/types/database";
 
@@ -55,7 +54,10 @@ export function IdeasClient({
   const [projectFilter, setProjectFilter] = useState<string>("");
   // Note dont les actions sont dépliées (téléphone uniquement).
   const [openActions, setOpenActions] = useState<string | null>(null);
-  const { isPhone, isTablet } = useViewport();
+  const [query, setQuery] = useState("");
+  // Notes dépliées : une idée longue est repliée par défaut.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const { isPhone, isTablet, hasTouch } = useViewport();
   /* Téléphone ET tablette : à 834 px en portrait, une note ne peut pas
    * plus porter un menu déroulant et deux boutons de 44 px qu'à 375. Le
    * seuil utile n'est pas « petit écran » mais « écran où la ligne
@@ -63,15 +65,15 @@ export function IdeasClient({
   const compact = isPhone || isTablet;
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const visible = useMemo(
-    () =>
-      ideas.filter(
-        (i) =>
-          !!i.archived_at === showArchived &&
-          (!projectFilter || i.project_id === projectFilter),
-      ),
-    [ideas, showArchived, projectFilter],
-  );
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return ideas.filter(
+      (i) =>
+        !!i.archived_at === showArchived &&
+        (!projectFilter || i.project_id === projectFilter) &&
+        (!q || i.body.toLowerCase().includes(q)),
+    );
+  }, [ideas, showArchived, projectFilter, query]);
 
   const projectName = (id: string | null) =>
     id ? (projects.find((p) => p.id === id)?.title ?? null) : null;
@@ -129,6 +131,12 @@ export function IdeasClient({
         ),
       );
       appToast("Le rangement n'a pas pu être enregistré.", { danger: true });
+      return;
+    }
+    if (next) {
+      appToast("Idée rangée.", {
+        action: { label: "Annuler", onClick: () => toggleArchive({ ...idea, archived_at: next }) },
+      });
     }
   }
 
@@ -152,16 +160,15 @@ export function IdeasClient({
     }
   }
 
+  /**
+   * Supprimer sans demander, mais en offrant de revenir.
+   *
+   * Une confirmation modale à chaque suppression, c'est un obstacle avant
+   * chaque geste juste pour couvrir le geste rare qui était une erreur.
+   * On supprime, on le dit, et on propose d'annuler — l'idée est alors
+   * réinsérée avec son identifiant d'origine, donc rien n'est perdu.
+   */
   async function remove(idea: Idea) {
-    if (
-      !(await appConfirm(
-        "Supprimer cette idée définitivement ? L'archivage la garde sans " +
-          "l'afficher.",
-        { confirmLabel: "Supprimer" },
-      ))
-    ) {
-      return;
-    }
     setIdeas((prev) => prev.filter((i) => i.id !== idea.id));
     const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
     if (error) {
@@ -170,6 +177,29 @@ export function IdeasClient({
       appToast("L'idée n'a pas pu être supprimée : elle est toujours là.", {
         danger: true,
       });
+      return;
+    }
+    appToast("Idée supprimée.", {
+      duration: 8000,
+      action: { label: "Annuler", onClick: () => restore(idea) },
+    });
+  }
+
+  /** Réinsère une idée supprimée, avec son identifiant d'origine. */
+  async function restore(idea: Idea) {
+    setIdeas((prev) => [idea, ...prev]);
+    const { error } = await supabase.from("ideas").insert({
+      id: idea.id,
+      user_id: idea.user_id,
+      project_id: idea.project_id,
+      body: idea.body,
+      archived_at: idea.archived_at,
+      created_at: idea.created_at,
+    });
+    if (error) {
+      console.error(error);
+      setIdeas((prev) => prev.filter((i) => i.id !== idea.id));
+      appToast("L'idée n'a pas pu être rétablie.", { danger: true });
     }
   }
 
@@ -215,9 +245,13 @@ export function IdeasClient({
             }
           }}
           onKeyDown={(e) => {
-            // Entrée envoie, Maj+Entrée passe à la ligne : une idée tient
-            // presque toujours sur une phrase.
-            if (e.key === "Enter" && !e.shiftKey) {
+            // Entrée n'envoie QU'AU CLAVIER physique.
+            //
+            // Un clavier de téléphone n'a pas de Maj+Entrée : envoyer sur
+            // Entrée rendait toute idée de plus d'une ligne impossible à
+            // écrire. Sur tactile, Entrée fait ce qu'elle dit — elle passe
+            // à la ligne — et c'est le bouton qui envoie.
+            if (!hasTouch && e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               capture();
             }
@@ -264,7 +298,7 @@ export function IdeasClient({
             {busy ? "Enregistrement…" : "Noter"}
           </button>
           )}
-          {!compact && (
+          {!hasTouch && (
             <span className="text-[11px]" style={{ color: "var(--text-4)" }}>
               Entrée pour noter · Maj+Entrée pour une nouvelle ligne
             </span>
@@ -273,6 +307,25 @@ export function IdeasClient({
       </div>
 
       {/* Filtres */}
+      {/* La recherche n'apparaît qu'une fois la boîte assez pleine pour
+          qu'on s'y perde : en dessous, elle ne ferait qu'occuper une
+          rangée au-dessus d'une liste qu'on lit d'un coup d'œil. */}
+      {ideas.length > 8 && (
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          type="search"
+          placeholder="Rechercher dans vos idées…"
+          aria-label="Rechercher dans vos idées"
+          className="w-full h-10 sm:h-9 px-3 mb-2 rounded-[var(--radius-md)] text-[13px]"
+          style={{
+            background: "var(--bg-2)",
+            border: "1px solid var(--border-soft)",
+            color: "var(--text-1)",
+          }}
+        />
+      )}
+
       {/* Deux rangées sur téléphone plutôt qu'une seule qui déborde : le
           menu des projets prend toute la largeur, les deux états se
           partagent la suivante. `ml-auto` poussait tout à droite jusqu'à
@@ -356,12 +409,43 @@ export function IdeasClient({
                 opacity: idea.archived_at ? 0.6 : 1,
               }}
             >
+              {/* Repliée à six lignes.
+                  Une idée de vingt lignes prenait tout l'écran et cachait
+                  les suivantes — or la valeur de cette page est de voir
+                  d'un coup ce qu'on a noté. Le repli est une lecture, pas
+                  une troncature : rien n'est perdu, tout se déplie. */}
               <p
                 className="text-[14px] leading-snug m-0 whitespace-pre-wrap"
-                style={{ color: "var(--text-1)" }}
+                style={{
+                  color: "var(--text-1)",
+                  ...(expanded.has(idea.id)
+                    ? {}
+                    : {
+                        display: "-webkit-box",
+                        WebkitLineClamp: 6,
+                        WebkitBoxOrient: "vertical" as const,
+                        overflow: "hidden",
+                      }),
+                }}
               >
                 {idea.body}
               </p>
+              {idea.body.length > 260 && (
+                <button
+                  onClick={() =>
+                    setExpanded((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(idea.id)) next.delete(idea.id);
+                      else next.add(idea.id);
+                      return next;
+                    })
+                  }
+                  className="mt-1 text-[12px] cursor-pointer bg-transparent border-none p-0"
+                  style={{ color: "var(--accent)" }}
+                >
+                  {expanded.has(idea.id) ? "Replier" : "Lire la suite"}
+                </button>
+              )}
               {/* Pied de note.
                   Sur téléphone, il ne porte QUE ce qui se lit : la date et
                   le projet. Les actions — rattacher, ranger, supprimer —
