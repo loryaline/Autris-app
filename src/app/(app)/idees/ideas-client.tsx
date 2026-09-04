@@ -55,7 +55,12 @@ export function IdeasClient({
   const [projectFilter, setProjectFilter] = useState<string>("");
   // Note dont les actions sont dépliées (téléphone uniquement).
   const [openActions, setOpenActions] = useState<string | null>(null);
-  const { isPhone } = useViewport();
+  const { isPhone, isTablet } = useViewport();
+  /* Téléphone ET tablette : à 834 px en portrait, une note ne peut pas
+   * plus porter un menu déroulant et deux boutons de 44 px qu'à 375. Le
+   * seuil utile n'est pas « petit écran » mais « écran où la ligne
+   * d'actions ne tient pas ». */
+  const compact = isPhone || isTablet;
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const visible = useMemo(
@@ -173,22 +178,42 @@ export function IdeasClient({
   return (
     <div className="max-w-[720px] mx-auto px-4 py-6 md:py-8">
       <h1
-        className="font-serif text-[26px] md:text-[30px] mb-1"
+        className="font-serif text-[22px] md:text-[30px] mb-2 md:mb-1"
         style={{ color: "var(--text-1)" }}
       >
         Idées
       </h1>
-      <p className="text-[13px] mb-6" style={{ color: "var(--text-3)" }}>
+      {/* Une phrase d'intention se lit une fois. Sur un écran où l'on
+          revient dix fois par jour pour noter en dix secondes, elle
+          repousse la liste vers le bas à chaque visite. */}
+      <p
+        className="text-[13px] mb-6 hidden md:block"
+        style={{ color: "var(--text-3)" }}
+      >
         Notez maintenant, triez plus tard. Une idée qu&apos;il faut classer
         avant de l&apos;écrire est une idée perdue.
       </p>
 
       {/* Capture */}
-      <div className="mb-6">
+      {/* Sur petit écran, la capture tient sur une ligne qui grandit avec
+          le texte, et le bouton se met à côté. Un champ de trois lignes
+          plus une rangée de bouton, c'était 140 px de mobilier avant la
+          première note — sur une page dont l'objet EST la liste. */}
+      <div className="mb-4 md:mb-6">
+        <div className={compact ? "flex items-start gap-2" : ""}>
         <textarea
           ref={inputRef}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            if (compact) {
+              // Le champ épouse son contenu : une ligne au repos, autant
+              // que nécessaire ensuite.
+              const el = e.currentTarget;
+              el.style.height = "auto";
+              el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+            }
+          }}
           onKeyDown={(e) => {
             // Entrée envoie, Maj+Entrée passe à la ligne : une idée tient
             // presque toujours sur une phrase.
@@ -197,17 +222,39 @@ export function IdeasClient({
               capture();
             }
           }}
-          rows={3}
-          placeholder="Une scène, un nom, une réplique, une question…"
+          rows={compact ? 1 : 3}
+          placeholder="Une scène, un nom, une réplique…"
           className="w-full text-[14px] px-3 py-2.5 rounded-[var(--radius-md)] resize-y"
           style={{
             background: "var(--bg-2)",
             border: "1px solid var(--border-soft)",
             color: "var(--text-1)",
-            minHeight: 84,
+            minHeight: compact ? 44 : 84,
+            resize: compact ? "none" : "vertical",
           }}
         />
+        {/* En compact, le bouton se met à CÔTÉ du champ : seul sur sa
+            rangée, il coûtait 50 px de haut pour un mot de cinq lettres,
+            sur une page dont l'objet est la liste en dessous. */}
+        {compact && (
+          <button
+            onClick={capture}
+            disabled={!draft.trim() || busy}
+            aria-label="Noter cette idée"
+            className="shrink-0 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer border-none disabled:opacity-40 disabled:cursor-default"
+            style={{
+              background: "var(--accent)",
+              color: "#1a1410",
+              minWidth: 62,
+              height: 44,
+            }}
+          >
+            {busy ? "…" : "Noter"}
+          </button>
+        )}
+        </div>
         <div className="flex items-center gap-2 mt-2">
+          {!compact && (
           <button
             onClick={capture}
             disabled={!draft.trim() || busy}
@@ -216,9 +263,12 @@ export function IdeasClient({
           >
             {busy ? "Enregistrement…" : "Noter"}
           </button>
-          <span className="text-[11px]" style={{ color: "var(--text-4)" }}>
-            Entrée pour noter · Maj+Entrée pour une nouvelle ligne
-          </span>
+          )}
+          {!compact && (
+            <span className="text-[11px]" style={{ color: "var(--text-4)" }}>
+              Entrée pour noter · Maj+Entrée pour une nouvelle ligne
+            </span>
+          )}
         </div>
       </div>
 
@@ -228,32 +278,38 @@ export function IdeasClient({
           partagent la suivante. `ml-auto` poussait tout à droite jusqu'à
           renvoyer les boutons à la ligne en escalier. */}
       <div
-        className="flex gap-2 pb-3 mb-3 flex-col sm:flex-row sm:items-center"
+        className="flex items-center gap-2 pb-3 mb-3"
         style={{ borderBottom: "1px solid var(--border-soft)" }}
       >
-        <select
-          value={projectFilter}
-          onChange={(e) => setProjectFilter(e.target.value)}
-          aria-label="Filtrer par projet"
-          className="h-9 sm:h-8 px-2 rounded text-[12px] cursor-pointer w-full sm:w-auto"
-          style={{
-            background: "var(--bg-2)",
-            border: "1px solid var(--border-soft)",
-            color: "var(--text-2)",
-          }}
-        >
-          <option value="">Tous les projets</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title}
-            </option>
-          ))}
-        </select>
+        {/* Filtrer n'a de sens qu'à partir de deux projets. En dessous,
+            ce menu occupait une rangée entière pour ne rien trier. */}
+        {projects.length > 1 && (
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            aria-label="Filtrer par projet"
+            className="h-9 sm:h-8 px-2 rounded text-[12px] cursor-pointer flex-1 min-w-0 sm:flex-none sm:w-auto"
+            style={{
+              background: "var(--bg-2)",
+              border: "1px solid var(--border-soft)",
+              color: "var(--text-2)",
+            }}
+          >
+            <option value="">Tous les projets</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </select>
+        )}
 
-        <span className="flex items-center gap-2 sm:ml-auto">
+        {/* Segmenté : deux états qui s'excluent se lisent mieux collés
+            qu'espacés, et la paire tient dans la largeur restante. */}
+        <span className="flex items-center sm:gap-2 sm:ml-auto shrink-0">
           <button
             onClick={() => setShowArchived(false)}
-            className="h-9 sm:h-8 px-3 rounded text-[12px] cursor-pointer flex-1 sm:flex-none"
+            className="h-9 sm:h-8 px-3 text-[12px] cursor-pointer rounded-l sm:rounded"
             style={{
               background: !showArchived ? "var(--accent-bg)" : "transparent",
               border: `1px solid ${!showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
@@ -264,7 +320,7 @@ export function IdeasClient({
           </button>
           <button
             onClick={() => setShowArchived(true)}
-            className="h-9 sm:h-8 px-3 rounded text-[12px] cursor-pointer flex-1 sm:flex-none"
+            className="h-9 sm:h-8 px-3 text-[12px] cursor-pointer rounded-r sm:rounded border-l-0 sm:border-l"
             style={{
               background: showArchived ? "var(--accent-bg)" : "transparent",
               border: `1px solid ${showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
@@ -330,7 +386,7 @@ export function IdeasClient({
                   </span>
                 )}
 
-                {isPhone ? (
+                {compact ? (
                   <button
                     onClick={() =>
                       setOpenActions((cur) => (cur === idea.id ? null : idea.id))
@@ -387,7 +443,7 @@ export function IdeasClient({
 
               {/* Actions dépliées — téléphone. Des libellés, pas des
                   glyphes : une coche seule ne dit pas ce qu'elle range. */}
-              {isPhone && openActions === idea.id && (
+              {compact && openActions === idea.id && (
                 <div
                   className="mt-2.5 pt-2.5 flex flex-col gap-2"
                   style={{ borderTop: "1px solid var(--border-soft)" }}

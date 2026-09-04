@@ -27,6 +27,16 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.8.2] — 2026-08-31
+
+### Corrections
+
+- **La boîte à idées cesse d'être surtout du mobilier sur petit écran.** Avant la première note : un titre, un sous-titre, un champ de trois lignes, une rangée de bouton et deux rangées de filtres — environ 320 px des 812 d'un iPhone, pour une page dont l'objet est la liste. Le champ tient maintenant sur une ligne qui grandit avec le texte, le bouton se met à côté, les filtres tiennent sur une rangée, et le sous-titre ne s'affiche qu'au bureau. On voit trois notes au lieu d'une et demie.
+- **La tablette reçoit le même traitement que le téléphone.** Le correctif de 0.8.1 ne visait que le téléphone : sur iPad en portrait, chaque note gardait son menu déroulant et ses deux boutons. Le seuil n'est pas « petit écran » mais « écran où la ligne d'actions ne tient pas ».
+- **Le filtre par projet n'apparaît qu'à partir de deux projets.** En dessous, il occupait une rangée entière pour ne rien trier.
+
+---
+
 ## [0.8.1] — 2026-08-31
 
 ### Corrections
