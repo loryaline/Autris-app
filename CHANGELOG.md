@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.8.1] — 2026-08-31
+
+### Corrections
+
+- **La boîte à idées tient enfin sur un téléphone.** Chaque note portait un menu de projet et deux boutons poussés à droite : à 44 px la cible tactile, ça dépassait la largeur d'un écran et repartait à la ligne en escalier — le projet s'affichant deux fois au passage, en pastille puis en menu. Sur téléphone, la note ne montre plus que son texte, sa date et son projet ; les actions passent derrière un bouton unique qui les déplie sur place, avec des libellés plutôt que des glyphes.
+- **La barre de filtres passe sur deux rangées** sur petit écran au lieu de déborder : le menu des projets prend la largeur, les deux états se partagent la ligne suivante.
+
+---
+
 ## [0.8.0] — 2026-08-31
 
 ### Ajouts
