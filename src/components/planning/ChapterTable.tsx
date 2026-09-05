@@ -9,6 +9,35 @@ import type { ChapterData as ChapterRow, CustomColumn, CellValue } from "@/app/(
 import { RichEditableCell, computeClickOffset } from "./RichEditableCell";
 import { ThemePills } from "./ThemePills";
 
+/**
+ * Suit un glisser jusqu'au relâchement — souris, doigt ou stylet.
+ *
+ * Jumeau de celui du plateau, et pour la même raison : `mousemove` et
+ * `mouseup` ne se déclenchent pas au doigt sur iOS. Le chapitrage est la
+ * seule autre vue qu'une tablette utilise vraiment ; sans ça, on ne
+ * pouvait ni sélectionner une plage de cases ni redimensionner une
+ * colonne.
+ *
+ * `pointercancel` est indispensable : le système reprend parfois le geste
+ * — balayage depuis le bord, appel entrant — et sans lui la sélection
+ * resterait ouverte indéfiniment.
+ */
+function trackDrag(
+  onMove: (ev: PointerEvent) => void,
+  onEnd?: (ev: PointerEvent) => void,
+) {
+  const move = (ev: PointerEvent) => onMove(ev);
+  const end = (ev: PointerEvent) => {
+    document.removeEventListener("pointermove", move);
+    document.removeEventListener("pointerup", end);
+    document.removeEventListener("pointercancel", end);
+    onEnd?.(ev);
+  };
+  document.addEventListener("pointermove", move);
+  document.addEventListener("pointerup", end);
+  document.addEventListener("pointercancel", end);
+}
+
 /* ---- Column definitions ---- */
 interface ColumnDef {
   key: string;
@@ -445,7 +474,7 @@ export function ChapterTable({
   }
 
   /** Sélectionne une case et démarre le suivi du drag rectangulaire. */
-  function beginCellSelection(pos: CellPos, e: React.MouseEvent) {
+  function beginCellSelection(pos: CellPos, e: React.PointerEvent) {
     commitAnyEdit();
     window.getSelection()?.removeAllRanges();
 
@@ -473,7 +502,7 @@ export function ChapterTable({
 
     // Drag rectangulaire : le focus suit la case sous le pointeur.
     setDragSelecting(true);
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       const el = document.elementFromPoint(ev.clientX, ev.clientY);
       const cellEl = (el as HTMLElement | null)?.closest(
         "[data-row-idx]",
@@ -484,13 +513,16 @@ export function ChapterTable({
       if (Number.isNaN(r) || Number.isNaN(c)) return;
       setSelFocus((prev) => (prev && prev.r === r && prev.c === c ? prev : { r, c }));
     };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+    // Au DOIGT, on s'arrête à la case touchée : un glisser d'un doigt
+    // doit faire défiler le tableau, qui est plus large que l'écran.
+    // Lui faire aussi tracer un rectangle de sélection rendrait le
+    // défilement impossible — et c'est le geste le plus utile des deux
+    // sur une tablette. La souris et le stylet, eux, tracent.
+    if (e.pointerType === "touch") {
       setDragSelecting(false);
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+      return;
+    }
+    trackDrag(onMove, () => setDragSelecting(false));
   }
 
   /** Vide le contenu des cases sélectionnées (champs texte, thèmes,
@@ -576,33 +608,31 @@ export function ChapterTable({
 
   // Clic hors du tableau → désélection (comme Sheets).
   useEffect(() => {
-    const onDown = (e: MouseEvent) => {
+    const onDown = (e: PointerEvent) => {
       const t = e.target as HTMLElement | null;
       if (!t) return;
       if (tableWrapperRef.current?.contains(t)) return;
       if (t.closest("[data-bubble-menu]")) return;
       clearSelection();
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
   }, []);
 
   /* ---- Column resize ---- */
-  function handleColumnResize(colKey: string, e: React.MouseEvent) {
+  function handleColumnResize(colKey: string, e: React.PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
     const startX = e.clientX;
     const startWidth = columnWidths[colKey] ?? 160;
     let lastWidth = startWidth;
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       const newWidth = Math.max(60, startWidth + ev.clientX - startX);
       lastWidth = newWidth;
       setColumnWidths((prev) => ({ ...prev, [colKey]: newWidth }));
     };
     const onUp = async () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
       // Persistence DB : on n'écrit qu'à la fin du drag pour éviter
       // de spammer Supabase à chaque pixel bougé.
       if (lastWidth === startWidth) return;
@@ -620,8 +650,7 @@ export function ChapterTable({
         );
       }
     };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    trackDrag(onMove, onUp);
   }
 
   /* ---- Save column order ---- */
@@ -1743,8 +1772,16 @@ export function ChapterTable({
                     />
                     {/* Resize handle */}
                     <div
-                      onMouseDown={(e) => handleColumnResize(col.key, e)}
-                      className="absolute right-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-[var(--color-accent-border)] z-10"
+                      onPointerDown={(e) => handleColumnResize(col.key, e)}
+                      className="rd-col-resize absolute right-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-[var(--color-accent-border)] z-10"
+                      style={{
+                        // La poignée seule refuse le geste au navigateur :
+                        // elle est trop étroite pour qu'on veuille y faire
+                        // défiler, et c'est le seul endroit du tableau où
+                        // le glisser doit redimensionner plutôt que
+                        // parcourir.
+                        touchAction: "none",
+                      }}
                     />
                   </div>
                 );
@@ -1852,7 +1889,7 @@ export function ChapterTable({
                         // texte — seulement dans le vide. En capture, la
                         // case est servie la première, quoi qu'il y ait
                         // dessous.
-                        onMouseDownCapture={(e) => {
+                        onPointerDownCapture={(e) => {
                           if (e.button !== 0) return;
                           if (isEditing) return; // édition en cours : laisser l'éditeur gérer
                           e.preventDefault();

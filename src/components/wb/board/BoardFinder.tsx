@@ -87,14 +87,17 @@ export function BoardFinder({
 
   useEffect(() => {
     if (!open && !showFilters) return;
-    const onDown = (e: MouseEvent) => {
+    // pointerdown et non mousedown : au doigt, iOS ne synthétise le
+    // mousedown qu'après le relâchement, et le panneau tardait à se
+    // fermer — assez pour qu'on le voie encore en touchant à côté.
+    const onDown = (e: PointerEvent) => {
       if (!boxRef.current?.contains(e.target as Node)) {
         setOpen(false);
         setShowFilters(false);
       }
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
   }, [open, showFilters]);
 
   /** Le texte par lequel un objet se laisse trouver. */

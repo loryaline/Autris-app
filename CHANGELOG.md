@@ -27,6 +27,20 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.1] — 2026-09-05
+
+### Ajouts
+
+- **Le chapitrage répond au doigt.** C'est la seule autre vue qu'une tablette utilise vraiment, et elle restait aveugle au tactile : ni sélection d'une plage de cases, ni redimensionnement de colonne. Elle passe aux Pointer Events, comme le plateau.
+- **La poignée de redimensionnement s'élargit là où le doigt sert** — 4 px se visent à la souris, jamais au doigt. Elle passe à 18 px sur écran tactile, en débordant vers l'intérieur pour ne pas décaler la colonne voisine.
+
+### Changements
+
+- **Au doigt, un glisser dans le tableau le fait défiler** au lieu de tracer un rectangle de sélection. Les deux gestes se disputaient le même mouvement, et sur un tableau plus large que l'écran c'est le défilement qui compte. La souris et le stylet tracent toujours.
+- Le panneau « chercher et trier » du plateau se ferme dès qu'on touche à côté : il attendait un , qu'iOS ne synthétise qu'après le relâchement.
+
+---
+
 ## [0.10.0] — 2026-09-05
 
 ### Ajouts

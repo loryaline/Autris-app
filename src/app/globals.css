@@ -1720,3 +1720,15 @@ body {
   outline-offset: 2px;
   border-radius: 3px;
 }
+
+
+/* Poignée de redimensionnement des colonnes du chapitrage.
+   4 px se visent à la souris, jamais au doigt. On l'élargit là où le
+   tactile existe, en la débordant vers l'intérieur pour ne pas décaler
+   la colonne voisine. */
+@media (any-pointer: coarse) {
+  .rd-col-resize {
+    width: 18px;
+    right: -7px;
+  }
+}
