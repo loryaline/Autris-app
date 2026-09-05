@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.9.3] — 2026-09-05
+
+### Changements
+
+- **La boîte à idées est enfin composée pour un téléphone, pas rétrécie depuis un bureau.** Le texte d'une note faisait 14 px et sa date 11 px — de la densité d'écran large posée sur 375 px. Les corps passent à 16,5 px pour les notes, 17 px dans l'écran d'écriture, 12,5 px pour les dates, avec des interlignes plus généreux et des lignes plus hautes. On voit six notes au lieu de neuf : c'est le bon échange.
+- Le bouton d'écriture passe à 60 px, les entrées de menu à 15 px, et le va-et-vient « à trier / rangées » à 40 px de haut. Au bureau, rien ne change.
+
+---
+
 ## [0.9.2] — 2026-09-05
 
 ### Corrections

@@ -199,7 +199,7 @@ export function NoteEditor({
   return (
     <div className="flex flex-col h-full">
       <header
-        className="flex items-center gap-2 px-3 h-12 shrink-0"
+        className="flex items-center gap-2 px-3 h-14 md:h-12 shrink-0"
         style={{ borderBottom: "1px solid var(--border-soft)" }}
       >
         <button
@@ -220,7 +220,7 @@ export function NoteEditor({
         </button>
 
         <span
-          className="text-[11px] flex-1"
+          className="text-[12.5px] md:text-[11px] flex-1"
           style={{ color: "var(--text-4)" }}
           aria-live="polite"
         >
@@ -236,7 +236,7 @@ export function NoteEditor({
             value={projectId ?? ""}
             onChange={(e) => assign(e.target.value)}
             aria-label="Rattacher à un projet"
-            className="h-8 px-2 rounded text-[12px] cursor-pointer max-w-[45vw]"
+            className="h-9 md:h-8 px-2 rounded text-[13.5px] md:text-[12px] cursor-pointer max-w-[45vw]"
             style={{
               background: "transparent",
               border: "1px solid var(--border-soft)",
@@ -287,7 +287,7 @@ export function NoteEditor({
                     setMenuOpen(false);
                     toggleArchive();
                   }}
-                  className="w-full text-left px-3.5 py-2.5 text-[13px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
+                  className="w-full text-left px-4 py-3 text-[15px] md:text-[13px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
                   style={{ color: "var(--text-2)" }}
                 >
                   {archived ? "Remettre à trier" : "Ranger"}
@@ -297,7 +297,7 @@ export function NoteEditor({
                     setMenuOpen(false);
                     remove();
                   }}
-                  className="w-full text-left px-3.5 py-2.5 text-[13px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
+                  className="w-full text-left px-4 py-3 text-[15px] md:text-[13px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
                   style={{ color: "var(--danger, #e05555)" }}
                 >
                   Supprimer
@@ -315,7 +315,7 @@ export function NoteEditor({
         value={body}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Une scène, un nom, une réplique…"
-        className="flex-1 w-full px-4 py-4 text-[15px] leading-relaxed resize-none"
+        className="flex-1 w-full px-4 py-4 text-[17px] md:text-[15px] leading-[1.6] resize-none"
         style={{
           background: "transparent",
           border: "none",
