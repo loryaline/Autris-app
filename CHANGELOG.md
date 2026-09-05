@@ -27,6 +27,16 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.9.4] — 2026-09-05
+
+### Changements
+
+- **L'en-tête de l'éditeur est dimensionnée pour le doigt.** Elle faisait 40 px de haut et le retour à l'accueil 20 px de côté — une cible de la taille d'un timbre. La barre passe à 56 px, la maison à 44 px de cible pour 18 px de dessin, et le fil d'Ariane à 15 px.
+- **Le titre du chapitre cesse d'être écrasé.** Le libellé du statut prenait 70 px sur un écran de 375, autant que le titre du chapitre — qui dit lui où l'on écrit et se retrouvait réduit à trois lettres. Sur petit écran la pastille se réduit à son point ; son nom reste en infobulle et pour la synthèse vocale, et l'appui continue de le changer.
+- **L'indicateur d'enregistrement perd son fond coloré sur téléphone** : un ✓ dans une pastille verte ressemble à un bouton à presser, alors que c'est un constat. Au bureau, rien ne change.
+
+---
+
 ## [0.9.3] — 2026-09-05
 
 ### Changements

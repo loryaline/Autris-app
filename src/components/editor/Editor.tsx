@@ -567,18 +567,24 @@ export function NovelEditor({
     <div className="flex flex-col h-full">
       {/* Breadcrumb top bar */}
       {!focusMode ? (
-        <div className="h-10 bg-bg-primary border-b border-white/[0.04] flex items-center flex-nowrap px-4 gap-2 shrink-0 overflow-hidden">
+        <div className="h-14 md:h-10 bg-bg-primary border-b border-white/[0.04] flex items-center flex-nowrap px-3 md:px-4 gap-2 shrink-0 overflow-hidden">
           <Link
             href="/"
             onClick={(e) => { if (!canNavigateHome) e.preventDefault(); }}
             title={canNavigateHome ? "Retour à l'accueil" : "Sauvegarde en cours…"}
-            className={`flex items-center justify-center w-5 h-5 rounded transition-colors ${
+            className={`flex items-center justify-center w-11 h-11 -ml-1.5 md:ml-0 md:w-5 md:h-5 rounded shrink-0 transition-colors ${
               canNavigateHome
                 ? "text-text-tertiary hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-bg)] cursor-pointer"
                 : "text-text-quaternary cursor-not-allowed opacity-50 pointer-events-none"
             }`}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            {/* 12 px d'icône dans une cible de 20 : au doigt, on visait
+                un timbre-poste. 44 px de cible, 18 px de dessin. */}
+            <svg
+              viewBox="0 0 12 12"
+              fill="none"
+              className="w-[18px] h-[18px] md:w-3 md:h-3"
+            >
               <path d="M2 6l4-4 4 4M3 5.5V10h2.5V7.5h1V10H9V5.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Link>
@@ -589,32 +595,40 @@ export function NovelEditor({
               chapitre qui dit où l'on écrit. */}
           {!isPhone && (
             <>
-              <Link href="/" className={`text-[12.5px] no-underline shrink-0 ${canNavigateHome ? "text-text-tertiary hover:text-[var(--color-accent)]" : "text-text-quaternary pointer-events-none"}`}>
+              <Link href="/" className={`text-[15px] md:text-[12.5px] no-underline shrink-0 ${canNavigateHome ? "text-text-tertiary hover:text-[var(--color-accent)]" : "text-text-quaternary pointer-events-none"}`}>
                 {projectTitle}
               </Link>
-              <span className="mx-1 text-text-quaternary/60 text-[11px] shrink-0">/</span>
+              <span className="mx-1 text-text-quaternary/60 text-[13px] md:text-[11px] shrink-0">/</span>
             </>
           )}
           <span
-            className={`text-[12.5px] text-text-tertiary ${isPhone ? "truncate min-w-0 max-w-[38%]" : "shrink-0"}`}
+            className={`text-[15px] md:text-[12.5px] text-text-tertiary ${isPhone ? "truncate min-w-0 max-w-[30%]" : "shrink-0"}`}
             title={isPhone ? novelTitle : undefined}
           >
             {novelTitle}
           </span>
           {activeChapter && (
             <>
-              <span className="mx-1 text-text-quaternary/60 text-[11px] shrink-0">/</span>
-              <span className="text-[12.5px] text-text-primary font-medium truncate min-w-0">
+              <span className="mx-1 text-text-quaternary/60 text-[13px] md:text-[11px] shrink-0">/</span>
+              <span className="text-[15px] md:text-[12.5px] text-text-primary font-medium truncate min-w-0">
                 {activeChapter.title}
               </span>
               <button
                 onClick={() => activeChapterId && handleStatusChange(activeChapterId)}
-                title="Cliquer pour changer le statut"
-                className="ml-2 inline-flex items-center gap-1.5 h-6 pl-1.5 pr-2.5 rounded-full cursor-pointer transition-colors shrink-0"
+                title={`Statut : ${statusBadge.label} — cliquer pour le changer`}
+                aria-label={`Statut : ${statusBadge.label} — cliquer pour le changer`}
+                className="ml-2 inline-flex items-center gap-1.5 h-8 md:h-6 pl-2 pr-3 md:pl-1.5 md:pr-2.5 rounded-full cursor-pointer transition-colors shrink-0"
                 style={{ background: statusBadge.bg, border: `1px solid ${statusBadge.border}`, color: statusBadge.text }}
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusBadge.dot }} />
-                <span className="text-[11px] font-medium">{statusBadge.label}</span>
+                {/* Le libellé du statut prend 70 px sur un écran de 375 —
+                    autant que le titre du chapitre, qui dit lui où l'on
+                    écrit. Sur petit écran, la pastille se réduit à son
+                    point ; son nom reste dans l'infobulle et pour la
+                    synthèse vocale, et l'appui continue de le changer. */}
+                <span className="text-[13px] md:text-[11px] font-medium hidden md:inline">
+                  {statusBadge.label}
+                </span>
               </button>
             </>
           )}
@@ -632,7 +646,11 @@ export function NovelEditor({
                 coûte cinq fois plus de place pour la même information. */}
             {syncStatus === "saved" && (
               <span
-                className="text-[11px] font-medium text-teal-dark bg-teal-bg px-1.5 py-0.5 rounded"
+                /* Pas de pastille colorée sur petit écran : un ✓ dans un
+                   cadre vert ressemble à un bouton à presser, alors que
+                   c'est un simple constat. Sans fond, il se lit comme
+                   l'état qu'il est. */
+                className="text-[15px] md:text-[11px] font-medium text-teal-dark md:bg-teal-bg px-0 md:px-1.5 py-0.5 rounded"
                 title={isPhone ? "Sauvegardé" : undefined}
                 aria-label={isPhone ? "Sauvegardé" : undefined}
               >
@@ -641,7 +659,7 @@ export function NovelEditor({
             )}
             {syncStatus === "saving" && (
               <span
-                className="text-[11px] font-medium text-primary bg-primary-bg px-1.5 py-0.5 rounded"
+                className="text-[15px] md:text-[11px] font-medium text-primary md:bg-primary-bg px-0 md:px-1.5 py-0.5 rounded"
                 title={isPhone ? "Sauvegarde en cours" : undefined}
                 aria-label={isPhone ? "Sauvegarde en cours" : undefined}
               >
@@ -718,7 +736,7 @@ export function NovelEditor({
                 coûte cinq fois plus de place pour la même information. */}
             {syncStatus === "saved" && (
               <span
-                className="text-[11px] font-medium text-teal-dark bg-teal-bg px-1.5 py-0.5 rounded"
+                className="text-[13px] md:text-[11px] font-medium text-teal-dark bg-teal-bg px-2 md:px-1.5 py-0.5 rounded"
                 title={isPhone ? "Sauvegardé" : undefined}
                 aria-label={isPhone ? "Sauvegardé" : undefined}
               >
@@ -727,7 +745,7 @@ export function NovelEditor({
             )}
             {syncStatus === "saving" && (
               <span
-                className="text-[11px] font-medium text-primary bg-primary-bg px-1.5 py-0.5 rounded"
+                className="text-[15px] md:text-[11px] font-medium text-primary md:bg-primary-bg px-0 md:px-1.5 py-0.5 rounded"
                 title={isPhone ? "Sauvegarde en cours" : undefined}
                 aria-label={isPhone ? "Sauvegarde en cours" : undefined}
               >
