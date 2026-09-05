@@ -27,6 +27,16 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.9.2] — 2026-09-05
+
+### Corrections
+
+- **La coche qui rangeait la note a disparu.** Dans un écran où l'on écrit, une coche veut dire « valider » — on rangeait donc ses notes en croyant les enregistrer, et l'écran renvoyait à une liste qui les disait ensuite absentes. Or il n'y a rien à valider : le texte s'enregistre seul. Ranger et supprimer passent derrière un menu, avec des mots. L'état d'écriture se dit lui aussi en toutes lettres — « enregistré » plutôt qu'un signe.
+- **Les idées rangées redeviennent atteignables.** Le va-et-vient « à trier / rangées » est une navigation, pas un filtre : replié derrière la loupe en 0.8.4, il rendait les idées rangées introuvables. Il est à l'écran dès qu'il y a quelque chose de rangé.
+- **La liste ne prétend plus être vide quand tout est rangé.** Elle dit « Rien à trier : tout est rangé » et propose de voir les idées concernées.
+
+---
+
 ## [0.9.1] — 2026-09-05
 
 ### Corrections

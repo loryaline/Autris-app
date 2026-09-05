@@ -128,6 +128,38 @@ export function IdeasClient({
         </button>
       </div>
 
+      {/* Le va-et-vient « à trier / rangées » n'est pas un filtre, c'est
+          une navigation : il vit à l'écran, pas derrière la loupe. Replié
+          avec le reste, il rendait les idées rangées INTROUVABLES — la
+          liste affichait « la boîte est vide » alors qu'elles étaient là.
+          Il n'apparaît que s'il y a quelque chose de rangé. */}
+      {archivedCount > 0 && (
+        <div className="flex items-center mb-3">
+          <button
+            onClick={() => setShowArchived(false)}
+            className="h-8 px-3 text-[12px] cursor-pointer rounded-l"
+            style={{
+              background: !showArchived ? "var(--accent-bg)" : "transparent",
+              border: `1px solid ${!showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
+              color: !showArchived ? "var(--accent)" : "var(--text-3)",
+            }}
+          >
+            À trier
+          </button>
+          <button
+            onClick={() => setShowArchived(true)}
+            className="h-8 px-3 text-[12px] cursor-pointer rounded-r border-l-0"
+            style={{
+              background: showArchived ? "var(--accent-bg)" : "transparent",
+              border: `1px solid ${showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
+              color: showArchived ? "var(--accent)" : "var(--text-3)",
+            }}
+          >
+            Rangées ({archivedCount})
+          </button>
+        </div>
+      )}
+
       {showFilters && (
         <div
           className="flex flex-col gap-2 mb-3 pb-3"
@@ -167,30 +199,6 @@ export function IdeasClient({
                 ))}
               </select>
             )}
-            <span className="flex items-center shrink-0 sm:ml-auto">
-              <button
-                onClick={() => setShowArchived(false)}
-                className="h-9 sm:h-8 px-3 text-[12px] cursor-pointer rounded-l"
-                style={{
-                  background: !showArchived ? "var(--accent-bg)" : "transparent",
-                  border: `1px solid ${!showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
-                  color: !showArchived ? "var(--accent)" : "var(--text-3)",
-                }}
-              >
-                À trier
-              </button>
-              <button
-                onClick={() => setShowArchived(true)}
-                className="h-9 sm:h-8 px-3 text-[12px] cursor-pointer rounded-r border-l-0"
-                style={{
-                  background: showArchived ? "var(--accent-bg)" : "transparent",
-                  border: `1px solid ${showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
-                  color: showArchived ? "var(--accent)" : "var(--text-3)",
-                }}
-              >
-                Rangées {archivedCount > 0 && `(${archivedCount})`}
-              </button>
-            </span>
           </div>
         </div>
       )}
@@ -202,9 +210,23 @@ export function IdeasClient({
               ? "Rien de rangé pour l'instant."
               : query || projectFilter
                 ? "Aucune idée ne correspond."
-                : "La boîte est vide."}
+                : archivedCount > 0
+                  ? // Dire « la boîte est vide » quand tout est rangé est un
+                    // mensonge — et c'est exactement ce qu'on lisait après
+                    // avoir rangé ses notes sans le vouloir.
+                    "Rien à trier : tout est rangé."
+                  : "La boîte est vide."}
           </p>
-          {!showArchived && !query && !projectFilter && (
+          {!showArchived && !query && !projectFilter && archivedCount > 0 && (
+            <button
+              onClick={() => setShowArchived(true)}
+              className="mt-3 text-[13px] cursor-pointer bg-transparent border-none"
+              style={{ color: "var(--accent)" }}
+            >
+              Voir les {archivedCount} idées rangées
+            </button>
+          )}
+          {!showArchived && !query && !projectFilter && archivedCount === 0 && (
             <Link
               href="/idees/nouvelle"
               className="inline-block mt-3 text-[13px]"
