@@ -36,6 +36,18 @@ export function NoteEditor({
   const [archived, setArchived] = useState(!!idea?.archived_at);
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
   const areaRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * Retour à la liste, avec rechargement.
+   *
+   * Le routeur sert /idees depuis son cache client : sans ce refresh, la
+   * liste réaffiche l'état d'AVANT la note qu'on vient d'écrire — texte
+   * périmé, rangement ignoré, et une note toute neuve absente.
+   */
+  const backToList = useCallback(() => {
+    router.push("/idees");
+    router.refresh();
+  }, [router]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Identifiant réel : une note neuve n'en a pas avant sa création.
   const idRef = useRef<string | null>(idea?.id ?? null);
@@ -117,7 +129,7 @@ export function NoteEditor({
         await persist(text, projectId);
       }
     }
-    router.push("/idees");
+    backToList();
   }
 
   async function assign(next: string) {
@@ -145,12 +157,12 @@ export function NoteEditor({
       appToast("Le rangement n'a pas pu être enregistré.", { danger: true });
       return;
     }
-    if (next) router.push("/idees");
+    if (next) backToList();
   }
 
   async function remove() {
     if (!idRef.current) {
-      router.push("/idees");
+      backToList();
       return;
     }
     const snapshot = {
@@ -168,7 +180,7 @@ export function NoteEditor({
       appToast("Cette note n'a pas pu être supprimée.", { danger: true });
       return;
     }
-    router.push("/idees");
+    backToList();
     appToast("Note supprimée.", {
       duration: 8000,
       action: {

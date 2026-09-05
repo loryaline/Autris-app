@@ -287,11 +287,19 @@ export function IdeasClient({
           height: 56,
           background: "var(--accent)",
           color: "#1a1410",
-          fontSize: 26,
-          lineHeight: 1,
         }}
       >
-        +
+        {/* Un trait dessiné, pas le caractère « + » : son centre optique
+            n'est pas son centre géométrique, et la croix paraissait
+            décalée dans le disque quelle que soit la mise en page. */}
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+          <path
+            d="M11 4v14M4 11h14"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
       </Link>
     </div>
   );
