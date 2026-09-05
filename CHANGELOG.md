@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.9.1] — 2026-09-05
+
+### Corrections
+
+- **La liste des idées se recharge en revenant d'une note.** Le routeur la resservait depuis son cache : le texte qu'on venait d'écrire n'apparaissait pas, un rangement fait dans la note était ignoré, et une note toute neuve restait invisible. Tous les retours rafraîchissent désormais.
+- **Le « + » est centré dans son disque.** C'était le caractère « + » lui-même : son centre optique n'est pas son centre géométrique. Un trait dessiné règle ça.
+
+---
+
 ## [0.9.0] — 2026-08-31
 
 ### Changements
