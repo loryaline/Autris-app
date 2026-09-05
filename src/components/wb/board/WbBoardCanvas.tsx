@@ -83,6 +83,36 @@ const LINK_PORTS = [
 const PORT_PX = 12;
 const RESIZE_PX = 20;
 
+/**
+ * Suit un glisser jusqu'au relâchement — souris, doigt ou stylet.
+ *
+ * Le plateau écoutait `mousemove` et `mouseup`. Ces événements ne se
+ * déclenchent pas au doigt sur iOS, ou avec un retard et sans les gestes
+ * à plusieurs doigts : le plateau était donc inutilisable sur iPad, y
+ * compris sur un iPad Pro en paysage, plus large qu'un ordinateur
+ * portable. Les Pointer Events unifient les trois moyens de viser.
+ *
+ * `pointercancel` est indispensable et n'a pas d'équivalent souris : le
+ * système l'envoie quand il reprend le geste à son compte — un balayage
+ * depuis le bord, un appel entrant. Sans lui, le glisser resterait
+ * « en cours » pour toujours et le plateau collerait au doigt.
+ */
+function trackDrag(
+  onMove: (ev: PointerEvent) => void,
+  onEnd?: (ev: PointerEvent) => void,
+) {
+  const move = (ev: PointerEvent) => onMove(ev);
+  const end = (ev: PointerEvent) => {
+    document.removeEventListener("pointermove", move);
+    document.removeEventListener("pointerup", end);
+    document.removeEventListener("pointercancel", end);
+    onEnd?.(ev);
+  };
+  document.addEventListener("pointermove", move);
+  document.addEventListener("pointerup", end);
+  document.addEventListener("pointercancel", end);
+}
+
 export function WbBoardCanvas({
   nodes,
   edges,
@@ -403,6 +433,101 @@ export function WbBoardCanvas({
     return () => host.removeEventListener("wheel", onWheel);
   }, [viewport, onViewportChange]);
 
+  /* ---- Pincer pour zoomer, deux doigts pour déplacer ----
+   *
+   * La molette n'existe pas au doigt, et le zoom du navigateur agrandirait
+   * la page entière au lieu du plateau. On suit donc les pointeurs posés :
+   * à deux, l'écart règle le zoom et le milieu règle le déplacement.
+   *
+   * Le suivi vit sur l'hôte et non dans les gestes de glisser, parce qu'un
+   * second doigt peut arriver APRÈS le premier — au milieu d'un
+   * déplacement déjà commencé. */
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  /* Le zoom en cours, tenu à jour hors du cycle de rendu.
+   *
+   * Un pincement produit plusieurs `pointermove` par image. Tous liraient
+   * le `viewport` figé dans la fermeture — React n'a pas encore rendu —
+   * et se composeraient donc à partir de la même valeur périmée : écarter
+   * les doigts du simple au double ne zoomait que d'un tiers. */
+  const vpRef = useRef(viewport);
+  useEffect(() => {
+    vpRef.current = viewport;
+  }, [viewport]);
+  const pinch = useRef<{ dist: number; cx: number; cy: number } | null>(null);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    const paire = () => {
+      const [a, b] = [...pointers.current.values()];
+      return {
+        dist: Math.hypot(b.x - a.x, b.y - a.y),
+        cx: (a.x + b.x) / 2,
+        cy: (a.y + b.y) / 2,
+      };
+    };
+
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === "mouse") return;
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.current.size === 2) pinch.current = paire();
+    };
+
+    const move = (e: PointerEvent) => {
+      if (!pointers.current.has(e.pointerId)) return;
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.current.size !== 2 || !pinch.current) return;
+      e.preventDefault();
+
+      const now = paire();
+      const prev = pinch.current;
+      const r = host.getBoundingClientRect();
+
+      const vp = vpRef.current;
+      const facteur = prev.dist > 0 ? now.dist / prev.dist : 1;
+      const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, vp.zoom * facteur));
+      const k = zoom / vp.zoom;
+
+      // Le zoom est ancré sur le milieu des deux doigts, et ce milieu se
+      // déplace : les deux gestes se composent en une seule opération.
+      const px = now.cx - r.left;
+      const py = now.cy - r.top;
+      onViewportChange(
+        {
+          zoom,
+          x: px - (prev.cx - r.left - vp.x) * k,
+          y: py - (prev.cy - r.top - vp.y) * k,
+        },
+        false,
+      );
+      pinch.current = now;
+    };
+
+    const up = (e: PointerEvent) => {
+      if (!pointers.current.delete(e.pointerId)) return;
+      if (pointers.current.size < 2) {
+        // On persiste au moment où le pincement se termine, pas à chaque
+        // image : le plateau n'a pas à écrire soixante fois par seconde.
+        if (pinch.current) onViewportChange(vpRef.current, true);
+        pinch.current = null;
+      }
+    };
+
+    host.addEventListener("pointerdown", down);
+    host.addEventListener("pointermove", move, { passive: false });
+    host.addEventListener("pointerup", up);
+    host.addEventListener("pointercancel", up);
+    return () => {
+      host.removeEventListener("pointerdown", down);
+      host.removeEventListener("pointermove", move);
+      host.removeEventListener("pointerup", up);
+      host.removeEventListener("pointercancel", up);
+    };
+    // La ref porte le viewport : l'effet n'a plus à se ré-attacher à
+    // chaque image de pincement.
+  }, [onViewportChange]);
+
   /* ---- Suppr : retire du PLATEAU les objets ou la flèche sélectionnés.
    * Jamais la fiche, jamais la relation — d'où l'absence de confirmation. */
   useEffect(() => {
@@ -444,11 +569,11 @@ export function WbBoardCanvas({
   ]);
 
   /* ---- Lasso de sélection (Maj + glisser sur le fond) ---- */
-  function startMarquee(e: React.MouseEvent) {
+  function startMarquee(e: React.PointerEvent) {
     const origin = toBoard(e.clientX, e.clientY);
     setMarquee({ x1: origin.x, y1: origin.y, x2: origin.x, y2: origin.y });
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       const p = toBoard(ev.clientX, ev.clientY);
       setMarquee((m) => (m ? { ...m, x2: p.x, y2: p.y } : m));
       const minX = Math.min(origin.x, p.x);
@@ -467,17 +592,11 @@ export function WbBoardCanvas({
         .map((n) => n.id);
       selectNodes(new Set(hit));
     };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      setMarquee(null);
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    trackDrag(onMove, () => setMarquee(null));
   }
 
   /* ---- Déplacement du plateau (glisser le fond) ---- */
-  function startPan(e: React.MouseEvent) {
+  function startPan(e: React.PointerEvent) {
     if (e.button !== 0) return;
     // Maj enfoncée → on trace un lasso au lieu de déplacer le plateau.
     if (e.shiftKey) {
@@ -490,27 +609,27 @@ export function WbBoardCanvas({
     // Repasser `viewport` (figé à l'appui) annulerait tout le déplacement.
     let last: Viewport = viewport;
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
+      // Deux doigts posés : c'est un pincement, pas un glisser. On laisse
+      // la main au suivi du zoom plutôt que de tirer le plateau en même
+      // temps que de l'agrandir.
+      if (pointers.current.size > 1) return;
       const dx = ev.clientX - start.x;
       const dy = ev.clientY - start.y;
       if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
       last = { zoom: viewport.zoom, x: start.vx + dx, y: start.vy + dy };
       onViewportChange(last, false);
     };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+    setPanning(true);
+    trackDrag(onMove, () => {
       setPanning(false);
       if (!moved) selectNodes(new Set());
       else onViewportChange(last, true);
-    };
-    setPanning(true);
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    });
   }
 
   /* ---- Déplacement d'un nœud (et de la sélection) ---- */
-  function startNodeDrag(e: React.MouseEvent, node: WbBoardNode) {
+  function startNodeDrag(e: React.PointerEvent, node: WbBoardNode) {
     if (e.button !== 0) return;
     e.stopPropagation();
 
@@ -574,27 +693,22 @@ export function WbBoardCanvas({
     );
     const start = { x: e.clientX, y: e.clientY };
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       const dx = (ev.clientX - start.x) / viewport.zoom;
       const dy = (ev.clientY - start.y) / viewport.zoom;
       for (const [id, o] of origins) onMoveNode(id, o.x + dx, o.y + dy);
     };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    trackDrag(onMove);
   }
 
   /* ---- Redimensionnement (poignée du coin) ---- */
-  function startResize(e: React.MouseEvent, node: WbBoardNode) {
+  function startResize(e: React.PointerEvent, node: WbBoardNode) {
     if (e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
     onBeginHistory();
     const start = { x: e.clientX, y: e.clientY, w: node.w, h: node.h };
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       const dx = (ev.clientX - start.x) / viewport.zoom;
       const dy = (ev.clientY - start.y) / viewport.zoom;
       onResizeNode(
@@ -603,28 +717,21 @@ export function WbBoardCanvas({
         Math.max(60, start.h + dy),
       );
     };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    trackDrag(onMove);
   }
 
   /* ---- Tracé d'un lien depuis la poignée d'une vignette ---- */
-  function startLinking(e: React.MouseEvent, from: WbBoardNode) {
+  function startLinking(e: React.PointerEvent, from: WbBoardNode) {
     e.stopPropagation();
     e.preventDefault();
     const p = toBoard(e.clientX, e.clientY);
     setLinking({ from, x: p.x, y: p.y });
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       const q = toBoard(ev.clientX, ev.clientY);
       setLinking((l) => (l ? { ...l, x: q.x, y: q.y } : l));
     };
-    const onUp = (ev: MouseEvent) => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+    trackDrag(onMove, (ev) => {
       const el = document.elementFromPoint(ev.clientX, ev.clientY);
       const targetEl = (el as HTMLElement | null)?.closest("[data-node-id]");
       const targetId = targetEl?.getAttribute("data-node-id");
@@ -635,9 +742,7 @@ export function WbBoardCanvas({
       if (target && target.id !== from.id && target.kind !== "cadre") {
         onStartLink(from, target);
       }
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    });
   }
 
   /* ---- Géométrie d'une arête : bord à bord entre deux nœuds ---- */
@@ -671,7 +776,7 @@ export function WbBoardCanvas({
   return (
     <div
       ref={hostRef}
-      onMouseDown={startPan}
+      onPointerDown={startPan}
       onDoubleClick={(e) => {
         if (e.target === e.currentTarget || (e.target as HTMLElement).dataset.boardBg) {
           onBackgroundDoubleClick();
@@ -694,6 +799,11 @@ export function WbBoardCanvas({
       style={{
         background: "var(--bg)",
         cursor: linking ? "crosshair" : panning ? "grabbing" : "grab",
+        // Sans ça, le navigateur confisque le geste : au doigt il fait
+        // défiler la page et zoome la page entière, et nos gestionnaires
+        // ne voient jamais rien. Tout le travail de conversion aux
+        // Pointer Events serait resté inopérant sur iPad.
+        touchAction: "none",
         outline: dragOver ? "2px dashed var(--accent)" : undefined,
         outlineOffset: "-6px",
       }}
@@ -825,7 +935,7 @@ export function WbBoardCanvas({
                   stroke="transparent"
                   strokeWidth={14}
                   style={{ pointerEvents: "stroke", cursor: "pointer" }}
-                  onMouseDown={(ev) => {
+                  onPointerDown={(ev) => {
                     ev.stopPropagation();
                     setSelectedEdgeId(edge.id);
                     onSelectionChange(new Set());
@@ -860,7 +970,7 @@ export function WbBoardCanvas({
                      pointer-events:none, il faut donc le rétablir ici. */
                   <g
                     style={{ pointerEvents: "all", cursor: "pointer" }}
-                    onMouseDown={(ev) => {
+                    onPointerDown={(ev) => {
                       ev.stopPropagation();
                       setSelectedEdgeId(edge.id);
                       onSelectionChange(new Set());
@@ -906,11 +1016,11 @@ export function WbBoardCanvas({
                     stroke="var(--bg)"
                     strokeWidth={2}
                     style={{ pointerEvents: "all", cursor: "grab" }}
-                    onMouseDown={(ev) => {
+                    onPointerDown={(ev) => {
                       ev.stopPropagation();
                       ev.preventDefault();
                       onBeginHistory();
-                      const onMove = (m: MouseEvent) => {
+                      const onMove = (m: PointerEvent) => {
                         const p = toBoard(m.clientX, m.clientY);
                         // On repasse en coordonnées relatives à l'axe.
                         const rx = p.x - baseX;
@@ -920,12 +1030,7 @@ export function WbBoardCanvas({
                           o: rx * nx + ry * ny,
                         });
                       };
-                      const onUp = () => {
-                        document.removeEventListener("mousemove", onMove);
-                        document.removeEventListener("mouseup", onUp);
-                      };
-                      document.addEventListener("mousemove", onMove);
-                      document.addEventListener("mouseup", onUp);
+                      trackDrag(onMove);
                     }}
                     onDoubleClick={(ev) => {
                       // Double-clic : la flèche redevient droite.
@@ -1009,7 +1114,7 @@ export function WbBoardCanvas({
             <div
               key={node.id}
               data-node-id={node.id}
-              onMouseDown={(e) => startNodeDrag(e, node)}
+              onPointerDown={(e) => startNodeDrag(e, node)}
               onClick={(e) => {
                 e.stopPropagation();
                 // Maj / Ctrl : ajoute ou retire de la sélection.
@@ -1074,7 +1179,7 @@ export function WbBoardCanvas({
               {resizable && (
                 <button
                   type="button"
-                  onMouseDown={(e) => startResize(e, node)}
+                  onPointerDown={(e) => startResize(e, node)}
                   title="Redimensionner"
                   aria-label="Redimensionner"
                   // Double flèche en diagonale, comme dans Photoshop : le
@@ -1142,7 +1247,7 @@ export function WbBoardCanvas({
                   <button
                     key={port.side}
                     type="button"
-                    onMouseDown={(e) => startLinking(e, node)}
+                    onPointerDown={(e) => startLinking(e, node)}
                     title={
                       node.kind === "fiche"
                         ? "Tirer un lien vers un autre objet"
@@ -1193,7 +1298,7 @@ export function WbBoardCanvas({
           return (
             <div
               ref={measureToolbar}
-              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               className="absolute z-40 flex items-center gap-0.5 px-1.5 py-1 rounded-[var(--radius-md)] shadow-xl"
               style={{

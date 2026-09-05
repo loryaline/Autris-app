@@ -27,6 +27,20 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.0] — 2026-09-05
+
+### Ajouts
+
+- **Le plateau répond au doigt.** Il n'écoutait que la souris — vingt gestionnaires `mousedown`, `mousemove`, `mouseup` — des événements qui ne se déclenchent pas au doigt sur iOS, ou avec du retard et sans les gestes à plusieurs doigts. Il était donc inutilisable sur iPad, y compris sur un iPad Pro en paysage, plus large qu'un ordinateur portable. Tout passe désormais par les Pointer Events, qui unifient souris, doigt et stylet.
+- **Pincer pour zoomer, deux doigts pour déplacer.** Le zoom est ancré sur le milieu des deux doigts, et ce milieu se déplace : les deux gestes se composent en un seul.
+- Un glisser interrompu par le système — balayage depuis le bord, appel entrant — se termine proprement. Sans ça, le plateau serait resté collé au doigt.
+
+### Corrections
+
+- La mini-carte répond elle aussi au doigt : son clic pour se déplacer ne se déclenchait pas.
+
+---
+
 ## [0.9.5] — 2026-09-05
 
 ### Ajouts

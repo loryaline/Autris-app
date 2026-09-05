@@ -94,7 +94,7 @@ export function BoardMiniMap({
   const py = (y: number) => box.dy + (y - box.minY) * box.scale;
 
   /** Du clic sur la mini-carte vers un point du plateau. */
-  const jumpFromEvent = (e: React.MouseEvent) => {
+  const jumpFromEvent = (e: React.PointerEvent) => {
     const r = svgRef.current?.getBoundingClientRect();
     if (!r) return;
     const mx = e.clientX - r.left;
@@ -112,7 +112,7 @@ export function BoardMiniMap({
       ref={svgRef}
       width={width}
       height={height}
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         e.stopPropagation();
         jumpFromEvent(e);
       }}
@@ -121,6 +121,9 @@ export function BoardMiniMap({
         background: "var(--bg-3)",
         border: "1px solid var(--border-soft)",
         boxShadow: "var(--shadow-md)",
+        // La mini-carte fait partie du plateau : elle répond au doigt
+        // comme lui, et ne laisse pas le navigateur emporter le geste.
+        touchAction: "none",
       }}
       aria-label="Vue d'ensemble du plateau"
     >
