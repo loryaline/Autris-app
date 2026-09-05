@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useViewport } from "@/lib/useViewport";
 import type { Genre, WbEntry, WbLink, WbStatus } from "@/types/database";
 import {
   getCategoryDef,
@@ -93,6 +94,14 @@ export function WbClient({
   //   palette     → 320 px, on y glisse les fiches (défaut)
   //   bibliotheque→ plein écran : le World Building tel qu'il a toujours été
   const [panelMode, setPanelMode] = useState<PanelMode>("palette");
+  // Sur téléphone, le World Building ouvre sur sa BIBLIOTHÈQUE et non sur
+  // le plateau : une surface infinie qu'on manipule à la souris n'a rien
+  // à offrir sur 375 px, alors que les fiches se lisent très bien.
+  const { isPhone } = useViewport();
+  /* Mode EFFECTIF : sur téléphone c'est toujours la bibliothèque, quel
+   * que soit le mode mémorisé. Dérivé plutôt que forcé dans un effet —
+   * ainsi le choix fait au bureau est intact quand on y revient. */
+  const mode: PanelMode = isPhone ? "bibliotheque" : panelMode;
   // Fiches déjà posées sur le plateau — repérage visuel dans la Palette.
   const [placedEntryIds, setPlacedEntryIds] = useState<Set<string>>(new Set());
   const supabase = createClient();
@@ -279,7 +288,7 @@ export function WbClient({
           setPanelMode("bibliotheque");
         }}
         counts={counts}
-        boardActive={panelMode !== "bibliotheque"}
+        boardActive={mode !== "bibliotheque"}
         onOpenBoard={() => {
           setPanelMode("palette");
           setSelectedId(null);
@@ -288,7 +297,7 @@ export function WbClient({
 
       {/* Le plateau : l'accueil du World Building. Masqué seulement quand
           la bibliothèque prend tout l'écran. */}
-      {panelMode !== "bibliotheque" && (
+      {mode !== "bibliotheque" && (
         <WbBoard
           projectId={projectId}
           entries={entries}
@@ -310,7 +319,7 @@ export function WbClient({
       )}
 
       {/* Panneau fermé : languette pour le rappeler */}
-      {panelMode === "ferme" && (
+      {mode === "ferme" && (
         <button
           type="button"
           onClick={() => setPanelMode("palette")}
@@ -335,7 +344,7 @@ export function WbClient({
       )}
 
       {/* Panneau en Palette, sans fiche ouverte : la liste à glisser */}
-      {panelMode === "palette" && !selectedEntry && (
+      {mode === "palette" && !selectedEntry && (
         <FichePalette
           entries={entries}
           placedEntryIds={placedEntryIds}
@@ -350,22 +359,22 @@ export function WbClient({
       )}
 
       {/* Panneau élargi (fiche ouverte à côté du plateau) ou Bibliothèque */}
-      {(panelMode === "bibliotheque" || (panelMode === "palette" && selectedEntry)) && (
+      {(mode === "bibliotheque" || (mode === "palette" && selectedEntry)) && (
         <div
           className={
-            panelMode === "bibliotheque"
+            mode === "bibliotheque"
               ? "flex-1 min-w-0 flex relative"
               : "w-[480px] shrink-0 flex flex-col h-full"
           }
           style={
-            panelMode === "palette"
+            mode === "palette"
               ? { borderLeft: "1px solid var(--border-soft)" }
               : undefined
           }
         >
           {/* Retour au plateau — même chevron que celui qui referme la
               Palette, pour que le geste soit le même partout. */}
-          {panelMode === "bibliotheque" && (
+          {mode === "bibliotheque" && (
             <button
               type="button"
               onClick={() => {
@@ -387,7 +396,7 @@ export function WbClient({
               </svg>
             </button>
           )}
-          {selectedEntry && panelMode === "palette" ? (
+          {selectedEntry && mode === "palette" ? (
         // Panneau étroit : mise en page une colonne, la même que le
         // panneau de contexte de l'éditeur. WbEntryDetail (grilles 12
         // colonnes) est réservé à la Bibliothèque.
