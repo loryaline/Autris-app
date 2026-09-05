@@ -103,7 +103,7 @@ export function IdeasClient({
     <div className="max-w-[720px] mx-auto px-4 py-4 md:py-8">
       <div className="flex items-center gap-2 mb-3">
         <h1
-          className="font-serif text-[22px] md:text-[30px] flex-1 m-0"
+          className="font-serif text-[28px] md:text-[30px] flex-1 m-0"
           style={{ color: "var(--text-1)" }}
         >
           Idées
@@ -137,7 +137,7 @@ export function IdeasClient({
         <div className="flex items-center mb-3">
           <button
             onClick={() => setShowArchived(false)}
-            className="h-8 px-3 text-[12px] cursor-pointer rounded-l"
+            className="h-10 md:h-8 px-4 md:px-3 text-[14px] md:text-[12px] cursor-pointer rounded-l"
             style={{
               background: !showArchived ? "var(--accent-bg)" : "transparent",
               border: `1px solid ${!showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
@@ -148,7 +148,7 @@ export function IdeasClient({
           </button>
           <button
             onClick={() => setShowArchived(true)}
-            className="h-8 px-3 text-[12px] cursor-pointer rounded-r border-l-0"
+            className="h-10 md:h-8 px-4 md:px-3 text-[14px] md:text-[12px] cursor-pointer rounded-r border-l-0"
             style={{
               background: showArchived ? "var(--accent-bg)" : "transparent",
               border: `1px solid ${showArchived ? "var(--accent-border)" : "var(--border-soft)"}`,
@@ -171,7 +171,7 @@ export function IdeasClient({
             type="search"
             placeholder="Rechercher dans vos idées…"
             aria-label="Rechercher dans vos idées"
-            className="w-full h-10 sm:h-9 px-3 rounded-[var(--radius-md)] text-[13px]"
+            className="w-full h-11 sm:h-9 px-3 rounded-[var(--radius-md)] text-[15px] md:text-[13px]"
             style={{
               background: "var(--bg-2)",
               border: "1px solid var(--border-soft)",
@@ -205,7 +205,7 @@ export function IdeasClient({
 
       {visible.length === 0 ? (
         <div className="py-16 text-center">
-          <p className="text-[13.5px] m-0" style={{ color: "var(--text-4)" }}>
+          <p className="text-[15px] md:text-[13.5px] m-0" style={{ color: "var(--text-4)" }}>
             {showArchived
               ? "Rien de rangé pour l'instant."
               : query || projectFilter
@@ -220,7 +220,7 @@ export function IdeasClient({
           {!showArchived && !query && !projectFilter && archivedCount > 0 && (
             <button
               onClick={() => setShowArchived(true)}
-              className="mt-3 text-[13px] cursor-pointer bg-transparent border-none"
+              className="mt-3 text-[15px] md:text-[13px] cursor-pointer bg-transparent border-none"
               style={{ color: "var(--accent)" }}
             >
               Voir les {archivedCount} idées rangées
@@ -229,7 +229,7 @@ export function IdeasClient({
           {!showArchived && !query && !projectFilter && archivedCount === 0 && (
             <Link
               href="/idees/nouvelle"
-              className="inline-block mt-3 text-[13px]"
+              className="inline-block mt-3 text-[15px] md:text-[13px]"
               style={{ color: "var(--accent)" }}
             >
               Écrire la première
@@ -251,14 +251,14 @@ export function IdeasClient({
                     une cible de la largeur de la page ne se rate pas. */}
                 <Link
                   href={`/idees/${idea.id}`}
-                  className="flex-1 min-w-0 py-3 no-underline block"
+                  className="flex-1 min-w-0 py-4 md:py-3 no-underline block"
                 >
                   <span
-                    className="text-[14px] leading-snug block"
+                    className="text-[16.5px] md:text-[14px] leading-[1.45] block"
                     style={{
                       color: "var(--text-1)",
                       display: "-webkit-box",
-                      WebkitLineClamp: 3,
+                      WebkitLineClamp: 4,
                       WebkitBoxOrient: "vertical",
                       overflow: "hidden",
                     }}
@@ -266,7 +266,7 @@ export function IdeasClient({
                     {idea.body || "Note vide"}
                   </span>
                   <span
-                    className="flex items-center gap-1.5 mt-1 text-[11px]"
+                    className="flex items-center gap-1.5 mt-1.5 text-[12.5px] md:text-[11px]"
                     style={{ color: "var(--text-4)" }}
                   >
                     <span>{frenchDate(idea.created_at)}</span>
@@ -305,8 +305,8 @@ export function IdeasClient({
         className="fixed right-4 z-40 flex items-center justify-center rounded-full no-underline shadow-lg"
         style={{
           bottom: "calc(84px + env(safe-area-inset-bottom, 0px))",
-          width: 56,
-          height: 56,
+          width: 60,
+          height: 60,
           background: "var(--accent)",
           color: "#1a1410",
         }}
