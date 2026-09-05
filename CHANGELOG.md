@@ -37,7 +37,7 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 ### Changements
 
 - **Au doigt, un glisser dans le tableau le fait défiler** au lieu de tracer un rectangle de sélection. Les deux gestes se disputaient le même mouvement, et sur un tableau plus large que l'écran c'est le défilement qui compte. La souris et le stylet tracent toujours.
-- Le panneau « chercher et trier » du plateau se ferme dès qu'on touche à côté : il attendait un , qu'iOS ne synthétise qu'après le relâchement.
+- Le panneau « chercher et trier » du plateau se ferme dès qu'on touche à côté : il attendait un `mousedown`, qu'iOS ne synthétise qu'après le relâchement.
 
 ---
 
