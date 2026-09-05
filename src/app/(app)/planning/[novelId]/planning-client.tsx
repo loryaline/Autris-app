@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useViewport } from "@/lib/useViewport";
+import { GrandEcran } from "@/components/layout/GrandEcran";
 import { PlanningSubSidebar, type PlanningView } from "@/components/planning/PlanningSubSidebar";
 import { ChapterTable } from "@/components/planning/ChapterTable";
 import { OutlineView } from "@/components/planning/OutlineView";
@@ -297,6 +299,37 @@ export function PlanningClient({
         : activeView === "synopsis"
           ? "Synopsis"
           : "Gantt";
+
+  /* Le chapitrage est une grille de colonnes larges à sélection multiple,
+   * les scènes une mise en page en colonnes. Ni l'une ni l'autre ne se
+   * réduit à 375 px : ce ne serait pas une version mobile, seulement une
+   * version inutilisable portant le même nom. Le synopsis, lui, est du
+   * texte — il passe. */
+  const { isPhone } = useViewport();
+  const vueTropLarge =
+    isPhone && (activeView === "tableau" || activeView === "outline");
+
+  if (vueTropLarge) {
+    return (
+      <GrandEcran
+        titre={activeView === "tableau" ? "Le chapitrage" : "Les scènes"}
+        raison={
+          activeView === "tableau"
+            ? "C'est un tableau de colonnes larges, où l'on compare et où l'on sélectionne plusieurs cases à la fois. Il vous attend sur ordinateur ou sur tablette."
+            : "Les scènes se travaillent en colonnes, côte à côte. Elles vous attendent sur ordinateur ou sur tablette."
+        }
+        ailleurs={
+          <button
+            onClick={() => changeView("synopsis")}
+            className="text-[15px] cursor-pointer bg-transparent border-none"
+            style={{ color: "var(--accent)" }}
+          >
+            Lire le synopsis
+          </button>
+        }
+      />
+    );
+  }
 
   return (
     <div className="flex h-full">

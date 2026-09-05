@@ -27,6 +27,18 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.9.5] — 2026-09-05
+
+### Ajouts
+
+- **Les écrans qui demandent de la place le disent.** Le chapitrage et les scènes ne se réduisent pas à 375 px — l'un est un tableau de colonnes larges à sélection multiple, l'autre une mise en page en colonnes. Les rétrécir n'en ferait pas des versions mobiles, seulement des versions inutilisables portant le même nom. Sur téléphone ils affichent désormais ce qu'ils sont, où les retrouver, et proposent le synopsis — qui, lui, est du texte et passe très bien.
+
+### Changements
+
+- **Le World Building ouvre sur sa bibliothèque sur téléphone**, plus sur le plateau. Une surface infinie qu'on manipule à la souris n'a rien à offrir sur un écran de téléphone, alors que les fiches s'y lisent sans peine. Le mode choisi au bureau reste intact : c'est un affichage dérivé, pas un réglage écrasé.
+
+---
+
 ## [0.9.4] — 2026-09-05
 
 ### Changements
