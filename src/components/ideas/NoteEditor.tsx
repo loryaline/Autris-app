@@ -35,6 +35,7 @@ export function NoteEditor({
   const [projectId, setProjectId] = useState(idea?.project_id ?? null);
   const [archived, setArchived] = useState(!!idea?.archived_at);
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+  const [menuOpen, setMenuOpen] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
   /**
@@ -223,7 +224,11 @@ export function NoteEditor({
           style={{ color: "var(--text-4)" }}
           aria-live="polite"
         >
-          {state === "saving" ? "…" : state === "saved" ? "✓" : ""}
+          {state === "saving"
+            ? "enregistrement…"
+            : state === "saved"
+              ? "enregistré"
+              : ""}
         </span>
 
         {projects.length > 0 && (
@@ -247,22 +252,60 @@ export function NoteEditor({
           </select>
         )}
 
-        <button
-          onClick={toggleArchive}
-          className="rd-icon-btn"
-          title={archived ? "Remettre à trier" : "Ranger"}
-          aria-label={archived ? "Remettre à trier" : "Ranger"}
-        >
-          {archived ? "↩" : "✓"}
-        </button>
-        <button
-          onClick={remove}
-          className="rd-icon-btn"
-          title="Supprimer"
-          aria-label="Supprimer"
-        >
-          ✕
-        </button>
+        {/* Un menu, pas des glyphes.
+            Il y avait ici une coche pour ranger et une croix pour
+            supprimer. Dans un écran où l'on écrit, une coche veut dire
+            « valider » — c'est ce que tout le monde y lit. On rangeait
+            donc ses notes en croyant les enregistrer. Or il n'y a RIEN à
+            valider : le texte s'enregistre seul. Les deux actions passent
+            derrière un menu, avec des mots. */}
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+            className="rd-icon-btn"
+            title="Options de la note"
+            aria-label="Options de la note"
+          >
+            ⋯
+          </button>
+          {menuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setMenuOpen(false)}
+              />
+              <div
+                className="absolute right-0 top-full mt-1 z-50 w-[190px] py-1 rounded-[var(--radius-md)] shadow-2xl"
+                style={{
+                  background: "var(--bg-3)",
+                  border: "1px solid var(--border-soft)",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    toggleArchive();
+                  }}
+                  className="w-full text-left px-3.5 py-2.5 text-[13px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
+                  style={{ color: "var(--text-2)" }}
+                >
+                  {archived ? "Remettre à trier" : "Ranger"}
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    remove();
+                  }}
+                  className="w-full text-left px-3.5 py-2.5 text-[13px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
+                  style={{ color: "var(--danger, #e05555)" }}
+                >
+                  Supprimer
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </header>
 
       {/* La note occupe tout ce qui reste. Pas de cadre, pas de carte :
