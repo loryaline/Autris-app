@@ -27,6 +27,20 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.6] — 2026-09-06
+
+### Corrections
+
+- **Le zoom à deux doigts fonctionne même quand un doigt tombe sur une étiquette.** L'étiquette arrête la propagation de l'appui pour gérer sa propre sélection ; le plateau, qui écoutait en phase remontante, ne voyait donc jamais le second doigt et croyait à un simple déplacement. Il écoute désormais en phase descendante, où rien ne peut lui cacher un doigt. Au passage, déplacer une vignette, la redimensionner ou tirer une flèche s'interrompent dès qu'un second doigt se pose : ces gestes appartiennent au zoom.
+- **La fin d'un panneau de l'éditeur n'est plus mangée par le rail.** Sur téléphone, la dernière scène — ou le dernier chapitre, la dernière fiche — se cachait derrière les boutons Chapitres / Infos / Scènes / Univers, qui flottent au-dessus du contenu sans qu'aucune place leur soit réservée. Les quatre panneaux gardent maintenant cette hauteur libre sous eux, encoche de l'iPhone comprise.
+- **Les cases du calendrier ne se chevauchent plus sur iPhone.** Deux causes cumulées : une hauteur minimale de 54 px qui se battait avec des colonnes carrées de 41 px de large, et surtout un effet de survol qui soulève la case — iOS garde le survol collé après un appui, laissant la case touchée en l'air, ombrée, par-dessus ses voisines. Le même piège guettait les boutons et les cartes du tableau de bord : l'effet est désormais réservé aux appareils qui savent réellement survoler.
+
+### Changements
+
+- **Le bouton « Liens manquants » du plateau perd son libellé** et ne garde que son icône. La barre d'outils gagne une fonction à chaque version et débordait sur les écrans étroits ; l'intitulé reste lisible par les lecteurs d'écran et au survol.
+
+---
+
 ## [0.10.5] — 2026-09-06
 
 ### Corrections

@@ -519,15 +519,23 @@ export function WbBoardCanvas({
       }
     };
 
-    host.addEventListener("pointerdown", down);
-    host.addEventListener("pointermove", move, { passive: false });
-    host.addEventListener("pointerup", up);
-    host.addEventListener("pointercancel", up);
+    /* En phase de CAPTURE, et non de bulle.
+     *
+     * Une étiquette de lien, une vignette, une poignée : toutes appellent
+     * stopPropagation() sur leur pointerdown, pour ne pas déclencher le
+     * déplacement du plateau. En bulle, le second doigt posé sur l'une
+     * d'elles n'atteignait donc jamais ce suiveur : le pincement ne voyait
+     * qu'un seul doigt et ne démarrait pas. La capture passe avant tout
+     * le monde — le comptage des doigts ne peut plus être intercepté. */
+    host.addEventListener("pointerdown", down, true);
+    host.addEventListener("pointermove", move, { passive: false, capture: true });
+    host.addEventListener("pointerup", up, true);
+    host.addEventListener("pointercancel", up, true);
     return () => {
-      host.removeEventListener("pointerdown", down);
-      host.removeEventListener("pointermove", move);
-      host.removeEventListener("pointerup", up);
-      host.removeEventListener("pointercancel", up);
+      host.removeEventListener("pointerdown", down, true);
+      host.removeEventListener("pointermove", move, true);
+      host.removeEventListener("pointerup", up, true);
+      host.removeEventListener("pointercancel", up, true);
     };
     // La ref porte le viewport : l'effet n'a plus à se ré-attacher à
     // chaque image de pincement.
@@ -699,6 +707,9 @@ export function WbBoardCanvas({
     const start = { x: e.clientX, y: e.clientY };
 
     const onMove = (ev: PointerEvent) => {
+      // Un second doigt posé : c'est un pincement. On lâche le geste en
+      // cours plutôt que de déplacer ET zoomer en même temps.
+      if (pointers.current.size > 1) return;
       const dx = (ev.clientX - start.x) / viewport.zoom;
       const dy = (ev.clientY - start.y) / viewport.zoom;
       for (const [id, o] of origins) onMoveNode(id, o.x + dx, o.y + dy);
@@ -714,6 +725,8 @@ export function WbBoardCanvas({
     onBeginHistory();
     const start = { x: e.clientX, y: e.clientY, w: node.w, h: node.h };
     const onMove = (ev: PointerEvent) => {
+      // Un second doigt posé : c'est un pincement, pas un redimensionnement.
+      if (pointers.current.size > 1) return;
       const dx = (ev.clientX - start.x) / viewport.zoom;
       const dy = (ev.clientY - start.y) / viewport.zoom;
       onResizeNode(
@@ -733,6 +746,9 @@ export function WbBoardCanvas({
     setLinking({ from, x: p.x, y: p.y });
 
     const onMove = (ev: PointerEvent) => {
+      // Un second doigt posé : c'est un pincement. On lâche le geste en
+      // cours plutôt que de déplacer ET zoomer en même temps.
+      if (pointers.current.size > 1) return;
       const q = toBoard(ev.clientX, ev.clientY);
       setLinking((l) => (l ? { ...l, x: q.x, y: q.y } : l));
     };
