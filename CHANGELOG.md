@@ -27,6 +27,16 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.3] — 2026-09-06
+
+### Corrections
+
+- **Le chapitrage défile enfin horizontalement au doigt.** Chaque case appelait `preventDefault()` sur l'appui — utile à la souris, où ça empêche la sélection de texte, mais au doigt ça annule le défilement natif du navigateur. Le tableau, plus large que l'écran, ne se parcourait donc qu'avec la barre maison.
+- **La poignée de ligne était invisible sur écran tactile.** Elle n'apparaissait qu'au survol — un geste qui n'existe pas au doigt. Elle est désormais toujours visible et passe de 14 à 26 px de large.
+- **La barre de défilement horizontale maison disparaît sur écran tactile.** Elle est devenue inutile, le doigt faisant défiler directement, et elle était surtout nuisible : collée en bas, elle occupait la zone où iOS attend son propre geste de changement d'application.
+
+---
+
 ## [0.10.2] — 2026-09-06
 
 ### Ajouts

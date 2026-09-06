@@ -1732,3 +1732,27 @@ body {
     right: -7px;
   }
 }
+
+
+/* ============================================================
+   Chapitrage au doigt
+   ============================================================ */
+
+/* La poignée de ligne n'apparaît qu'au survol — un geste qui n'existe pas
+   sur un écran tactile : elle y était donc invisible en permanence, alors
+   qu'elle ouvre le menu de la ligne et sert à réordonner. On la montre, et
+   on l'élargit : 14 px ne se saisissent pas au doigt. */
+@media (any-pointer: coarse) {
+  .rd-row-handle {
+    opacity: 1 !important;
+    width: 26px;
+  }
+
+  /* La barre de défilement horizontale maison devient inutile — le doigt
+     fait défiler le tableau directement — et surtout nuisible : collée en
+     bas de l'écran, elle occupe la zone où iOS attend son propre geste de
+     changement d'application. */
+  .rd-hscroll {
+    display: none;
+  }
+}
