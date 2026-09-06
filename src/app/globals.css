@@ -1756,3 +1756,37 @@ body {
     display: none;
   }
 }
+
+
+/* Poignées d'une vignette du plateau — redimensionnement et points de
+   liaison. Elles n'apparaissent qu'au survol, geste qui n'existe pas sur
+   un écran tactile : elles y étaient donc invisibles en permanence, et
+   tirer une flèche ou redimensionner devenait impossible.
+   Sur tactile elles restent discrètes tant que rien n'est sélectionné,
+   et se révèlent pleinement sur l'objet sélectionné — sans quoi un
+   plateau chargé se couvrirait de points. */
+@media (any-pointer: coarse) {
+  .rd-node-handle {
+    opacity: 0.45;
+  }
+  .group[data-selected=1] .rd-node-handle {
+    opacity: 1;
+  }
+}
+
+
+/* Barre supérieure sur écran tactile.
+   60 px de haut et un fil d'Ariane « Autris / Accueil » qui répète ce que
+   la navigation dit déjà : sur un iPad, cette hauteur est prise sur le
+   plateau, où elle manque. On la resserre sans la supprimer — elle porte
+   le menu et les réglages. */
+@media (any-pointer: coarse) {
+  .rd-topbar {
+    height: 46px;
+    padding: 0 12px;
+  }
+  .rd-topbar .rd-crumb-sep,
+  .rd-topbar .rd-crumb-root {
+    display: none;
+  }
+}

@@ -60,10 +60,12 @@ export function Topbar({ username }: { username?: string | null }) {
 
       {/* Fil d'Ariane */}
       <div className="rd-crumbs">
-        <span className="serif italic">Autris</span>
+        {/* Sur écran tactile, « Autris » et son séparateur disparaissent :
+            on sait où l'on est, et cette place est prise sur le plateau. */}
+        <span className="serif italic rd-crumb-root">Autris</span>
         {crumbs.map((c, i) => (
           <span key={i} className="row gap-2" style={{ display: "contents" }}>
-            <span className="sep">/</span>
+            <span className={i === 0 ? "sep rd-crumb-sep" : "sep"}>/</span>
             <span className={i === crumbs.length - 1 ? "current" : ""}>{c}</span>
           </span>
         ))}

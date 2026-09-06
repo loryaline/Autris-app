@@ -1134,6 +1134,9 @@ export function WbBoardCanvas({
               // du chapitrage.
               ref={observeNode}
               className="absolute group"
+              // Sur écran tactile, les poignées se révèlent pleinement sur
+              // l'objet sélectionné (cf. .rd-node-handle dans globals.css).
+              data-selected={selected ? "1" : undefined}
               style={{
                 left: node.x,
                 top: node.y,
@@ -1185,7 +1188,7 @@ export function WbBoardCanvas({
                   // Double flèche en diagonale, comme dans Photoshop : le
                   // geste se lit sans légende, et rien ne l'apparente aux
                   // points de liaison, ronds et dorés, posés sur les bords.
-                  className="absolute flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border-none bg-transparent z-10"
+                  className="rd-node-handle absolute flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border-none bg-transparent z-10"
                   style={{
                     cursor: "nwse-resize",
                     color: "var(--text-2)",
@@ -1254,7 +1257,7 @@ export function WbBoardCanvas({
                         : "Tirer une flèche vers un autre objet"
                     }
                     aria-label={`Tirer un lien depuis le bord ${port.label}`}
-                    className="absolute rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair border-none"
+                    className="rd-node-handle absolute rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair border-none"
                     style={{
                       background: "var(--accent)",
                       boxShadow: `0 0 0 ${2 / viewport.zoom}px var(--bg)`,
