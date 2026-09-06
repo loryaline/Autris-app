@@ -13,12 +13,22 @@ import { WB_CATEGORIES, getCategoryDef } from "@/lib/wb-constants";
 export function FichePalette({
   entries,
   onOpenEntry,
+  onPlaceEntry,
   onExpand,
   onClose,
   placedEntryIds,
 }: {
   entries: WbEntry[];
   onOpenEntry: (id: string) => void;
+  /**
+   * Pose la fiche au centre de la vue.
+   *
+   * Le glisser-déposer HTML5 n'existe pas sur Safari iOS : `dragstart` n'y
+   * est jamais émis. Sur iPad, aucune fiche ne pouvait donc être posée sur
+   * le plateau — la fonctionnalité entière était hors d'atteinte. Un bouton
+   * la dépose au centre, à charge de la déplacer ensuite au doigt.
+   */
+  onPlaceEntry: (id: string) => void;
   onExpand: () => void;
   onClose: () => void;
   /** Fiches déjà posées au moins une fois — repérage visuel, pas un blocage. */
@@ -236,7 +246,7 @@ export function FichePalette({
                         }}
                         onClick={() => onOpenEntry(e.id)}
                         title={`${e.title} — cliquer pour ouvrir, glisser pour poser sur le plateau`}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab active:cursor-grabbing transition-colors hover:bg-white/[0.05]"
+                        className="group/fiche flex items-center gap-2 px-2 py-1.5 rounded cursor-grab active:cursor-grabbing transition-colors hover:bg-white/[0.05]"
                       >
                         <div
                           className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] overflow-hidden"
@@ -280,6 +290,23 @@ export function FichePalette({
                             style={{ background: "var(--accent)" }}
                           />
                         )}
+                        {/* Poser sans glisser. Toujours présent — au doigt
+                            c'est le SEUL chemin, à la souris c'est un
+                            raccourci qui évite de viser. */}
+                        <button
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            onPlaceEntry(e.id);
+                          }}
+                          title="Poser au centre du plateau"
+                          aria-label={`Poser ${e.title} au centre du plateau`}
+                          className="rd-place-btn shrink-0 flex items-center justify-center rounded cursor-pointer bg-transparent border-none"
+                          style={{ color: "var(--text-3)", width: 28, height: 28 }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                            <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                          </svg>
+                        </button>
                       </div>
                     );
                   })}

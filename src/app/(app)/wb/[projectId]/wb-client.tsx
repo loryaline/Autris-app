@@ -346,6 +346,13 @@ export function WbClient({
       {/* Panneau en Palette, sans fiche ouverte : la liste à glisser */}
       {mode === "palette" && !selectedEntry && (
         <FichePalette
+          // Le plateau écoute cet événement et pose la fiche au centre de
+          // sa vue — il est le seul à connaître son cadrage courant.
+          onPlaceEntry={(id) =>
+            window.dispatchEvent(
+              new CustomEvent("autris:place-entry", { detail: id }),
+            )
+          }
           entries={entries}
           placedEntryIds={placedEntryIds}
           onOpenEntry={(id) => {

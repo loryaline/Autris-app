@@ -547,6 +547,22 @@ export function WbBoard({
     [board, entriesById, links],
   );
 
+  /* Poser une fiche depuis la palette, sans glisser.
+   *
+   * Le glisser-déposer HTML5 n'existe pas sur Safari iOS : sur iPad,
+   * aucune fiche ne pouvait rejoindre le plateau. La palette demande, le
+   * plateau exécute — lui seul connaît le centre de sa vue. */
+  useEffect(() => {
+    const onPlace = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (!id) return;
+      const c = centerOfView();
+      placeEntry(id, c.x - 100, c.y - 60);
+    };
+    window.addEventListener("autris:place-entry", onPlace);
+    return () => window.removeEventListener("autris:place-entry", onPlace);
+  }, [centerOfView, placeEntry]);
+
   /**
    * Déplie la parenté d'un personnage : aînés au-dessus, descendance en
    * dessous, fratrie et conjoints au même niveau.

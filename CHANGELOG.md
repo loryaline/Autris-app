@@ -27,6 +27,19 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.4] — 2026-09-06
+
+### Corrections
+
+- **On peut de nouveau poser une fiche sur le plateau depuis un iPad.** Le glisser-déposer HTML5 n'existe pas sur Safari iOS — l'événement de départ n'y est jamais émis — et la palette ne fonctionnait donc pas du tout : la fonctionnalité entière était hors d'atteinte. Chaque fiche porte désormais un bouton qui la dépose au centre de la vue, à charge de la déplacer ensuite au doigt. Il est présent partout : au doigt c'est le seul chemin, à la souris c'est un raccourci.
+- **Les poignées des vignettes réapparaissent sur écran tactile.** Redimensionnement et points de liaison ne se révélaient qu'au survol — un geste qui n'existe pas au doigt : ils étaient donc invisibles en permanence, et tirer une flèche impossible. Ils restent discrets au repos et se révèlent pleinement sur l'objet sélectionné, sans quoi un plateau chargé se couvrirait de points.
+
+### Changements
+
+- **La barre supérieure se resserre sur écran tactile** — 46 px au lieu de 60 — et le fil d'Ariane y perd son « Autris / », qui répétait ce que la navigation dit déjà. Cette hauteur est prise sur le plateau, où elle manque.
+
+---
+
 ## [0.10.3] — 2026-09-06
 
 ### Corrections
