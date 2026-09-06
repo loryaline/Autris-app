@@ -139,7 +139,17 @@ export function EditorMobileRail({
               ✕
             </button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
+          {/* Le rail est en position fixe au bas de l'écran : sans cette
+              réserve, il recouvre la fin du contenu — la dernière scène,
+              le dernier chapitre — qu'on ne peut alors plus atteindre. */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto"
+            style={{
+              paddingBottom: "calc(62px + env(safe-area-inset-bottom, 0px))",
+            }}
+          >
+            {children}
+          </div>
         </div>
       )}
 

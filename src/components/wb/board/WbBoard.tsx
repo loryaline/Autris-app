@@ -1269,13 +1269,13 @@ export function WbBoard({
         <ToolButton
           onClick={revealExisting}
           title="Tracer les relations entre les fiches déjà posées, sans rien ajouter au plateau"
+          aria-label="Tracer les liens manquants"
         >
           <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
             <circle cx="3.5" cy="3.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
             <circle cx="10.5" cy="10.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
             <path d="M4.9 4.9L9.1 9.1" stroke="currentColor" strokeWidth="1.2" strokeDasharray="1.6 1.4" strokeLinecap="round" />
           </svg>
-          Liens manquants
         </ToolButton>
 
         <div className="ml-auto flex items-center gap-1.5">
