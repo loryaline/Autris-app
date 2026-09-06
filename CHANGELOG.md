@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.5] — 2026-09-06
+
+### Corrections
+
+- **La poignée d'une flèche sélectionnée se saisit au doigt.** Elle faisait 6 px de rayon — suffisant à la souris, introuvable au doigt — et rétrécissait encore au dézoome, puisqu'elle vit dans le plan transformé du plateau. Elle garde désormais une taille constante à l'écran, plus généreuse sur tactile.
+- **Une flèche se sélectionne sans viser au pixel.** Sa zone de saisie invisible faisait 14 px de large et maigrissait elle aussi avec le zoom. Elle passe à 30 px sur écran tactile, à taille constante.
+
+---
+
 ## [0.10.4] — 2026-09-06
 
 ### Corrections

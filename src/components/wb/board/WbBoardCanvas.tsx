@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { WbBoardEdge, WbBoardNode, WbEntry, WbLink } from "@/types/database";
 import { areReciprocal, getCategoryDef } from "@/lib/wb-constants";
+import { useViewport } from "@/lib/useViewport";
 
 /**
  * Le plateau : surface infinie, déplacement, zoom, vignettes, post-its et liens.
@@ -199,6 +200,10 @@ export function WbBoardCanvas({
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   // Dernier appui, pour détecter nous-mêmes le double-clic (cf. startNodeDrag).
   const lastDown = useRef<{ id: string; t: number }>({ id: "", t: 0 });
+  // Au doigt, une poignée de 6 px de rayon est introuvable — et elle
+  // rétrécit encore avec le zoom, puisqu'elle vit dans le plan transformé.
+  const { hasTouch } = useViewport();
+  const WAYPOINT_R = hasTouch ? 13 : 6;
 
   /* ---- Hauteur RÉELLE des vignettes ----
    * Une vignette fiche s'étire selon son contenu : sa hauteur stockée
@@ -933,7 +938,11 @@ export function WbBoardCanvas({
                   d={d}
                   fill="none"
                   stroke="transparent"
-                  strokeWidth={14}
+                  // Zone de saisie constante à l'écran : 14 px conviennent
+                  // à la souris, mais un doigt en demande le double — et
+                  // le trait maigrit avec le dézoome, puisqu'il vit dans
+                  // le plan transformé.
+                  strokeWidth={(hasTouch ? 30 : 14) / viewport.zoom}
                   style={{ pointerEvents: "stroke", cursor: "pointer" }}
                   onPointerDown={(ev) => {
                     ev.stopPropagation();
@@ -1011,10 +1020,12 @@ export function WbBoardCanvas({
                   <circle
                     cx={mx}
                     cy={my}
-                    r={6}
+                    // Taille CONSTANTE à l'écran : dans le plan transformé,
+                    // un rayon fixe fondrait avec le dézoome.
+                    r={WAYPOINT_R / viewport.zoom}
                     fill="var(--accent)"
                     stroke="var(--bg)"
-                    strokeWidth={2}
+                    strokeWidth={2 / viewport.zoom}
                     style={{ pointerEvents: "all", cursor: "grab" }}
                     onPointerDown={(ev) => {
                       ev.stopPropagation();
