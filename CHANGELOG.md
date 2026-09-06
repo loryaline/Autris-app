@@ -27,6 +27,16 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.7] — 2026-09-06
+
+### Corrections
+
+- **Les jours du calendrier ne se chevauchent plus sur iPhone.** La vraie cause n'était pas le survol collant corrigé en 0.10.6 : sur 375 px, les sept colonnes font 41 px de large, mais une hauteur minimale de 54 px était imposée à chaque case — et comme elle doit rester carrée, c'est sa LARGEUR qui s'étirait à 54. Chaque case mordait ainsi de 9 px sur ses deux voisines. Elle ne peut désormais plus dépasser sa colonne.
+- **Le numéro du jour reste lisible quand une date porte un jalon.** Dans 42 px, le titre du jalon était tronqué à deux lettres — illisible — et recouvrait le numéro du jour. Sur petit écran il ne reste que la pastille de couleur ; le détail du jour, juste au-dessous, énonce le jalon en toutes lettres.
+- **« 4 joursd'affilée » retrouve son espace.** L'espace tombait juste avant un retour à la ligne, et JSX le supprimait.
+
+---
+
 ## [0.10.6] — 2026-09-06
 
 ### Corrections

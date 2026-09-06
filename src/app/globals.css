@@ -1028,7 +1028,12 @@ body {
 }
 .rd-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .rd-cal-cell {
-  position: relative; aspect-ratio: 1; min-height: 54px;
+  /* Le max-width n'est pas décoratif : sans lui, la case DÉBORDE de sa
+     colonne. Sur un iPhone, sept colonnes tiennent dans 41 px chacune,
+     mais min-height en impose 54 — et aspect-ratio, voulant rester carré,
+     étire alors la LARGEUR à 54. Une case grignotait ainsi 9 px sur
+     chacune de ses voisines : les jours se chevauchaient. */
+  position: relative; aspect-ratio: 1; min-height: 54px; max-width: 100%;
   border-radius: var(--r-sm);
   border: 1px solid color-mix(in srgb, var(--border-soft) 50%, transparent);
   background: var(--surface);
@@ -1802,14 +1807,18 @@ body {
 }
 
 
-/* Calendrier sur petit écran.
-   Sept colonnes sur 375 px donnent des cases d'environ 41 px de large,
-   alors que min-height en impose 54 : elles s'étirent en hauteur et le
-   contenu s'y entasse. On rend la hauteur à la largeur. */
+/* Calendrier sur petit écran : on resserre les gouttières pour rendre
+   quelques pixels aux cases, déjà étroites à sept par ligne. La hauteur
+   de 54 px, elle, est conservée — c'est ce qui garde le jour, le nombre
+   de mots et les points lisibles, et la case atteignable au doigt. */
 @media (max-width: 480px) {
   .rd-cal-grid { gap: 3px; }
   .rd-cal-grid-head { gap: 3px; }
-  .rd-cal-cell { min-height: 0; }
+  /* Le titre du jalon n'a aucune chance dans 42 px : tronqué à deux ou
+     trois lettres il n'apprend rien, et il recouvre le numéro du jour,
+     qui lui est indispensable. Reste la pastille de couleur, qui signale
+     le jalon ; le détail du jour l'énonce en toutes lettres au-dessous. */
+  .rd-cal-milestone > span:not(.rd-cal-milestone-dot) { display: none; }
 }
 
 
