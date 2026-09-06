@@ -27,6 +27,19 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.8] — 2026-09-06
+
+### Corrections
+
+- **Le texte respire enfin sur téléphone.** La feuille de l'éditeur gardait les marges d'un livre imprimé : 64 px de marge extérieure plus 64 px de rembourrage laissaient **183 px de texte sur un écran de 375** — quatre ou cinq mots par ligne, tout écrasé au centre. Il en reste 323. Un correctif antérieur visait juste mais était écrit avant la règle qu'il devait corriger : à spécificité égale, c'est la dernière qui gagne, et il n'avait jamais rien changé à l'affichage.
+- **Une fiche posée sur le plateau arrive devant, plus derrière.** Elle recevait une profondeur fixe, indifférente à la pile : dès que quoi que ce soit avait été mis au premier plan, la nouvelle fiche apparaissait dessous — parfois complètement cachée. Une carte, elle, reste un fond et continue de passer dessous.
+
+### Changements
+
+- **Le plateau se dézoome deux fois plus loin** — jusqu'à 10 % au lieu de 20 %. La vue restait collée à ce que le plateau contient, sans marge autour pour poser un groupe à l'écart ou juger d'un ensemble. En dessous de 35 %, les poignées et les points de liaison cessent de compenser le zoom et rapetissent avec le reste : à ce niveau on navigue, on ne bricole plus.
+
+---
+
 ## [0.10.7] — 2026-09-06
 
 ### Corrections
