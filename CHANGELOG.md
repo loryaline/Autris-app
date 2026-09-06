@@ -27,6 +27,19 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.9] — 2026-09-06
+
+### Corrections
+
+- **La feuille de styles ne compilait plus en développement.** Un sélecteur écrit `[data-selected="1"]` perdait ses guillemets à la minification, et le compilateur refusait alors la valeur purement numérique qui en résultait — faisant échouer **toute** la feuille. Le serveur servait silencieusement la dernière version valide : des correctifs entiers restaient invisibles sans qu'aucune erreur n'apparaisse à l'écran. Le sélecteur teste désormais la présence de l'attribut, qui n'est posé que sur l'objet sélectionné. La compilation de production, elle, n'était pas affectée.
+- **Encore un peu plus de place pour le texte sur téléphone** : la feuille se rapproche des bords et son rembourrage descend à 14 px. Le texte occupe 337 px sur un écran de 375 — 90 % de la largeur, contre la moitié il y a deux versions.
+
+### Ajouts
+
+- **Un bouton pressé répond, au doigt.** Tout le vocabulaire de l'interface reposait sur le survol : sans souris, appuyer ne produisait rien de visible et on doutait d'avoir cliqué. Deux réponses complémentaires : le halo natif du système, teinté à l'accent plutôt que laissé au gris par défaut — presque invisible sur fond sombre —, et un assombrissement franc pendant l'appui. L'opacité seule, jamais une transformation : elle ne déplace rien et ne peut casser aucune mise en page. À la souris, rien ne change.
+
+---
+
 ## [0.10.8] — 2026-09-06
 
 ### Corrections
