@@ -1766,10 +1766,13 @@ body {
    et se révèlent pleinement sur l'objet sélectionné — sans quoi un
    plateau chargé se couvrirait de points. */
 @media (any-pointer: coarse) {
+  /* Rien au repos, tout sur l'objet SÉLECTIONNÉ. Les montrer en
+     permanence, même en demi-teinte, couvre le plateau de points et rend
+     illisible ce qu'on est venu y regarder — les fiches et leurs liens. */
   .rd-node-handle {
-    opacity: 0.45;
+    opacity: 0;
   }
-  .group[data-selected=1] .rd-node-handle {
+  .group[data-selected="1"] .rd-node-handle {
     opacity: 1;
   }
 }
