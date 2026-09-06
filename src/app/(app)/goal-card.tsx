@@ -131,7 +131,10 @@ export function GoalCard(props: GoalCardProps) {
         </div>
         {streak > 0 && (
           <div className="rd-streak-pill">
-            🔥 {streak} jour{streak > 1 ? "s" : ""} d&apos;affilée
+            {/* L'espace est explicite : collé au retour à la ligne qui suit,
+                JSX le supprimait et affichait « 4 joursd'affilée ». */}
+            🔥 {streak} jour{streak > 1 ? "s" : ""}
+            {" d’affilée"}
           </div>
         )}
       </div>
