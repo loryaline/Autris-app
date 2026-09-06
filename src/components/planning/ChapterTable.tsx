@@ -1874,7 +1874,7 @@ export function ChapterTable({
                       });
                     }}
                     title="Options de la ligne · glisser pour réordonner" aria-label="Options de la ligne · glisser pour réordonner"
-                    className="absolute left-0 top-1 bottom-1 w-3.5 flex items-center justify-center rounded-sm opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab z-10 border-none"
+                    className="rd-row-handle absolute left-0 top-1 bottom-1 w-3.5 flex items-center justify-center rounded-sm opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab z-10 border-none"
                     style={{
                       background:
                         rowColor ??
@@ -1934,7 +1934,11 @@ export function ChapterTable({
                         onPointerDownCapture={(e) => {
                           if (e.button !== 0) return;
                           if (isEditing) return; // édition en cours : laisser l'éditeur gérer
-                          e.preventDefault();
+                          // preventDefault empêche la sélection de texte à la
+                          // SOURIS. Au doigt il annule le défilement natif du
+                          // navigateur : le tableau, plus large que l'écran,
+                          // devenait impossible à parcourir latéralement.
+                          if (e.pointerType !== "touch") e.preventDefault();
                           beginCellSelection({ r: idx, c: colIdx }, e);
                         }}
                         onDoubleClickCapture={(e) => {
@@ -2042,7 +2046,7 @@ export function ChapterTable({
         {thumb.width > 0 && (
           <div
             ref={scrollTrackRef}
-            className="sticky bottom-1 z-30 mx-1 h-[16px] rounded-full relative"
+            className="rd-hscroll sticky bottom-1 z-30 mx-1 h-[16px] rounded-full relative"
             style={{
               background: "color-mix(in srgb, var(--bg-3) 85%, transparent)",
               border: "1px solid var(--border-soft)",
