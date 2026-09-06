@@ -27,6 +27,18 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.10] — 2026-09-06
+
+### Corrections
+
+- **Une fiche posée sur le plateau arrive devant, sans exception.** La 0.10.8 avait corrigé la profondeur fixe, mais une seconde règle envoyait toujours certaines fiches au fond : une fiche de géographie illustrée était traitée comme une carte de décor, si bien que poser un lieu le faisait disparaître sous le reste. Une carte reste un décor, mais c'est un choix qui appartient à qui la pose — la barre d'empilement l'envoie à l'arrière d'un geste. Ce qu'on vient de demander doit d'abord se voir.
+
+### Changements
+
+- **La fiche posée arrive sélectionnée.** Sur un plateau chargé, c'est ce qui dit où elle a atterri.
+
+---
+
 ## [0.10.9] — 2026-09-06
 
 ### Corrections

@@ -544,19 +544,29 @@ export function WbBoard({
   const placeEntry = useCallback(
     async (entryId: string, x: number, y: number) => {
       const box = defaultNodeBox(entriesById.get(entryId));
-      const z = zBounds();
       const created = await board.addNode("fiche", x, y, {
         entryId,
         w: box.w,
         h: box.h,
-        // Une fiche posée arrive DEVANT ce qui est déjà là. Elle prenait
-        // jusqu'ici une profondeur fixe, indifférente à la pile : sur un
-        // plateau où quoi que ce soit avait été mis au premier plan, la
-        // nouvelle fiche apparaissait derrière — parfois invisible.
-        // Une carte reste un fond et continue de passer dessous.
-        z: box.z < 0 ? z.min - 1 : z.max + 1,
+        // Ce qu'on pose arrive DEVANT, sans exception.
+        //
+        // Deux règles envoyaient la fiche au fond. Une profondeur fixe
+        // d'abord, indifférente à la pile : dès que quoi que ce soit avait
+        // été mis au premier plan, la nouvelle fiche passait dessous. Et
+        // les fiches de géographie illustrées, traitées comme des cartes
+        // de fond : poser un lieu le faisait disparaître sous le reste.
+        //
+        // Une carte reste un décor, mais c'est un choix qui appartient à
+        // qui la pose : la barre d'empilement l'envoie à l'arrière d'un
+        // geste. Ce qu'on vient de demander doit d'abord se voir.
+        z: zBounds().max + 1,
       });
-      if (created) await board.materializeLinks(created, links);
+      if (created) {
+        // Elle arrive sélectionnée : sur un plateau chargé, c'est ce qui
+        // dit où elle a atterri.
+        setSelectedIds(new Set([created.id]));
+        await board.materializeLinks(created, links);
+      }
       return created;
     },
     [board, entriesById, links, zBounds],
@@ -1369,9 +1379,9 @@ export function WbBoard({
           })
         }
         onDropEntry={async (entryId, x, y) => {
-          // Une carte arrive en grand et sous les autres vignettes.
+          // Une carte arrive en grand, mais devant comme tout le reste :
+          // cf. placeEntry, même raison.
           const box = defaultNodeBox(entriesById.get(entryId));
-          const z = zBounds();
           const node = await board.addNode(
             "fiche",
             x - box.w / 2 + 100,
@@ -1380,8 +1390,7 @@ export function WbBoard({
               entryId,
               w: box.w,
               h: box.h,
-              // Une carte se glisse sous la pile, le reste arrive dessus.
-              z: box.z < 0 ? z.min - 1 : z.max + 1,
+              z: zBounds().max + 1,
             },
           );
           // La fiche arrive avec les relations qu'elle a déjà avec ce qui
