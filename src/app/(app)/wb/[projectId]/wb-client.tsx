@@ -97,7 +97,7 @@ export function WbClient({
   // Sur téléphone, le World Building ouvre sur sa BIBLIOTHÈQUE et non sur
   // le plateau : une surface infinie qu'on manipule à la souris n'a rien
   // à offrir sur 375 px, alors que les fiches se lisent très bien.
-  const { isPhone } = useViewport();
+  const { isPhone, isTablet } = useViewport();
   /* Mode EFFECTIF : sur téléphone c'est toujours la bibliothèque, quel
    * que soit le mode mémorisé. Dérivé plutôt que forcé dans un effet —
    * ainsi le choix fait au bureau est intact quand on y revient. */
@@ -358,17 +358,34 @@ export function WbClient({
         />
       )}
 
+      {/* Sur TABLETTE, la fiche ouverte se superpose au plateau au lieu de
+          le comprimer. Le panneau fait 480 px fixes : sur un iPad en
+          portrait (834 px) il n'en resterait que 354 pour le plateau —
+          trois colonnes ne tiennent pas à cette largeur. Un voile derrière
+          referme la fiche, comme partout ailleurs dans Autris. */}
+      {isTablet && mode === "palette" && selectedEntry && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40"
+          onClick={() => setSelectedId(null)}
+        />
+      )}
+
       {/* Panneau élargi (fiche ouverte à côté du plateau) ou Bibliothèque */}
       {(mode === "bibliotheque" || (mode === "palette" && selectedEntry)) && (
         <div
           className={
             mode === "bibliotheque"
               ? "flex-1 min-w-0 flex relative"
-              : "w-[480px] shrink-0 flex flex-col h-full"
+              : isTablet
+                ? "fixed inset-y-0 right-0 z-40 w-[min(440px,88vw)] flex flex-col shadow-2xl"
+                : "w-[480px] shrink-0 flex flex-col h-full"
           }
           style={
             mode === "palette"
-              ? { borderLeft: "1px solid var(--border-soft)" }
+              ? {
+                  borderLeft: "1px solid var(--border-soft)",
+                  ...(isTablet ? { background: "var(--bg)" } : {}),
+                }
               : undefined
           }
         >

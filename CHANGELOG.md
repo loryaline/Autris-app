@@ -27,6 +27,18 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.2] — 2026-09-06
+
+### Ajouts
+
+- **L'appui long remplace le clic droit** sur écran tactile. La palette de couleurs d'une case du chapitrage ne s'ouvrait qu'au clic droit — un geste qui n'existe pas au doigt : la fonctionnalité était présente et inatteignable sur iPad. Deux garde-fous : le doigt doit rester immobile, sinon c'est un défilement ; et la souris est ignorée, parce qu'elle a déjà son clic droit et qu'un clic maintenu qui ouvre un menu serait une surprise désagréable.
+
+### Changements
+
+- **Sur tablette, la fiche ouverte se superpose au plateau** au lieu de le comprimer. Le panneau fait 480 px : sur un iPad en portrait il n'en restait que 354 pour le plateau. Un voile derrière le referme, comme partout ailleurs.
+
+---
+
 ## [0.10.1] — 2026-09-05
 
 ### Ajouts
