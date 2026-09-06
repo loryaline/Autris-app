@@ -23,7 +23,16 @@ import { useViewport } from "@/lib/useViewport";
  * géographique (sous-catégorie d'Univers & Monde).
  */
 
-const MIN_ZOOM = 0.2;
+/* On dézoome jusqu'à 10 % : au-delà du seuil précédent de 20 %, la vue
+   restait collée à ce que le plateau contient, sans marge autour pour
+   respirer, poser un groupe à l'écart ou juger d'un ensemble. */
+const MIN_ZOOM = 0.1;
+/* Poignées, ports et zones de saisie sont contre-mis à l'échelle pour
+   garder une taille constante à l'écran. Sans plancher, à 10 % de zoom
+   ils grossiraient dix fois dans le plan et écraseraient des vignettes
+   devenues minuscules. En dessous de ce seuil, ils rapetissent avec le
+   reste : à ce niveau on navigue, on ne bricole plus. */
+const UI_ZOOM_MIN = 0.35;
 const MAX_ZOOM = 2.5;
 
 /**
@@ -204,6 +213,10 @@ export function WbBoardCanvas({
   // rétrécit encore avec le zoom, puisqu'elle vit dans le plan transformé.
   const { hasTouch } = useViewport();
   const WAYPOINT_R = hasTouch ? 13 : 6;
+  /* Échelle des affordances : le zoom réel, mais jamais en dessous du
+     plancher — cf. UI_ZOOM_MIN. À ne pas utiliser pour la géométrie, qui
+     doit suivre le zoom exact. */
+  const uiZoom = Math.max(viewport.zoom, UI_ZOOM_MIN);
 
   /* ---- Hauteur RÉELLE des vignettes ----
    * Une vignette fiche s'étire selon son contenu : sa hauteur stockée
@@ -958,7 +971,7 @@ export function WbBoardCanvas({
                   // à la souris, mais un doigt en demande le double — et
                   // le trait maigrit avec le dézoome, puisqu'il vit dans
                   // le plan transformé.
-                  strokeWidth={(hasTouch ? 30 : 14) / viewport.zoom}
+                  strokeWidth={(hasTouch ? 30 : 14) / uiZoom}
                   style={{ pointerEvents: "stroke", cursor: "pointer" }}
                   onPointerDown={(ev) => {
                     ev.stopPropagation();
@@ -1038,10 +1051,10 @@ export function WbBoardCanvas({
                     cy={my}
                     // Taille CONSTANTE à l'écran : dans le plan transformé,
                     // un rayon fixe fondrait avec le dézoome.
-                    r={WAYPOINT_R / viewport.zoom}
+                    r={WAYPOINT_R / uiZoom}
                     fill="var(--accent)"
                     stroke="var(--bg)"
-                    strokeWidth={2 / viewport.zoom}
+                    strokeWidth={2 / uiZoom}
                     style={{ pointerEvents: "all", cursor: "grab" }}
                     onPointerDown={(ev) => {
                       ev.stopPropagation();
@@ -1223,18 +1236,18 @@ export function WbBoardCanvas({
                     // à l'écran quel que soit le zoom du plateau.
                     left: "100%",
                     top: "100%",
-                    width: RESIZE_PX / viewport.zoom,
-                    height: RESIZE_PX / viewport.zoom,
-                    marginLeft: -RESIZE_PX / 2 / viewport.zoom,
-                    marginTop: -RESIZE_PX / 2 / viewport.zoom,
+                    width: RESIZE_PX / uiZoom,
+                    height: RESIZE_PX / uiZoom,
+                    marginLeft: -RESIZE_PX / 2 / uiZoom,
+                    marginTop: -RESIZE_PX / 2 / uiZoom,
                     // Le cadre laisse passer les clics : sa poignée, elle,
                     // doit rester saisissable.
                     pointerEvents: "auto",
                   }}
                 >
                   <svg
-                    width={RESIZE_PX / viewport.zoom}
-                    height={RESIZE_PX / viewport.zoom}
+                    width={RESIZE_PX / uiZoom}
+                    height={RESIZE_PX / uiZoom}
                     viewBox="0 0 14 14"
                     fill="none"
                   >
@@ -1287,15 +1300,15 @@ export function WbBoardCanvas({
                     className="rd-node-handle absolute rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair border-none"
                     style={{
                       background: "var(--accent)",
-                      boxShadow: `0 0 0 ${2 / viewport.zoom}px var(--bg)`,
+                      boxShadow: `0 0 0 ${2 / uiZoom}px var(--bg)`,
                       // Dimensions divisées par le zoom : le point garde
                       // la même taille à l'écran, de 20 % à 250 %.
                       left: port.x,
                       top: port.y,
-                      width: PORT_PX / viewport.zoom,
-                      height: PORT_PX / viewport.zoom,
-                      marginLeft: -PORT_PX / 2 / viewport.zoom,
-                      marginTop: -PORT_PX / 2 / viewport.zoom,
+                      width: PORT_PX / uiZoom,
+                      height: PORT_PX / uiZoom,
+                      marginLeft: -PORT_PX / 2 / uiZoom,
+                      marginTop: -PORT_PX / 2 / uiZoom,
                     }}
                   />
                 ))}

@@ -531,20 +531,35 @@ export function WbBoard({
     return m;
   }, [board.nodes]);
 
+  /** Profondeurs extrêmes de la pile, pour poser dessus ou dessous. */
+  const zBounds = useCallback(() => {
+    if (board.nodes.length === 0) return { min: 0, max: 0 };
+    return {
+      min: Math.min(...board.nodes.map((n) => n.z)),
+      max: Math.max(...board.nodes.map((n) => n.z)),
+    };
+  }, [board.nodes]);
+
   /** Pose une fiche au point voulu et rattache ses relations connues. */
   const placeEntry = useCallback(
     async (entryId: string, x: number, y: number) => {
       const box = defaultNodeBox(entriesById.get(entryId));
+      const z = zBounds();
       const created = await board.addNode("fiche", x, y, {
         entryId,
         w: box.w,
         h: box.h,
-        z: box.z,
+        // Une fiche posée arrive DEVANT ce qui est déjà là. Elle prenait
+        // jusqu'ici une profondeur fixe, indifférente à la pile : sur un
+        // plateau où quoi que ce soit avait été mis au premier plan, la
+        // nouvelle fiche apparaissait derrière — parfois invisible.
+        // Une carte reste un fond et continue de passer dessous.
+        z: box.z < 0 ? z.min - 1 : z.max + 1,
       });
       if (created) await board.materializeLinks(created, links);
       return created;
     },
-    [board, entriesById, links],
+    [board, entriesById, links, zBounds],
   );
 
   /* Poser une fiche depuis la palette, sans glisser.
@@ -816,15 +831,6 @@ export function WbBoard({
     },
     [board, selectedIds],
   );
-
-  /** Profondeurs extrêmes de la pile, pour poser dessus ou dessous. */
-  const zBounds = useCallback(() => {
-    if (board.nodes.length === 0) return { min: 0, max: 0 };
-    return {
-      min: Math.min(...board.nodes.map((n) => n.z)),
-      max: Math.max(...board.nodes.map((n) => n.z)),
-    };
-  }, [board.nodes]);
 
   async function handleAddPostit() {
     const c = centerOfView();

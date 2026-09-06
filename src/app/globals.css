@@ -1374,11 +1374,9 @@ body {
 
 /* Téléphone : le rail des panneaux est en position fixe en bas d'écran.
    Sans cette réserve, il recouvrirait les dernières lignes du chapitre —
-   celles qu'on est justement en train d'écrire. La feuille se colle aussi
-   aux bords : 64 px de marge sur 375 px de large, c'est un tiers perdu. */
+   celles qu'on est justement en train d'écrire. */
 @media (max-width: 767px) {
   .editor-scroll { padding: 16px 0 calc(70px + env(safe-area-inset-bottom, 0px)); }
-  .paper-sheet { width: calc(100% - 24px); }
 }
 
 .paper-sheet {
@@ -1422,6 +1420,24 @@ body {
 .editor-paper.focus .paper-sheet {
   width: min(720px, calc(100% - 80px));
   padding: 64px 80px 88px;
+}
+
+/* La feuille sur téléphone.
+   Ces règles doivent venir APRÈS les déclarations ci-dessus : à
+   spécificité égale c'est la dernière qui gagne, et une version
+   antérieure de ce correctif, écrite plus haut dans le fichier, n'avait
+   jamais rien changé à l'affichage.
+
+   Les marges d'un livre imprimé n'ont pas de sens ici : 64 px de marge
+   extérieure plus 64 px de rembourrage laissaient 183 px de texte sur un
+   écran de 375 — moins de la moitié, quatre ou cinq mots par ligne. La
+   feuille se colle donc presque aux bords, et respire par le haut. */
+@media (max-width: 767px) {
+  .paper-sheet,
+  .editor-paper.focus .paper-sheet {
+    width: calc(100% - 16px);
+    padding: 28px 18px 44px;
+  }
 }
 
 /* --- Prose dans la feuille --- */
