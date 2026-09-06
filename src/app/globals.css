@@ -1435,8 +1435,8 @@ body {
 @media (max-width: 767px) {
   .paper-sheet,
   .editor-paper.focus .paper-sheet {
-    width: calc(100% - 16px);
-    padding: 28px 18px 44px;
+    width: calc(100% - 10px);
+    padding: 24px 14px 40px;
   }
 }
 
@@ -1800,7 +1800,14 @@ body {
   .rd-node-handle {
     opacity: 0;
   }
-  .group[data-selected="1"] .rd-node-handle {
+  /* Présence de l'attribut, et non sa valeur : l'attribut n'est posé que
+     sur l'objet sélectionné. Écrit [data-selected="1"], le compilateur
+     CSS retirait les guillemets à la minification puis refusait la valeur
+     purement numérique qui en résultait — TOUTE la feuille de styles
+     échouait alors à compiler, et le serveur servait silencieusement la
+     dernière version valide. Des correctifs entiers restaient invisibles
+     sans qu'aucune erreur ne remonte à l'écran. */
+  .group[data-selected] .rd-node-handle {
     opacity: 1;
   }
 }
@@ -1846,5 +1853,41 @@ body {
   .rd-stat-card:hover {
     transform: none;
     box-shadow: none;
+  }
+}
+
+
+/* Le retour au toucher.
+
+   Tout le vocabulaire de l'interface reposait sur le survol : un bouton
+   change de fond quand la souris s'en approche. Au doigt ce geste
+   n'existe pas — on appuyait donc sans que rien ne bouge, et le doute
+   s'installait : ai-je cliqué ? On appuie une deuxième fois.
+
+   Deux réponses complémentaires. Le halo natif d'iOS et d'Android,
+   d'abord, teinté à l'accent plutôt que laissé au gris par défaut,
+   presque invisible sur fond sombre. Puis un assombrissement franc
+   pendant l'appui — l'opacité seule, jamais une transformation : elle ne
+   déplace rien et ne peut donc casser aucune mise en page.
+
+   Ce retour ne vaut que là où le survol manque : à la souris, les états
+   existants suffisent et rien ne change. */
+@media (hover: none) {
+  button,
+  [role="button"],
+  a,
+  summary,
+  label {
+    -webkit-tap-highlight-color: color-mix(in srgb, var(--accent) 26%, transparent);
+  }
+
+  button:active:not(:disabled),
+  [role="button"]:active,
+  .rd-btn:active:not(:disabled),
+  .rd-icon-btn:active:not(:disabled),
+  .rd-cal-cell:active:not(:disabled) {
+    opacity: 0.55;
+    /* Assez court pour être perçu comme une réponse, pas comme un délai. */
+    transition: opacity 0.05s linear;
   }
 }
