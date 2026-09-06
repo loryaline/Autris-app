@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, type Dispatch, type SetStateA
 import { createClient } from "@/lib/supabase/client";
 import { appConfirm } from "@/lib/app-confirm";
 import { appToast } from "@/lib/app-toast";
+import { useLongPress } from "@/lib/useLongPress";
 import type { ChapterStatus } from "@/types/database";
 import type { ChapterData as ChapterRow, CustomColumn, CellValue } from "@/app/(app)/planning/[novelId]/planning-client";
 import { RichEditableCell, computeClickOffset } from "./RichEditableCell";
@@ -524,6 +525,46 @@ export function ChapterTable({
     }
     trackDrag(onMove, () => setDragSelecting(false));
   }
+
+  /**
+   * Appui long = clic droit, au doigt.
+   *
+   * La palette de couleurs d'une case ne s'ouvrait qu'au clic droit — un
+   * geste qui n'existe pas sur un écran tactile. La fonctionnalité était
+   * donc présente et inatteignable sur iPad.
+   *
+   * Le gestionnaire est posé UNE fois sur le tableau, et retrouve la case
+   * sous le doigt : un par cellule serait un hook dans une boucle, ce que
+   * React interdit — et cinquante gestionnaires pour un geste rare.
+   */
+  const longPress = useLongPress((pt) => {
+    const el = document.elementFromPoint(pt.clientX, pt.clientY);
+    const cellEl = (el as HTMLElement | null)?.closest(
+      "[data-row-idx]",
+    ) as HTMLElement | null;
+    if (!cellEl) return;
+    const r = Number(cellEl.getAttribute("data-row-idx"));
+    const c = Number(cellEl.getAttribute("data-col-idx"));
+    if (Number.isNaN(r) || Number.isNaN(c)) return;
+    const chapitre = sorted[r];
+    const colonne = visibleColumns[c];
+    if (!chapitre || !colonne) return;
+
+    commitAnyEdit();
+    window.getSelection()?.removeAllRanges();
+    const k = cellKey(chapitre.id, colonne.key);
+    if (!selectedKeys.has(k)) {
+      setExtraCells(new Set());
+      setSelAnchor({ r, c });
+      setSelFocus({ r, c });
+    }
+    setPalette({
+      kind: "cell",
+      chapterId: chapitre.id,
+      colKey: colonne.key,
+      anchor: { top: pt.clientY + 4, left: Math.max(8, pt.clientX - 60) },
+    });
+  });
 
   /** Vide le contenu des cases sélectionnées (champs texte, thèmes,
    * colonnes custom — le titre/statut/mots ne sont pas touchés). */
@@ -1702,6 +1743,7 @@ export function ChapterTable({
           ref={tableWrapperRef}
           id="chapter-table-scroll"
           onScroll={updateThumb}
+          {...longPress}
           className={`overflow-x-auto scrollbar-none border border-white/[0.06] rounded-[var(--radius-lg)] bg-bg-secondary/30 ${
             dragSelecting ? "select-none" : ""
           }`}
