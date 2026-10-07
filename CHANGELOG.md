@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.11.1] — 2026-10-07
+
+### Changements
+
+- **Le tableau de bord montre enfin le rapport entre le réglage et la réalité.** Les paramètres du roman promettent une date de fin — ce qui reste à écrire divisé par le rythme déclaré. Le tableau de bord en projetait une autre, tirée du rythme réellement tenu, sans jamais nommer le plan dont elle s'écarte : deux pages annonçaient deux dates à des années d'intervalle et aucune ne disait à quoi l'autre répondait. Elles figurent maintenant côte à côte, **Fin prévue** et **Au rythme actuel**, et le rythme se lit « 221 mots/j · 1 500 visés ». L'écart entre les deux est l'information qu'on vient chercher.
+- **« Restant » a cédé sa place** : la barre d'avancement juste au-dessus l'énonce déjà, mots écrits sur objectif.
+
+---
+
 ## [0.11.0] — 2026-10-07
 
 ### Changements
