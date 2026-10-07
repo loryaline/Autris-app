@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.10.11] — 2026-10-07
+
+### Corrections
+
+- **Le tableau de bord lit enfin le rythme réglé dans les paramètres du roman.** Les colonnes « mots par jour » et « jours par semaine » n'étaient pas demandées à la requête : elles arrivaient toujours indéfinies, et le calcul retombait en silence sur sa valeur par défaut de 500 mots par jour, sept jours sur sept. Un roman réglé à 1 500 mots par jour était donc jugé sur 500 — et la page des paramètres affichait une estimation que le tableau de bord contredisait, sans que rien ne signale le désaccord.
+
+---
+
 ## [0.10.10] — 2026-09-06
 
 ### Corrections
