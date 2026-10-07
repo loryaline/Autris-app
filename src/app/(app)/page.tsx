@@ -36,6 +36,13 @@ export default async function DashboardPage() {
     return d.toISOString().slice(0, 10);
   })();
   const todayForWeekIso = todayIso;
+  /* Sept derniers jours GLISSANTS — pas la semaine civile.
+     Le rythme d'écriture ne redémarre pas le lundi matin. */
+  const rolling7StartIso = (() => {
+    const d = new Date(nowForQuery);
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().slice(0, 10);
+  })();
 
   // === Toutes les requêtes en parallèle ===
   // Avant : 7 awaits séquentiels (somme des latences, ~1-2 s sur Supabase).
@@ -47,6 +54,7 @@ export default async function DashboardPage() {
     projectsRes,
     activityRes,
     weekActivityRes,
+    rolling7Res,
     lastWbRes,
     milestoneRes,
     alertMilestoneRes,
@@ -85,6 +93,12 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .gte("date", weekStartIso)
       .lte("date", todayForWeekIso),
+    supabase
+      .from("daily_activity")
+      .select("words_written")
+      .eq("user_id", user.id)
+      .gte("date", rolling7StartIso)
+      .lte("date", todayIso),
     supabase
       .from("daily_activity")
       .select("date")
@@ -306,30 +320,28 @@ export default async function DashboardPage() {
   const activeNovelTitle =
     (activeNovel as { title?: string } | undefined)?.title ?? null;
 
-  // ===== Calculs scopés sur le roman actif depuis sa date d'activation =====
-  // Avant : moyenne mensuelle calendaire qui n'avait pas de sens dès qu'on
-  // activait un roman en milieu de mois ou qu'on bascule entre romans.
-  // Maintenant : on borne la fenêtre de mesure à [activated_at, now()] et on
-  // ne compte que les mots écrits SUR le roman actif depuis l'activation.
-  const activatedAtRaw = (activeNovel as { activated_at?: string | null } | undefined)?.activated_at ?? null;
-  const activationBaseWords = (activeNovel as { activation_word_count?: number | null } | undefined)?.activation_word_count ?? 0;
-  const activatedAtDate = activatedAtRaw ? new Date(activatedAtRaw) : null;
-  const activatedAtMs = activatedAtDate ? activatedAtDate.getTime() : null;
-  // Jours écoulés depuis activation. Min 1 pour éviter div/0 et donner une
-  // valeur lisible le jour même de l'activation.
-  const daysSinceActivation = activatedAtMs
-    ? Math.max(1, Math.ceil((nowMs - activatedAtMs) / 86_400_000))
+  /* ===== Avancement et rythme, sans date de départ =====
+
+     Avant : tout se mesurait sur la fenêtre [activation, aujourd'hui]. Cette
+     date d'activation est posée automatiquement au moment où l'on rend un
+     roman actif, et rien ne permet de la corriger. Un roman activé des
+     semaines avant la première séance d'écriture traînait donc un déficit
+     qu'il ne pouvait plus rattraper : des milliers de mots « attendus » pour
+     des jours où personne n'avait jamais prévu d'écrire. Le tableau de bord
+     annonçait « en retard » et n'avait aucun moyen d'annoncer autre chose.
+
+     Il n'y a plus de début. L'avancement se lit sur le roman entier — les
+     mots écrits sur l'objectif total — et le rythme sur les sept derniers
+     jours glissants, une fenêtre qui avance avec le temps et qu'aucune date
+     passée ne leste. Arrêter une semaine se voit, et se rattrape. */
+  const rolling7Words = (rolling7Res.data ?? []).reduce(
+    (sum, r) => sum + Math.max(0, r.words_written ?? 0),
+    0,
+  );
+  const realDailyPace = rolling7Words / 7;
+  const progressPct = activeGoal > 0
+    ? Math.round((activeWords / activeGoal) * 100)
     : 0;
-  // Mots écrits sur le roman actif depuis activation = current_words - base.
-  // Clampé à 0 (au cas où l'utilisatrice supprimerait du contenu).
-  const wordsSinceActivation = Math.max(0, activeWords - activationBaseWords);
-  // Mots attendus sur la même période, basés sur le rythme paramétré.
-  const expectedSinceActivation = DAILY_GOAL * daysSinceActivation;
-  const periodPct = expectedSinceActivation > 0
-    ? Math.round((wordsSinceActivation / expectedSinceActivation) * 100)
-    : 0;
-  // Rythme réel = mots / jours depuis activation.
-  const realDailyPace = daysSinceActivation > 0 ? wordsSinceActivation / daysSinceActivation : 0;
   const etaDays =
     realDailyPace > 0 && remainingWords > 0
       ? Math.ceil(remainingWords / realDailyPace)
@@ -346,15 +358,6 @@ export default async function DashboardPage() {
           : paceDelta > -DAILY_GOAL * 0.3
             ? "onTrack"
             : "behind";
-
-  // Affichage de la date d'activation, formatée FR.
-  const activationDateLabel = activatedAtDate
-    ? activatedAtDate.toLocaleDateString("fr-FR", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    : null;
 
   // Roman correspondant au dernier chapitre modifié (pour le hero
   // « Reprenez votre histoire »). On le résout depuis la liste des romans
@@ -560,15 +563,13 @@ export default async function DashboardPage() {
           activeNovelGoalReached={activeNovelGoalReached}
           dailyGoal={DAILY_GOAL}
           streak={streak}
-          daysSinceActivation={daysSinceActivation}
-          wordsSinceActivation={wordsSinceActivation}
-          expectedSinceActivation={expectedSinceActivation}
-          periodPct={periodPct}
+          totalWordsNovel={activeWords}
+          goalWordsNovel={activeGoal}
+          progressPct={progressPct}
           etaLabel={etaLabel}
           realDailyPace={realDailyPace}
           remainingWords={remainingWords}
           paceVerdict={paceVerdict}
-          activationDateLabel={activationDateLabel}
         />
         <div>
           <DashboardClient projects={projects ?? []} lastProjectTitle={lastProject?.title} />
