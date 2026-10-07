@@ -406,9 +406,24 @@ export default async function DashboardPage() {
   // Jours d'écriture du mois (au moins un mot écrit).
   const writingDaysCount = monthActivity.filter((d) => d.wordsDisplay > 0).length;
 
-  const etaLabel = etaDate
-    ? etaDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
-    : null;
+  const fmtDay = (d: Date) =>
+    d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  const etaLabel = etaDate ? fmtDay(etaDate) : null;
+
+  /* La date que PROMET le réglage du roman.
+     La page des paramètres l'affiche déjà — « fin estimée du premier jet
+     le 9 décembre 2026 » — en divisant ce qui reste par le rythme déclaré.
+     Le tableau de bord, lui, ne montrait que la projection du rythme réel,
+     sans jamais nommer le plan dont elle s'écarte : deux pages annonçaient
+     deux dates sans qu'aucune ne dise à quoi l'autre répondait. Les deux
+     figurent maintenant côte à côte, et l'écart entre elles est l'information
+     utile. */
+  const plannedEtaDays =
+    DAILY_GOAL > 0 && remainingWords > 0
+      ? Math.ceil(remainingWords / DAILY_GOAL)
+      : 0;
+  const plannedEtaLabel =
+    plannedEtaDays > 0 ? fmtDay(new Date(nowMs + plannedEtaDays * 86_400_000)) : null;
 
   // Hero alternatif pour le persona « Explorateur » : tant qu'aucune
   // fiche d'univers n'existe, on invite à esquisser le worldbuilding
@@ -567,8 +582,8 @@ export default async function DashboardPage() {
           goalWordsNovel={activeGoal}
           progressPct={progressPct}
           etaLabel={etaLabel}
+          plannedEtaLabel={plannedEtaLabel}
           realDailyPace={realDailyPace}
-          remainingWords={remainingWords}
           paceVerdict={paceVerdict}
         />
         <div>

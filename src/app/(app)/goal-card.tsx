@@ -39,9 +39,11 @@ interface GoalCardProps {
   /** Objectif total du roman, 0 si aucun n'est fixé. */
   goalWordsNovel: number;
   progressPct: number;
+  /** Fin projetée par le rythme réel des sept derniers jours. */
   etaLabel: string | null;
+  /** Fin promise par le rythme réglé dans les paramètres du roman. */
+  plannedEtaLabel: string | null;
   realDailyPace: number;
-  remainingWords: number;
   paceVerdict: string | null;
 }
 
@@ -72,7 +74,7 @@ export function GoalCard(props: GoalCardProps) {
     activeNovelTitle, activeNovelExists, activeNovelGoalReached,
     dailyGoal, streak,
     totalWordsNovel, goalWordsNovel, progressPct,
-    etaLabel, realDailyPace, remainingWords, paceVerdict,
+    etaLabel, plannedEtaLabel, realDailyPace, paceVerdict,
   } = props;
 
   const [selectedDay, setSelectedDay] = useState(todayNum);
@@ -162,23 +164,33 @@ export function GoalCard(props: GoalCardProps) {
         </>
       )}
 
-      {/* Métriques d'estimation */}
+      {/* Le plan et le réel, côte à côte.
+
+          Les paramètres du roman promettent une date — ce qui reste divisé
+          par le rythme déclaré. Le tableau de bord en projetait une autre,
+          tirée du rythme réellement tenu, sans jamais nommer le plan dont
+          elle s'écarte. Deux pages annonçaient deux dates très différentes
+          et aucune ne disait à quoi l'autre répondait. L'écart entre les
+          deux est précisément ce qu'on vient chercher ici.
+
+          « Restant » a cédé sa place : la barre juste au-dessus l'énonce
+          déjà, mots écrits sur objectif. */}
       <div className="rd-metrics-row">
         <div>
-          <div className="rd-metric-label">Fin estimée</div>
+          <div className="rd-metric-label">Fin prévue</div>
+          <div className="rd-metric-value">{plannedEtaLabel ?? "—"}</div>
+        </div>
+        <div>
+          <div className="rd-metric-label">Au rythme actuel</div>
           <div className="rd-metric-value">{etaLabel ?? "—"}</div>
         </div>
         <div>
           <div className="rd-metric-label">Rythme (7 j)</div>
           <div className="rd-metric-value">
             {realDailyPace > 0 ? Math.round(realDailyPace).toLocaleString("fr-FR") : "—"}
-            {realDailyPace > 0 && <span className="small">mots/j</span>}
-          </div>
-        </div>
-        <div>
-          <div className="rd-metric-label">Restant</div>
-          <div className="rd-metric-value">
-            {remainingWords > 0 ? remainingWords.toLocaleString("fr-FR") : "—"}
+            <span className="small">
+              {" "}mots/j · {dailyGoal.toLocaleString("fr-FR")} visés
+            </span>
           </div>
         </div>
         <div>
