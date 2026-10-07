@@ -62,7 +62,8 @@ export default async function DashboardPage() {
         `id, title, genre, created_at, updated_at, cover_image_url,
          novels (
            id, title, current_words, word_goal, is_active, status,
-           activated_at, activation_word_count, project_id, created_at, updated_at
+           activated_at, activation_word_count, project_id, created_at, updated_at,
+           words_per_session, sessions_per_week
          )`,
       )
       .eq("user_id", user.id)
@@ -226,6 +227,11 @@ export default async function DashboardPage() {
   const allNovels = projects?.flatMap(p => p.novels ?? []) ?? [];
   const activeNovel = allNovels.find((n: { is_active?: boolean }) => n.is_active);
 
+  /* Le rythme réglé dans les paramètres du roman.
+     Ces deux colonnes n'étaient pas demandées à la requête ci-dessus : elles
+     arrivaient donc toujours indéfinies, et le tableau de bord retombait en
+     silence sur la valeur par défaut. Un roman réglé à 1 500 mots par jour
+     était jugé sur 500, sans que rien ne le signale. */
   const DAILY_GOAL = (() => {
     if (!activeNovel) return DEFAULT_DAILY_GOAL;
     const wps = (activeNovel as { words_per_session?: number | null }).words_per_session ?? 0;
