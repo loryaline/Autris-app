@@ -27,6 +27,15 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.11.2] — 2026-10-07
+
+### Corrections
+
+- **Le chapitrage défile de nouveau au doigt.** La poignée de ligne porte un glisser-déposer natif, qui n'existe pas sur Safari iOS — il n'y réordonnait donc rien. Mais depuis qu'elle est rendue visible en permanence sur tactile, elle forme une bande de 26 px sur toute la hauteur du tableau, à gauche, exactement là où le pouce se pose : elle y captait le geste et bloquait le défilement. Le glisser natif est réservé à la souris, et le menu de la ligne gagne **Monter** et **Descendre**, qui font le même travail.
+- **Le dézoome du plateau répond tout de suite sur iPad.** Chaque image du pincement déclenchait un rendu complet de la surface — toutes les vignettes, tous les liens, reconstruits soixante fois par seconde. Le geste décrochait : on écartait les doigts, rien ne bougeait, puis le plateau rattrapait d'un bond, au point de douter qu'il ait compris. Pendant le geste, seules trois propriétés changent réellement — les deux plans et le calage de la grille : elles sont désormais écrites directement, et l'état n'est mis à jour qu'au relâchement.
+
+---
+
 ## [0.11.1] — 2026-10-07
 
 ### Changements
