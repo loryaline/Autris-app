@@ -27,6 +27,16 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.11.0] — 2026-10-07
+
+### Changements
+
+- **Le tableau de bord n'a plus de date de départ.** Tout se mesurait jusqu'ici sur la fenêtre « depuis l'activation » — une date posée automatiquement au moment où l'on rend un roman actif, que rien ne permettait de corriger. Un roman activé des semaines avant la première séance d'écriture traînait un déficit impossible à rattraper : des milliers de mots « attendus » pour des jours où personne n'avait prévu d'écrire. Le statut annonçait « en retard » et n'avait aucun moyen d'annoncer autre chose.
+- **L'avancement se lit sur le roman entier** — les mots écrits sur l'objectif total — au lieu d'un décompte partant d'une date arbitraire.
+- **Le rythme se mesure sur les sept derniers jours glissants**, une fenêtre qui avance avec le temps et qu'aucune date passée ne leste. S'arrêter une semaine se voit, et se rattrape.
+
+---
+
 ## [0.10.11] — 2026-10-07
 
 ### Corrections

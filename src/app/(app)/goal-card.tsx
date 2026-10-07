@@ -34,15 +34,15 @@ interface GoalCardProps {
   activeNovelGoalReached: boolean;
   dailyGoal: number;
   streak: number;
-  daysSinceActivation: number;
-  wordsSinceActivation: number;
-  expectedSinceActivation: number;
-  periodPct: number;
+  /** Mots écrits sur le roman actif, en tout. */
+  totalWordsNovel: number;
+  /** Objectif total du roman, 0 si aucun n'est fixé. */
+  goalWordsNovel: number;
+  progressPct: number;
   etaLabel: string | null;
   realDailyPace: number;
   remainingWords: number;
   paceVerdict: string | null;
-  activationDateLabel: string | null;
 }
 
 const MONTHS = [
@@ -71,9 +71,8 @@ export function GoalCard(props: GoalCardProps) {
     monthActivity, startOffset, monthIndex, todayNum,
     activeNovelTitle, activeNovelExists, activeNovelGoalReached,
     dailyGoal, streak,
-    wordsSinceActivation, expectedSinceActivation, periodPct,
+    totalWordsNovel, goalWordsNovel, progressPct,
     etaLabel, realDailyPace, remainingWords, paceVerdict,
-    activationDateLabel,
   } = props;
 
   const [selectedDay, setSelectedDay] = useState(todayNum);
@@ -124,9 +123,6 @@ export function GoalCard(props: GoalCardProps) {
           </div>
           <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 2 }}>
             Objectif quotidien · {dailyGoal.toLocaleString("fr-FR")} mots
-            {activationDateLabel && (
-              <> · actif depuis le {activationDateLabel}</>
-            )}
           </div>
         </div>
         {streak > 0 && (
@@ -139,25 +135,28 @@ export function GoalCard(props: GoalCardProps) {
         )}
       </div>
 
-      {/* Progression depuis activation */}
-      {activeNovelExists && !activeNovelGoalReached && (
+      {/* Avancement du roman — les mots écrits sur l'objectif total.
+          Plus de « depuis l'activation » : cette fenêtre partait d'une date
+          posée automatiquement, impossible à corriger, et comptabilisait
+          comme un retard tous les jours où l'on n'avait jamais prévu
+          d'écrire. Ce que montre cette barre ne dépend d'aucune date. */}
+      {activeNovelExists && !activeNovelGoalReached && goalWordsNovel > 0 && (
         <>
           <div className="rd-progress-row">
             <span style={{ color: "var(--text-3)" }}>
-              Depuis l&apos;activation ·{" "}
               <span style={{ color: "var(--text-2)" }}>
-                {wordsSinceActivation.toLocaleString("fr-FR")}
+                {totalWordsNovel.toLocaleString("fr-FR")}
               </span>
               <span style={{ color: "var(--text-4)" }}>
-                {" "}/ {expectedSinceActivation.toLocaleString("fr-FR")} attendus
+                {" "}/ {goalWordsNovel.toLocaleString("fr-FR")} mots
               </span>
             </span>
-            <span className="pct">{periodPct}%</span>
+            <span className="pct">{progressPct}%</span>
           </div>
           <div className="rd-progress-bar">
             <div
               className="rd-progress-fill"
-              style={{ width: `${Math.min(100, periodPct)}%` }}
+              style={{ width: `${Math.min(100, progressPct)}%` }}
             />
           </div>
         </>
@@ -170,7 +169,7 @@ export function GoalCard(props: GoalCardProps) {
           <div className="rd-metric-value">{etaLabel ?? "—"}</div>
         </div>
         <div>
-          <div className="rd-metric-label">Rythme</div>
+          <div className="rd-metric-label">Rythme (7 j)</div>
           <div className="rd-metric-value">
             {realDailyPace > 0 ? Math.round(realDailyPace).toLocaleString("fr-FR") : "—"}
             {realDailyPace > 0 && <span className="small">mots/j</span>}
