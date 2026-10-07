@@ -473,6 +473,40 @@ export function WbBoardCanvas({
   }, [viewport]);
   const pinch = useRef<{ dist: number; cx: number; cy: number } | null>(null);
 
+  /* Les trois couches qui portent le cadrage, pour les piloter à la main
+     pendant un pincement. */
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const edgePlaneRef = useRef<SVGGElement | null>(null);
+  const nodePlaneRef = useRef<HTMLDivElement | null>(null);
+
+  /* Applique un cadrage SANS repasser par React.
+
+     Un pincement émet plusieurs dizaines d'événements par seconde. Chacun
+     déclenchait un rendu complet de la surface : toutes les vignettes,
+     tous les liens, reconstruits à chaque image. Sur iPad le geste
+     décrochait — on écartait les doigts et il ne se passait rien pendant
+     un instant, puis le plateau rattrapait d'un bond, au point de douter
+     que le pincement soit reconnu.
+
+     Pendant le geste, seules trois propriétés changent réellement : la
+     translation du plan des objets, celle du plan des liens, et le calage
+     de la grille. On les écrit directement. L'état React n'est mis à jour
+     qu'au relâchement — une fois, pas soixante. */
+  const applyViewportToDom = useCallback((v: Viewport) => {
+    if (nodePlaneRef.current) {
+      nodePlaneRef.current.style.transform =
+        `translate(${v.x}px, ${v.y}px) scale(${v.zoom})`;
+    }
+    edgePlaneRef.current?.setAttribute(
+      "transform",
+      `translate(${v.x} ${v.y}) scale(${v.zoom})`,
+    );
+    if (gridRef.current) {
+      gridRef.current.style.backgroundSize = `${28 * v.zoom}px ${28 * v.zoom}px`;
+      gridRef.current.style.backgroundPosition = `${v.x}px ${v.y}px`;
+    }
+  }, []);
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -511,22 +545,25 @@ export function WbBoardCanvas({
       // déplace : les deux gestes se composent en une seule opération.
       const px = now.cx - r.left;
       const py = now.cy - r.top;
-      onViewportChange(
-        {
-          zoom,
-          x: px - (prev.cx - r.left - vp.x) * k,
-          y: py - (prev.cy - r.top - vp.y) * k,
-        },
-        false,
-      );
+      const next = {
+        zoom,
+        x: px - (prev.cx - r.left - vp.x) * k,
+        y: py - (prev.cy - r.top - vp.y) * k,
+      };
+      // Le ref fait foi pendant le geste : c'est lui que lit l'image
+      // suivante, puisque l'état React ne bougera qu'à la fin.
+      vpRef.current = next;
+      applyViewportToDom(next);
       pinch.current = now;
     };
 
     const up = (e: PointerEvent) => {
       if (!pointers.current.delete(e.pointerId)) return;
       if (pointers.current.size < 2) {
-        // On persiste au moment où le pincement se termine, pas à chaque
-        // image : le plateau n'a pas à écrire soixante fois par seconde.
+        /* Le relâchement est le seul moment où React apprend le nouveau
+           cadrage : d'un coup, et une seule fois. Tout ce qui dépend du
+           zoom sans vivre dans les plans transformés — la minimap, la
+           taille des poignées — se remet à jour ici. */
         if (pinch.current) onViewportChange(vpRef.current, true);
         pinch.current = null;
       }
@@ -552,7 +589,7 @@ export function WbBoardCanvas({
     };
     // La ref porte le viewport : l'effet n'a plus à se ré-attacher à
     // chaque image de pincement.
-  }, [onViewportChange]);
+  }, [onViewportChange, applyViewportToDom]);
 
   /* ---- Suppr : retire du PLATEAU les objets ou la flèche sélectionnés.
    * Jamais la fiche, jamais la relation — d'où l'absence de confirmation. */
@@ -845,6 +882,7 @@ export function WbBoardCanvas({
       {/* Grille de points, solidaire du plan */}
       <div
         data-board-bg="1"
+        ref={gridRef}
         className="absolute inset-0"
         style={{
           backgroundImage:
@@ -881,6 +919,7 @@ export function WbBoardCanvas({
           </marker>
         </defs>
         <g
+          ref={edgePlaneRef}
           transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.zoom})`}
         >
           {displayEdges.map(({ edge, twin, label, symmetric }) => {
@@ -1119,6 +1158,7 @@ export function WbBoardCanvas({
 
       {/* Objets — plan transformé */}
       <div
+        ref={nodePlaneRef}
         className="absolute top-0 left-0"
         style={{
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,

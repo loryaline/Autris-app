@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { appConfirm } from "@/lib/app-confirm";
 import { appToast } from "@/lib/app-toast";
 import { useLongPress } from "@/lib/useLongPress";
+import { useViewport } from "@/lib/useViewport";
 import type { ChapterStatus } from "@/types/database";
 import type { ChapterData as ChapterRow, CustomColumn, CellValue } from "@/app/(app)/planning/[novelId]/planning-client";
 import { RichEditableCell, computeClickOffset } from "./RichEditableCell";
@@ -537,6 +538,8 @@ export function ChapterTable({
    * sous le doigt : un par cellule serait un hook dans une boucle, ce que
    * React interdit — et cinquante gestionnaires pour un geste rare.
    */
+  const { hasTouch } = useViewport();
+
   const longPress = useLongPress((pt) => {
     const el = document.elementFromPoint(pt.clientX, pt.clientY);
     const cellEl = (el as HTMLElement | null)?.closest(
@@ -1249,6 +1252,30 @@ export function ChapterTable({
   }
 
   /* ---- Row drag & drop ---- */
+  /* Déplacer une ligne d'un cran, sans glisser.
+
+     Le glisser-déposer HTML5 n'existe pas sur Safari iOS : la poignée
+     `draggable` n'y réordonne rien. Pire, devenue visible en permanence
+     sur tactile, elle formait une bande de 26 px sur toute la hauteur du
+     tableau, à gauche — exactement là où le pouce se pose — et y bloquait
+     le défilement. On la laisse à la souris et on offre au doigt deux
+     entrées de menu, qui font le même travail. */
+  async function moveRow(idx: number, delta: number) {
+    const cible = idx + delta;
+    if (cible < 0 || cible >= sorted.length) return;
+    const reordered = [...sorted];
+    const [item] = reordered.splice(idx, 1);
+    reordered.splice(cible, 0, item);
+    const updated = reordered.map((c, i) => ({ ...c, position: i }));
+    setChapters(updated);
+    const supabase = supabaseRef.current;
+    await Promise.all(
+      updated.map((c) =>
+        supabase.from("chapters").update({ position: c.position }).eq("id", c.id)
+      )
+    );
+  }
+
   async function handleRowDrop() {
     if (dragRowIdx === null || dragOverRowIdx === null || dragRowIdx === dragOverRowIdx) {
       setDragRowIdx(null);
@@ -1565,6 +1592,31 @@ export function ChapterTable({
             }}
           >
             <button
+              disabled={rowMenu.idx === 0}
+              onClick={() => {
+                const m = rowMenu;
+                setRowMenu(null);
+                moveRow(m.idx, -1);
+              }}
+              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2 disabled:opacity-35 disabled:cursor-not-allowed"
+            >
+              <span className="text-[13px] leading-none w-4 text-center">⌃</span>
+              Monter ce chapitre
+            </button>
+            <button
+              disabled={rowMenu.idx >= sorted.length - 1}
+              onClick={() => {
+                const m = rowMenu;
+                setRowMenu(null);
+                moveRow(m.idx, 1);
+              }}
+              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2 disabled:opacity-35 disabled:cursor-not-allowed"
+            >
+              <span className="text-[13px] leading-none w-4 text-center">⌄</span>
+              Descendre ce chapitre
+            </button>
+            <div className="my-1 border-t border-white/[0.06]" />
+            <button
               onClick={() => {
                 const m = rowMenu;
                 setRowMenu(null);
@@ -1856,7 +1908,7 @@ export function ChapterTable({
                       d'options de la ligne, drag réordonne. */}
                   <button
                     type="button"
-                    draggable
+                    draggable={!hasTouch}
                     onDragStart={(e) => {
                       setDragRowIdx(idx);
                       e.dataTransfer.effectAllowed = "move";
