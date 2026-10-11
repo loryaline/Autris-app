@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.11.3] — 2026-10-11
+
+### Corrections
+
+- **Une case en cours d'édition n'a plus qu'un seul cadre.** Il y en avait deux, emboîtés à quelques pixels l'un de l'autre pour désigner le même endroit : celui que la case dessine elle-même, et un second posé autour de la zone de texte. Le cadre de la case reste — il épouse ses bords — et le texte n'en porte plus. Un fond à peine plus clair suffit à dire que la saisie est ouverte.
+
+---
+
 ## [0.11.2] — 2026-10-07
 
 ### Corrections

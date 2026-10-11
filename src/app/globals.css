@@ -318,12 +318,15 @@ body {
 .rich-cell-display p {
   margin: 0;
 }
-/* Une seule fenêtre de focus visible : la cellule active reçoit une
-   subtile bordure accent qui matérialise la sélection. */
+/* La case en cours d'édition.
+
+   Il y avait deux cadres pour une seule case : celui que la case dessine
+   elle-même, et celui-ci, posé autour de la zone de texte. Deux traits
+   d'accent emboîtés à quelques pixels l'un de l'autre, pour désigner le
+   même endroit. On garde le cadre de la case — il épouse ses bords — et
+   le texte n'en porte plus. Reste un fond à peine plus clair, qui suffit
+   à dire que la saisie est ouverte. */
 .cell-focused {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
-  border-radius: 2px;
   background: rgba(255, 255, 255, 0.02);
 }
 

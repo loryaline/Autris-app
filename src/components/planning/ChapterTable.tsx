@@ -2047,8 +2047,10 @@ export function ChapterTable({
                         }}
                       >
                         {renderCell(col, chapter)}
-                        {/* Habillage sélection — overlay non interactif */}
-                        {isSelected && !isEditing && (
+                        {/* Habillage sélection — overlay non interactif, donc
+                            sans gêne pour la saisie. Il reste affiché pendant
+                            l'édition : c'est lui, désormais, le seul cadre. */}
+                        {isSelected && (
                           <div
                             className="absolute inset-0 pointer-events-none z-10"
                             style={{
