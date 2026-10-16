@@ -29,9 +29,24 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  /* Qui est connecté, au prix le plus bas possible.
+
+     `getUser()` interroge le serveur d'authentification à chaque requête.
+     `getClaims()` vérifie la signature sur place — le projet signe en
+     ES256, donc avec une clé publique mise en cache, sans réseau.
+
+     Mais `getClaims()` ne sait pas renouveler un jeton périmé. On ne
+     retombe donc sur `getUser()` que dans ce cas précis : lui va chercher
+     une session fraîche et réécrit les témoins. Le cas courant ne coûte
+     plus rien ; le cas rare coûte ce qu'il coûtait. */
+  const { data: revendications } = await supabase.auth.getClaims();
+  let user: { id: string } | null = revendications?.claims?.sub
+    ? { id: revendications.claims.sub }
+    : null;
+  if (!user) {
+    const { data } = await supabase.auth.getUser();
+    user = data.user ? { id: data.user.id } : null;
+  }
 
   // If not logged in and trying to access app routes, redirect to login
   const isAuthRoute =
@@ -58,7 +73,21 @@ export async function updateSession(request: NextRequest) {
   // If logged in but onboarding not done, redirect to onboarding.
   // Si le profil est marqué deleted_at (RGPD soft delete), on déconnecte
   // et on renvoie vers /login — quel que soit l'état de l'onboarding.
-  if (user && !isAuthRoute && !isAuthCallback && !isOnboarding) {
+  /* L'état du profil, revérifié de loin en loin et non à chaque page.
+
+     Cette lecture de `profiles` partait en base à CHAQUE requête — chaque
+     navigation, chaque préchargement — pour répondre deux fois sur mille
+     autre chose que « ce compte est normal ». C'était le second
+     aller-retour distant payé avant que la page ne commence.
+
+     Un témoin de courte durée mémorise la réponse. Dix minutes : assez
+     pour que la question ne se pose qu'une fois par visite, assez peu
+     pour qu'un compte supprimé entre-temps soit déconnecté sans tarder.
+     Les deux bascules qui comptent — fin de l'intégration, suppression du
+     compte — effacent ce témoin au moment où elles surviennent. */
+  const profilVerifie = request.cookies.get("autris_profil")?.value === "ok";
+
+  if (user && !isAuthRoute && !isAuthCallback && !isOnboarding && !profilVerifie) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("onboarding_done, deleted_at")
@@ -77,6 +106,16 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";
       return NextResponse.redirect(url);
+    }
+
+    // Compte normal : on s'en souvient, et on cesse de le redemander.
+    if (profile) {
+      supabaseResponse.cookies.set("autris_profil", "ok", {
+        maxAge: 600,
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+      });
     }
   }
 

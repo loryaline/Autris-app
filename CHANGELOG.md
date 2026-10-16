@@ -27,6 +27,20 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.13.0] — 2026-10-16
+
+### Changements
+
+- **Une navigation ne coûte plus quatre allers-retours distants avant de commencer.** Chaque changement de page interrogeait le serveur d'authentification Supabase **trois fois** — le garde-route, la mise en page de l'application, puis la page — et lisait en plus la table `profiles` pour vérifier l'état du compte. Quatre attentes réseau empilées, chacune avant la suivante, avant que la moindre donnée de la page ne soit demandée.
+
+  Le projet signe ses jetons avec une clé asymétrique. La signature se vérifie donc **sur place**, avec la clé publique mise en cache : même garantie, aucun réseau. Les trois vérifications deviennent gratuites. Le garde-route ne retombe sur l'appel distant que dans le cas où il sert vraiment à quelque chose — un jeton périmé à renouveler.
+
+  Quant à l'état du compte, un témoin de dix minutes mémorise la réponse au lieu de reposer la question à chaque page.
+
+- **Un compte supprimé depuis un autre appareil est désormais déconnecté dans les dix minutes**, au lieu de l'être à la page suivante. C'est la contrepartie du témoin ci-dessus. Une suppression faite depuis l'appareil courant déconnecte toujours sur-le-champ, et les données restent protégées par les règles d'accès de la base dans l'intervalle.
+
+---
+
 ## [0.12.2] — 2026-10-16
 
 ### Corrections

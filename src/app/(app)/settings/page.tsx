@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsClient } from "./settings-client";
+import { utilisateurConnecte } from "@/lib/supabase/utilisateur";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Vérification locale du jeton, sans aller-retour réseau — cf. utilisateurConnecte.
+  const user = await utilisateurConnecte(supabase);
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase

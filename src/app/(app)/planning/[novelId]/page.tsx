@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PlanningClient } from "./planning-client";
 import { getNarrativeMethod } from "@/lib/narrative-methods";
 import { personaPrefs } from "@/lib/persona";
+import { utilisateurConnecte } from "@/lib/supabase/utilisateur";
 
 // « postits » a été retiré : un lien enregistré vers cet onglet retombe
 // donc sur le chapitrage plutôt que sur un écran vide.
@@ -21,7 +22,8 @@ export default async function PlanningPage({
   const initialView =
     view && PLANNING_VIEWS.includes(view) ? view : "tableau";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Vérification locale du jeton, sans aller-retour réseau — cf. utilisateurConnecte.
+  const user = await utilisateurConnecte(supabase);
   if (!user) redirect("/login");
 
   // Phase 1 : tout ce qui ne dépend pas de chapters/customColumns en parallèle.

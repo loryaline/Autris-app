@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { IdeasClient } from "./ideas-client";
 import type { Idea } from "@/types/database";
+import { utilisateurConnecte } from "@/lib/supabase/utilisateur";
 
 /**
  * La boîte à idées — écran d'accueil de la version mobile.
@@ -11,9 +12,8 @@ import type { Idea } from "@/types/database";
  */
 export default async function IdeasPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Vérification locale du jeton, sans aller-retour réseau — cf. utilisateurConnecte.
+  const user = await utilisateurConnecte(supabase);
   if (!user) return null;
 
   const [ideasRes, projectsRes] = await Promise.all([
