@@ -27,6 +27,20 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.12.0] — 2026-10-16
+
+### Ajouts
+
+- **La typographie française se tape au clavier.** Un clavier ne porte ni guillemets français, ni cadratin, ni demi-cadratin — les trois signes dont un roman français a le plus besoin. Trois raccourcis, dans l'éditeur : `""` donne `«` ou `»` selon qu'un guillemet attend sa fermeture, `--` donne un demi-cadratin `–`, `---` un cadratin `—` pour les tirets de dialogue. Les guillemets reçoivent l'espace fine insécable qu'exige la typographie française — « comme ceci » — sans quoi le chevron part seul à la ligne. Les règles reconnaissent aussi les guillemets courbes et les tirets longs que la ponctuation intelligente d'iOS produit d'elle-même : les raccourcis fonctionnent donc au doigt sur iPad, pas seulement au clavier physique.
+- **Chaque page annonce son chargement.** Un squelette apparaît dès le clic, au lieu d'attendre que la page soit prête.
+
+### Corrections
+
+- **Un bouton pressé répond, à la souris aussi.** L'enfoncement n'avait été ajouté que pour le tactile. Or il manque là où il manque aussi : au survol, la souris apprend qu'un élément est cliquable, jamais que le clic a été reçu.
+- **Les changements de page ne donnent plus l'impression d'être ignorés.** Aucune route n'avait de frontière de chargement : le routeur restait sur la page précédente, figée, le temps que les requêtes aboutissent — rien ne bougeait, et l'on cliquait une seconde fois en croyant n'avoir pas cliqué. La page n'arrive pas plus vite, mais la transition commence à l'instant du clic. Le squelette n'apparaît qu'après 150 ms : en dessous, un affichage qui surgit et s'efface aussitôt se lit comme un clignotement, plus désagréable que l'attente qu'il masque.
+
+---
+
 ## [0.11.3] — 2026-10-11
 
 ### Corrections

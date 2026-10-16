@@ -1883,14 +1883,52 @@ body {
   label {
     -webkit-tap-highlight-color: color-mix(in srgb, var(--accent) 26%, transparent);
   }
+}
 
-  button:active:not(:disabled),
-  [role="button"]:active,
-  .rd-btn:active:not(:disabled),
-  .rd-icon-btn:active:not(:disabled),
-  .rd-cal-cell:active:not(:disabled) {
-    opacity: 0.55;
-    /* Assez court pour être perçu comme une réponse, pas comme un délai. */
-    transition: opacity 0.05s linear;
-  }
+/* L'enfoncement, pour TOUS les pointeurs.
+   Réservé d'abord au tactile, il manquait là où il manque aussi : à la
+   souris, le survol dit « ce truc est cliquable », jamais « j'ai bien reçu
+   ton clic ». Entre l'appui et l'arrivée de la page, rien ne bougeait. */
+button:active:not(:disabled),
+[role="button"]:active,
+.rd-btn:active:not(:disabled),
+.rd-icon-btn:active:not(:disabled),
+.rd-cal-cell:active:not(:disabled),
+.rd-stat-card:active {
+  opacity: 0.55;
+  /* Assez court pour être perçu comme une réponse, pas comme un délai. */
+  transition: opacity 0.05s linear;
+}
+
+
+/* Les squelettes de chargement.
+
+   Aucune route n'avait de frontière de chargement : le routeur restait
+   donc sur l'ancienne page, figé, jusqu'à ce que la nouvelle ait fini
+   d'interroger la base. Rien ne bougeait, et on cliquait deux fois en
+   croyant n'avoir pas cliqué. Un squelette rend la transition immédiate :
+   le changement de page se voit avant d'être terminé. */
+.rd-skel {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 0%,
+    color-mix(in srgb, var(--surface-2) 70%, transparent) 50%,
+    var(--surface) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--r-sm);
+  animation: rd-skel-sweep 1.3s var(--ease-out) infinite;
+}
+@keyframes rd-skel-sweep {
+  to { background-position: -200% 0; }
+}
+/* Un écran qui clignote est pire que l'attente : sous le seuil où l'œil
+   perçoit un changement de page, le squelette reste invisible. */
+.rd-skel-page { animation: rd-skel-in 0.01s linear 0.15s both; }
+@keyframes rd-skel-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rd-skel { animation: none; }
 }

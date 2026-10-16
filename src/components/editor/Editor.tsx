@@ -16,6 +16,7 @@ import { ContextPanel } from "./ContextPanel";
 import { EditorMobileRail, type RailKey } from "./EditorMobileRail";
 import { useViewport } from "@/lib/useViewport";
 import { Pomodoro } from "./Pomodoro";
+import { TypographieFr } from "@/lib/editor/typographie-fr";
 
 interface ChapterData {
   id: string;
@@ -126,8 +127,11 @@ export function NovelEditor({
         showOnlyCurrent: true,
       }),
       CharacterCount,
-      // Typography retiré : ses smart quotes / tirets em sont déclenchés
-      // par les input rules et perturbent la composition iOS Safari.
+      // Typography (le paquet officiel) reste retiré : ses règles
+      // touchaient aussi l'apostrophe et les guillemets anglais, ce qui
+      // désorganisait la composition sur Safari iOS. TypographieFr ne
+      // reprend que « », – et — — rien qui interfère avec l'apostrophe.
+      TypographieFr,
     ],
     // Contenu initial figé via useState — ne change plus à chaque render,
     // donc useEditor ne ré-instancie pas l'éditeur sous nous.
