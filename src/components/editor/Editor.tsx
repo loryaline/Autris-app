@@ -111,10 +111,18 @@ export function NovelEditor({
     // au DOM, et la composition iOS est perdue (lettre écrasée par la
     // suivante, curseur figé). Ce flag est la solution réelle.
     shouldRerenderOnTransaction: false,
-    // Désactive les input rules globalement — éviter que TipTap intercepte
-    // les frappes pour appliquer des règles auto (smart quotes, tirets,
-    // etc) qui rentrent en conflit avec la composition iOS.
-    enableInputRules: false,
+    /* Les règles de saisie restent coupées — SAUF les nôtres.
+
+       Ce drapeau était un simple `false`, ce qui désactivait TOUTES les
+       règles de saisie : les raccourcis typographiques ajoutés plus tard
+       ne pouvaient donc jamais se déclencher, et rien ne le signalait.
+
+       Il vaut mieux qu'un booléen ici. Les règles markdown de StarterKit
+       — `#` qui fait un titre, `- ` qui ouvre une liste, `---` qui trace
+       un filet — n'ont rien à faire dans un roman, où une réplique
+       commence précisément par un tiret. Elles restent donc éteintes, et
+       seule TypographieFr est autorisée à transformer la frappe. */
+    enableInputRules: [TypographieFr],
     enablePasteRules: false,
     extensions: [
       StarterKit.configure({

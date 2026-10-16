@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.12.2] — 2026-10-16
+
+### Corrections
+
+- **Les raccourcis typographiques fonctionnent enfin.** Livrés en 0.12.0, ils ne pouvaient pas se déclencher : l'éditeur portait `enableInputRules: false`, qui coupe **toutes** les règles de saisie — les nôtres comprises. Rien ne le signalait, ni à la compilation ni à l'exécution. Le drapeau accepte une liste d'extensions plutôt qu'un simple booléen : seules celles de la typographie française sont désormais autorisées. Les règles markdown de StarterKit restent éteintes, ce pour quoi le drapeau existait — dans un roman, `- ` ouvrirait une liste à chaque réplique et `---` tracerait un filet au lieu d'un cadratin.
+
+---
+
 ## [0.12.1] — 2026-10-16
 
 ### Changements

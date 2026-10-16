@@ -77,7 +77,18 @@ export function SynopsisView({
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
-    enableInputRules: false,
+    /* Les règles de saisie restent coupées — SAUF les nôtres.
+
+       Ce drapeau était un simple `false`, ce qui désactivait TOUTES les
+       règles de saisie : les raccourcis typographiques ajoutés plus tard
+       ne pouvaient donc jamais se déclencher, et rien ne le signalait.
+
+       Il vaut mieux qu'un booléen ici. Les règles markdown de StarterKit
+       — `#` qui fait un titre, `- ` qui ouvre une liste, `---` qui trace
+       un filet — n'ont rien à faire dans un roman, où une réplique
+       commence précisément par un tiret. Elles restent donc éteintes, et
+       seule TypographieFr est autorisée à transformer la frappe. */
+    enableInputRules: [TypographieFr],
     enablePasteRules: false,
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
