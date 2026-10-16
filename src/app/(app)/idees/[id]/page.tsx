@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NoteEditor } from "@/components/ideas/NoteEditor";
 import type { Idea } from "@/types/database";
+import { utilisateurConnecte } from "@/lib/supabase/utilisateur";
 
 /** Une idée, ouverte en plein écran — c'est-à-dire modifiable. */
 export default async function NotePage({
@@ -11,9 +12,8 @@ export default async function NotePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Vérification locale du jeton, sans aller-retour réseau — cf. utilisateurConnecte.
+  const user = await utilisateurConnecte(supabase);
   if (!user) return null;
 
   const [ideaRes, projectsRes] = await Promise.all([

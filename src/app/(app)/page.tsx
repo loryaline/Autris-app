@@ -5,6 +5,7 @@ import { personaPrefs } from "@/lib/persona";
 import { FirstStepsBanner } from "./first-steps-banner";
 import { WBNudge } from "@/components/home/WBNudge";
 import { MilestoneAlerts, type MilestoneAlertItem } from "@/components/home/MilestoneAlerts";
+import { utilisateurConnecte } from "@/lib/supabase/utilisateur";
 
 // Fenêtre d'alerte « jalon approche » : J-7 par défaut. Au-delà, on considère
 // que le jalon est encore lointain et on n'embête pas l'utilisatrice.
@@ -14,7 +15,8 @@ const DEFAULT_DAILY_GOAL = 500;
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Vérification locale du jeton, sans aller-retour réseau — cf. utilisateurConnecte.
+  const user = await utilisateurConnecte(supabase);
 
   if (!user) return null;
 

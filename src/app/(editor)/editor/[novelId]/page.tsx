@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NovelEditor } from "@/components/editor/Editor";
 import { personaPrefs } from "@/lib/persona";
+import { utilisateurConnecte } from "@/lib/supabase/utilisateur";
 
 export default async function EditorPage({
   params,
@@ -10,7 +11,8 @@ export default async function EditorPage({
   const { novelId } = await params;
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Vérification locale du jeton, sans aller-retour réseau — cf. utilisateurConnecte.
+  const user = await utilisateurConnecte(supabase);
 
   // Phase 1 : profil + roman (avec titre projet joint) en parallèle.
   // L'ancien code faisait 4 awaits séquentiels — ici on en fait 1 puis 1.

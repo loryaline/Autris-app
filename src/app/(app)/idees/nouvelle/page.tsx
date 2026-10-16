@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NoteEditor } from "@/components/ideas/NoteEditor";
+import { utilisateurConnecte } from "@/lib/supabase/utilisateur";
 
 /**
  * Une note neuve.
@@ -9,9 +10,8 @@ import { NoteEditor } from "@/components/ideas/NoteEditor";
  */
 export default async function NouvelleNotePage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Vérification locale du jeton, sans aller-retour réseau — cf. utilisateurConnecte.
+  const user = await utilisateurConnecte(supabase);
   if (!user) return null;
 
   const { data: projects } = await supabase

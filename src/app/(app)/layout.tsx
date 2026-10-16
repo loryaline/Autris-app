@@ -4,10 +4,12 @@ import { Topbar } from "@/components/layout/Topbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { ThemeBar } from "@/components/theme/ThemeBar";
+import { utilisateurConnecte } from "@/lib/supabase/utilisateur";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Vérification locale du jeton, sans aller-retour réseau — cf. utilisateurConnecte.
+  const user = await utilisateurConnecte(supabase);
 
   let username: string | null = null;
   let sidebarProjects: {

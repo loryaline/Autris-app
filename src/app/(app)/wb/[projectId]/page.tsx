@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { WbClient } from "./wb-client";
 import { personaPrefs } from "@/lib/persona";
 import type { Genre } from "@/types/database";
+import { utilisateurConnecte } from "@/lib/supabase/utilisateur";
 
 export default async function WorldBuildingPage({
   params,
@@ -11,7 +12,8 @@ export default async function WorldBuildingPage({
 }) {
   const { projectId } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Vérification locale du jeton, sans aller-retour réseau — cf. utilisateurConnecte.
+  const user = await utilisateurConnecte(supabase);
   if (!user) redirect("/login");
 
   const [{ data: project }, { data: profile }] = await Promise.all([
