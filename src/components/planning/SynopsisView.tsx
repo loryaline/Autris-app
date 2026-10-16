@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { TypographieFr } from "@/lib/editor/typographie-fr";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { createClient } from "@/lib/supabase/client";
@@ -85,6 +86,10 @@ export function SynopsisView({
         placeholder: "Rédigez ici ce synopsis…",
         showOnlyWhenEditable: true,
       }),
+      // Un synopsis se rédige comme le roman : mêmes guillemets, mêmes
+      // tirets. Les raccourcis n'avaient été branchés que sur l'éditeur,
+      // et s'arrêtaient donc à sa porte.
+      TypographieFr,
     ],
     content: initialContent,
     editorProps: {

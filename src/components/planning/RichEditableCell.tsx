@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { TypographieFr } from "@/lib/editor/typographie-fr";
 import Underline from "@tiptap/extension-underline";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
@@ -178,6 +179,9 @@ function FocusedCell({
       TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
+      // Les cellules du chapitrage reçoivent du vrai texte — répliques,
+      // résumés de scène. Mêmes raccourcis typographiques qu'ailleurs.
+      TypographieFr,
     ],
     content: value || "",
     immediatelyRender: false,

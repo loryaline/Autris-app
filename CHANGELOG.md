@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.12.1] — 2026-10-16
+
+### Changements
+
+- **Les raccourcis typographiques valent partout où l'on écrit** : le synopsis et les cellules du chapitrage les reçoivent à leur tour. Ils n'avaient été branchés que sur l'éditeur du roman et s'arrêtaient à sa porte, alors qu'on y rédige aussi des répliques et des résumés de scène.
+
+---
+
 ## [0.12.0] — 2026-10-16
 
 ### Ajouts
