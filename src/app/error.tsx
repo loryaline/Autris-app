@@ -40,7 +40,7 @@ export default function ErrorPage({
         </p>
 
         {error?.digest && (
-          <p className="text-[10.5px] text-text-quaternary mb-6 font-mono">
+          <p className="text-[10px] text-text-quaternary mb-6 font-mono">
             Référence : {error.digest}
           </p>
         )}

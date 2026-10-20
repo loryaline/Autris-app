@@ -524,7 +524,7 @@ export function WbClient({
                   </div>
                 )}
                 {showTips && (
-                  <div className="mt-1.5 text-[11.5px] text-text-quaternary italic">
+                  <div className="mt-1.5 text-[12px] text-text-quaternary italic">
                     Astuce : créez quelques fiches dans une catégorie, puis liez-les entre elles depuis chaque fiche.
                   </div>
                 )}
@@ -536,7 +536,7 @@ export function WbClient({
                 <button
                   onClick={() => createEntry("__libre__")}
                   title="Créer une fiche sans modèle — vous ajoutez les blocs vous-même"
-                  className="h-9 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] text-[12.5px] cursor-pointer transition-colors"
+                  className="h-9 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] text-[12px] cursor-pointer transition-colors"
                 >
                   <span className="text-[13px]">✎</span>
                   Fiche libre
@@ -572,7 +572,7 @@ export function WbClient({
                   <div className="relative">
                     <button
                       onClick={() => setShowSubtypeMenu((s) => !s)}
-                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12.5px] cursor-pointer transition-colors"
+                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12px] cursor-pointer transition-colors"
                     >
                       <span className="text-[13px]">+</span>
                       Nouvelle fiche
@@ -588,7 +588,7 @@ export function WbClient({
                             <button
                               key={s.key}
                               onClick={() => createEntry(s.key)}
-                              className="w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary flex items-center gap-2.5 cursor-pointer"
+                              className="w-full text-left px-3 py-2 text-[12px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary flex items-center gap-2.5 cursor-pointer"
                             >
                               <span>{s.icon}</span>
                               <span className="flex-1">{s.label}</span>
@@ -607,7 +607,7 @@ export function WbClient({
                   <div className="relative">
                     <button
                       onClick={() => setShowMagicMenu((s) => !s)}
-                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12.5px] cursor-pointer transition-colors"
+                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12px] cursor-pointer transition-colors"
                     >
                       <span className="text-[13px]">+</span>
                       Nouvelle fiche
@@ -626,7 +626,7 @@ export function WbClient({
                                 createEntry(s.key);
                                 setShowMagicMenu(false);
                               }}
-                              className="w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary flex items-center gap-2.5 cursor-pointer"
+                              className="w-full text-left px-3 py-2 text-[12px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary flex items-center gap-2.5 cursor-pointer"
                             >
                               <span>{s.icon}</span>
                               <span className="flex-1">{s.label}</span>
@@ -640,7 +640,7 @@ export function WbClient({
                   <div className="relative">
                     <button
                       onClick={() => setShowMoneyMenu((s) => !s)}
-                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12.5px] cursor-pointer transition-colors"
+                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12px] cursor-pointer transition-colors"
                     >
                       <span className="text-[13px]">+</span>
                       Nouvelle fiche
@@ -659,7 +659,7 @@ export function WbClient({
                                 createEntry(s.key);
                                 setShowMoneyMenu(false);
                               }}
-                              className="w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary flex items-center gap-2.5 cursor-pointer"
+                              className="w-full text-left px-3 py-2 text-[12px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary flex items-center gap-2.5 cursor-pointer"
                             >
                               <span>{s.icon}</span>
                               <span className="flex-1">{s.label}</span>
@@ -673,7 +673,7 @@ export function WbClient({
                   <div className="relative">
                     <button
                       onClick={() => setShowBestiaireMenu((s) => !s)}
-                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12.5px] cursor-pointer transition-colors"
+                      className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12px] cursor-pointer transition-colors"
                     >
                       <span className="text-[13px]">+</span>
                       Nouvelle créature
@@ -692,7 +692,7 @@ export function WbClient({
                                 createEntry(s.key);
                                 setShowBestiaireMenu(false);
                               }}
-                              className="w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary cursor-pointer"
+                              className="w-full text-left px-3 py-2 text-[12px] text-text-secondary hover:bg-white/[0.04] hover:text-text-primary cursor-pointer"
                             >
                               {s.label}
                             </button>
@@ -704,7 +704,7 @@ export function WbClient({
                 ) : (
                   <button
                     onClick={() => createEntry()}
-                    className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12.5px] cursor-pointer transition-colors"
+                    className="h-9 inline-flex items-center gap-2 px-4 rounded-[var(--radius-md)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] font-medium text-[12px] cursor-pointer transition-colors"
                   >
                     <span className="text-[13px]">+</span>
                     Nouvelle fiche
@@ -975,7 +975,7 @@ export function WbClient({
                         )}
                         {/* Badge catégorie, haut-gauche */}
                         <div
-                          className="absolute top-2.5 left-2.5 flex items-center gap-1.5 h-6 px-2 rounded-[var(--radius-sm)] text-[9.5px] font-medium uppercase backdrop-blur-sm"
+                          className="absolute top-2.5 left-2.5 flex items-center gap-1.5 h-6 px-2 rounded-[var(--radius-sm)] text-[10px] font-medium uppercase backdrop-blur-sm"
                           style={{
                             letterSpacing: "0.14em",
                             background: tone.bg,
@@ -1007,7 +1007,7 @@ export function WbClient({
                         {snippets.length > 0 ? (
                           <div className="mt-2.5 flex flex-col gap-1">
                             {snippets.slice(0, 2).map((s, i) => (
-                              <div key={i} className="text-[11.5px] leading-snug flex gap-2">
+                              <div key={i} className="text-[12px] leading-snug flex gap-2">
                                 <span className="text-text-quaternary shrink-0 w-[80px] truncate">
                                   {s.label}
                                 </span>
@@ -1018,7 +1018,7 @@ export function WbClient({
                             ))}
                           </div>
                         ) : (
-                          <div className="mt-2 text-[11.5px] italic text-text-quaternary font-serif">
+                          <div className="mt-2 text-[12px] italic text-text-quaternary font-serif">
                             Fiche vide — clique pour la renseigner
                           </div>
                         )}
@@ -1031,13 +1031,13 @@ export function WbClient({
                             {e.tags.slice(0, 3).map((t) => (
                               <span
                                 key={t}
-                                className="text-[9.5px] px-1.5 py-0.5 bg-white/[0.03] text-text-tertiary rounded border border-white/[0.05]"
+                                className="text-[10px] px-1.5 py-0.5 bg-white/[0.03] text-text-tertiary rounded border border-white/[0.05]"
                               >
                                 {t}
                               </span>
                             ))}
                             {e.tags.length > 3 && (
-                              <span className="text-[9.5px] text-text-quaternary">
+                              <span className="text-[10px] text-text-quaternary">
                                 +{e.tags.length - 3}
                               </span>
                             )}
@@ -1046,7 +1046,7 @@ export function WbClient({
 
                         {/* Footer : date + statut */}
                         <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/[0.05]">
-                          <span className="text-[10.5px] text-text-quaternary">
+                          <span className="text-[10px] text-text-quaternary">
                             {new Date(e.updated_at).toLocaleDateString("fr-FR")}
                           </span>
                           <StatusChip status={e.status} />
@@ -1111,7 +1111,7 @@ function SubChip({
   return (
     <button
       onClick={onClick}
-      className={`h-7 inline-flex items-center gap-1.5 px-3 rounded-full text-[11.5px] cursor-pointer transition-colors border ${
+      className={`h-7 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] cursor-pointer transition-colors border ${
         active
           ? "bg-[var(--color-accent-bg)] border-[var(--color-accent-border)] text-[var(--color-accent)]"
           : "bg-white/[0.02] border-white/[0.05] text-text-tertiary hover:text-text-primary hover:border-white/[0.1]"

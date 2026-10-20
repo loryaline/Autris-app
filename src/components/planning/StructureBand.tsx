@@ -208,7 +208,7 @@ export function StructureBand({
           </button>
 
           {method !== "libre" && (
-            <span className="text-[13.5px] text-text-secondary font-serif italic">
+            <span className="text-[14px] text-text-secondary font-serif italic">
               {def.label}
             </span>
           )}
@@ -224,7 +224,7 @@ export function StructureBand({
         {!collapsed && (
           <div className="mt-2.5">
             {method === "libre" ? (
-              <div className="text-[11.5px] text-text-quaternary italic py-1">
+              <div className="text-[12px] text-text-quaternary italic py-1">
                 Aucune méthode narrative. Choisissez un cadre (3 actes, voyage du
                 héros…) pour guider votre planification.
               </div>
@@ -254,7 +254,7 @@ export function StructureBand({
                     </button>
                     <div className="flex-1 min-w-0">
                       <div
-                        className={`text-[12.5px] ${
+                        className={`text-[12px] ${
                           b.done
                             ? "text-text-tertiary line-through"
                             : "text-text-primary"
@@ -294,7 +294,7 @@ export function StructureBand({
                             onChange={(e) => saveNote(b.id, e.target.value)}
                             placeholder="Vos notes pour cette étape…"
                             rows={2}
-                            className="mt-1.5 w-full text-[11.5px] px-2 py-1.5 bg-bg-primary border border-white/[0.07] rounded-[var(--radius-sm)] text-text-secondary placeholder:text-text-quaternary focus:outline-none focus:border-[var(--color-accent-border)] resize-y"
+                            className="mt-1.5 w-full text-[12px] px-2 py-1.5 bg-bg-primary border border-white/[0.07] rounded-[var(--radius-sm)] text-text-secondary placeholder:text-text-quaternary focus:outline-none focus:border-[var(--color-accent-border)] resize-y"
                           />
                         );
                       })()}
@@ -310,7 +310,7 @@ export function StructureBand({
                   <div key={gi} className="flex flex-col gap-1.5 shrink-0">
                     {group.act && (
                       <div
-                        className="text-[9.5px] font-medium text-[var(--color-accent)] uppercase px-0.5"
+                        className="text-[10px] font-medium text-[var(--color-accent)] uppercase px-0.5"
                         style={{ letterSpacing: "0.16em" }}
                       >
                         {group.act}
@@ -335,7 +335,7 @@ export function StructureBand({
                               {label}
                             </div>
                             {description && (
-                              <div className="text-[10.5px] text-text-tertiary mt-1 leading-snug">
+                              <div className="text-[10px] text-text-tertiary mt-1 leading-snug">
                                 {description}
                               </div>
                             )}
@@ -348,7 +348,7 @@ export function StructureBand({
                                 onChange={(e) =>
                                   assignBeat(b.id, e.target.value || null)
                                 }
-                                className={`w-full text-[10.5px] px-1.5 py-1 rounded-[var(--radius-sm)] bg-bg-primary border cursor-pointer focus:outline-none ${
+                                className={`w-full text-[10px] px-1.5 py-1 rounded-[var(--radius-sm)] bg-bg-primary border cursor-pointer focus:outline-none ${
                                   linked
                                     ? "border-[var(--color-accent-border)] text-[var(--color-accent)]"
                                     : "border-white/[0.12] text-text-tertiary"
@@ -438,7 +438,7 @@ export function StructureBand({
               })}
             </div>
 
-            <div className="rounded-[var(--radius-md)] bg-white/[0.03] border border-white/[0.06] p-3 text-[11.5px] leading-relaxed">
+            <div className="rounded-[var(--radius-md)] bg-white/[0.03] border border-white/[0.06] p-3 text-[12px] leading-relaxed">
               <div className="text-text-secondary">
                 ⚠ Les beats de structure seront remplacés.
               </div>

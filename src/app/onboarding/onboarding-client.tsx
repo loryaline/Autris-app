@@ -610,7 +610,7 @@ export function OnboardingClient({
                       }`}
                     >
                       {isReco && (
-                        <span className="absolute top-1.5 right-1.5 text-[8.5px] font-medium uppercase tracking-wider text-primary bg-primary-bg border border-primary-border rounded-full px-1.5 py-0.5">
+                        <span className="absolute top-1.5 right-1.5 text-[9px] font-medium uppercase tracking-wider text-primary bg-primary-bg border border-primary-border rounded-full px-1.5 py-0.5">
                           Recommandé
                         </span>
                       )}

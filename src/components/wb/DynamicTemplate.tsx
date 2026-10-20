@@ -46,7 +46,7 @@ export function DynamicTemplate({
         <div key={f.key} className={fieldSpan(f, true)}>
           {f.label && <FieldLabel>{f.label}</FieldLabel>}
           <div className="overflow-x-auto rounded-[var(--radius-md)] border border-white/[0.06]">
-            <table className="w-full text-[12.5px] border-collapse">
+            <table className="w-full text-[12px] border-collapse">
               <thead>
                 <tr className="bg-white/[0.03]">
                   {cols.map((c) => (
@@ -157,7 +157,7 @@ export function DynamicTemplate({
         <div key={f.key} className={fieldSpan(f, true)}>
           {f.label && <FieldLabel>{f.label}</FieldLabel>}
           <div className="overflow-x-auto rounded-[var(--radius-md)] border border-white/[0.06]">
-            <table className="w-full text-[12.5px] border-collapse">
+            <table className="w-full text-[12px] border-collapse">
               <thead>
                 <tr className="bg-white/[0.03]">
                   {cols.map((c) => (
@@ -181,7 +181,7 @@ export function DynamicTemplate({
                           value={row[ci] ?? ""}
                           onChange={(e) => setCell(ri, ci, e.target.value)}
                           placeholder={ci === 0 ? f.placeholder : undefined}
-                          className="w-full text-[12.5px] px-2.5 py-1.5 bg-transparent border-0 focus:outline-none focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary"
+                          className="w-full text-[12px] px-2.5 py-1.5 bg-transparent border-0 focus:outline-none focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary"
                         />
                       </td>
                     ))}
@@ -274,7 +274,7 @@ export function DynamicTemplate({
 
   if (readOnly && visibleSections.length === 0) {
     return (
-      <p className="text-[12.5px] text-text-quaternary italic font-serif">
+      <p className="text-[12px] text-text-quaternary italic font-serif">
         Aucun détail renseigné pour cette fiche.
       </p>
     );
@@ -300,7 +300,7 @@ export function DynamicTemplate({
               </h4>
             </header>
             {section.note && !readOnly && (
-              <p className="mb-3 text-[11.5px] text-text-tertiary font-serif italic leading-relaxed">
+              <p className="mb-3 text-[12px] text-text-tertiary font-serif italic leading-relaxed">
                 {section.note}
               </p>
             )}
@@ -333,7 +333,7 @@ export function DynamicTemplate({
             </h4>
           </header>
           {section.note && !readOnly && (
-            <p className="mb-3 text-[11.5px] text-text-tertiary font-serif italic leading-relaxed">
+            <p className="mb-3 text-[12px] text-text-tertiary font-serif italic leading-relaxed">
               {section.note}
             </p>
           )}
@@ -378,13 +378,13 @@ function readTableRows(raw: unknown, nCols: number): string[][] {
 }
 
 const FIELD_INPUT =
-  "w-full text-[12.5px] px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-md)] focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary transition-colors";
+  "w-full text-[12px] px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-md)] focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary transition-colors";
 
 const FIELD_TEXTAREA =
-  "w-full text-[12.5px] leading-relaxed px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-md)] resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary transition-colors";
+  "w-full text-[12px] leading-relaxed px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-md)] resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary transition-colors";
 
 const RO_TEXT =
-  "text-[12.5px] leading-relaxed text-text-secondary whitespace-pre-wrap";
+  "text-[12px] leading-relaxed text-text-secondary whitespace-pre-wrap";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (

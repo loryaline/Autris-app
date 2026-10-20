@@ -77,7 +77,7 @@ export function WbHome({
                 {projectTitle}
               </span>
             </h1>
-            <div className="mt-2.5 text-[12.5px] text-text-tertiary font-serif italic">
+            <div className="mt-2.5 text-[12px] text-text-tertiary font-serif italic">
               {totalFiches === 0
                 ? "Aucune fiche pour l'instant. Choisissez une catégorie pour commencer à bâtir votre univers."
                 : totalFiches === 1
@@ -90,7 +90,7 @@ export function WbHome({
             <button
               onClick={handleExport}
               title="Exporter tout l'univers en .zip (une fiche par page — importable dans Notion)"
-              className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary text-[12.5px] text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors"
+              className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] border border-white/[0.08] bg-bg-secondary text-[12px] text-text-secondary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                 <path
@@ -119,7 +119,7 @@ export function WbHome({
                   >
                     {group}
                   </h2>
-                  <span className="text-[10.5px] text-text-quaternary/70 font-serif italic">
+                  <span className="text-[10px] text-text-quaternary/70 font-serif italic">
                     {groupTotal} fiche{groupTotal > 1 ? "s" : ""}
                   </span>
                 </div>
@@ -161,7 +161,7 @@ export function WbHome({
                             {c.label}
                           </div>
                           <div
-                            className={`mt-1 text-[10.5px] font-serif italic ${
+                            className={`mt-1 text-[10px] font-serif italic ${
                               isEmpty ? "text-text-quaternary/70" : "text-text-tertiary"
                             }`}
                           >
@@ -217,11 +217,11 @@ export function WbHome({
                       {cat?.icon ?? "✦"}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="text-[12.5px] text-text-primary truncate">
+                      <div className="text-[12px] text-text-primary truncate">
                         {e.title || "Sans titre"}
                       </div>
                       <div
-                        className="text-[9.5px] font-medium uppercase text-text-quaternary truncate"
+                        className="text-[10px] font-medium uppercase text-text-quaternary truncate"
                         style={{ letterSpacing: "0.16em" }}
                       >
                         {cat?.label ?? e.category}

@@ -361,11 +361,11 @@ export function PlanningClient({
               <path d="M5.5 2V12" stroke="currentColor" strokeWidth="1.2" />
             </svg>
           </button>
-          <span className="text-[12.5px] text-text-tertiary">{projectTitle}</span>
+          <span className="text-[12px] text-text-tertiary">{projectTitle}</span>
           <span className="mx-2 text-text-quaternary/60 text-[11px]">/</span>
-          <span className="text-[12.5px] text-text-tertiary">{novelTitle}</span>
+          <span className="text-[12px] text-text-tertiary">{novelTitle}</span>
           <span className="mx-2 text-text-quaternary/60 text-[11px]">/</span>
-          <span className="text-[12.5px] text-text-primary font-medium">
+          <span className="text-[12px] text-text-primary font-medium">
             Planification
             {activeView !== "tableau" && (
               <span className="text-text-tertiary font-normal">
@@ -394,7 +394,7 @@ export function PlanningClient({
                 scène par scène
               </span>
             </h1>
-            <div className="mt-2 text-[12.5px] text-text-tertiary font-serif italic">
+            <div className="mt-2 text-[12px] text-text-tertiary font-serif italic">
               {novelTitle}
               <span className="mx-2 text-text-quaternary/50 not-italic">·</span>
               <span className="not-italic">
@@ -438,7 +438,7 @@ export function PlanningClient({
                   )}
                 </div>
                 {showTips && (
-                  <div className="mt-1.5 text-[11.5px] text-text-quaternary italic">
+                  <div className="mt-1.5 text-[12px] text-text-quaternary italic">
                     Astuce : cliquez sur la pastille de statut d&apos;un chapitre pour le faire évoluer.
                   </div>
                 )}
@@ -459,7 +459,7 @@ export function PlanningClient({
                     <button
                       onClick={() => setShowCsvImport(true)}
                       title="Importer un CSV — les lignes s'ajoutent à la suite du tableau"
-                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12.5px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
                     >
                       <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                         <path
@@ -483,7 +483,7 @@ export function PlanningClient({
                         downloadCsv(`${slugify(novelTitle)}-chapitrage.csv`, csv);
                       }}
                       title="Télécharger le tableau au format CSV (Excel, Numbers, LibreOffice)"
-                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12.5px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
                     >
                       <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                         <path
@@ -500,7 +500,7 @@ export function PlanningClient({
                       onClick={() =>
                         window.dispatchEvent(new CustomEvent("autris:add-chapter"))
                       }
-                      className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] font-medium cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] text-[12px] font-medium cursor-pointer transition-colors"
                       style={{
                         background: "var(--color-accent)",
                         color: "#1a1410",

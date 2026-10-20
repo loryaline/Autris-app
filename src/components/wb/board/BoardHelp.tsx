@@ -112,7 +112,7 @@ export function BoardHelp({ onClose }: { onClose: () => void }) {
                 {g.rows.map((r) => (
                   <div
                     key={r.what}
-                    className="flex items-baseline gap-3 text-[12.5px]"
+                    className="flex items-baseline gap-3 text-[12px]"
                   >
                     <span className="flex items-center gap-1 shrink-0">
                       {r.keys.map((k, i) => (

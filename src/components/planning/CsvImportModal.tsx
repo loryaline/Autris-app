@@ -420,7 +420,7 @@ export function CsvImportModal({
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06] shrink-0">
           <div>
             <div className="text-[14px] font-medium text-text-primary">Importer un CSV</div>
-            <div className="text-[11.5px] text-text-tertiary mt-0.5">
+            <div className="text-[12px] text-text-tertiary mt-0.5">
               Les lignes importées s&apos;ajoutent à la suite du tableau actuel.
             </div>
           </div>
@@ -450,7 +450,7 @@ export function CsvImportModal({
               <div className="text-[13px] text-text-secondary">
                 Glisse ton fichier .csv ici, ou clique pour le choisir
               </div>
-              <div className="text-[11.5px] text-text-quaternary mt-1">
+              <div className="text-[12px] text-text-quaternary mt-1">
                 Séparateur ; ou , — l&apos;export Autris se réimporte tel quel
               </div>
               <input
@@ -470,7 +470,7 @@ export function CsvImportModal({
               {/* Options */}
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-3">
                 <span className="text-[12px] text-text-tertiary">{fileName}</span>
-                <label className="flex items-center gap-1.5 text-[12.5px] text-text-secondary cursor-pointer">
+                <label className="flex items-center gap-1.5 text-[12px] text-text-secondary cursor-pointer">
                   <input
                     type="checkbox"
                     checked={hasHeader}
@@ -482,7 +482,7 @@ export function CsvImportModal({
                   />
                   Première ligne = en-têtes
                 </label>
-                <label className="flex items-center gap-1.5 text-[12.5px] text-text-secondary">
+                <label className="flex items-center gap-1.5 text-[12px] text-text-secondary">
                   Importer à partir de la ligne
                   <input
                     type="number"
@@ -497,7 +497,7 @@ export function CsvImportModal({
                         ),
                       )
                     }
-                    className="w-16 h-7 px-2 rounded bg-bg-primary border border-white/[0.10] text-[12.5px] text-text-primary"
+                    className="w-16 h-7 px-2 rounded bg-bg-primary border border-white/[0.10] text-[12px] text-text-primary"
                   />
                 </label>
                 <button
@@ -527,7 +527,7 @@ export function CsvImportModal({
 
               {/* Aperçu */}
               <div className="border border-white/[0.08] rounded-[var(--radius-md)] overflow-auto max-h-[38vh]">
-                <table className="w-full text-[11.5px] border-collapse">
+                <table className="w-full text-[12px] border-collapse">
                   <thead>
                     {headerRow && (
                       <tr className="bg-bg-tertiary">
@@ -567,7 +567,7 @@ export function CsvImportModal({
                                 }))
                               }
                               title="Destination de cette colonne"
-                              className={`w-full max-w-[180px] h-6 px-1 rounded text-[10.5px] bg-bg-primary border cursor-pointer ${
+                              className={`w-full max-w-[180px] h-6 px-1 rounded text-[10px] bg-bg-primary border cursor-pointer ${
                                 isOverridden
                                   ? "border-[var(--color-accent-border)] text-[var(--color-accent)]"
                                   : t?.kind === "ignore"
@@ -625,7 +625,7 @@ export function CsvImportModal({
                   </tbody>
                 </table>
               </div>
-              <div className="mt-2 text-[11.5px] text-text-quaternary">
+              <div className="mt-2 text-[12px] text-text-quaternary">
                 Clique sur une ligne pour définir le point de départ — les lignes
                 grisées au-dessus seront ignorées.
               </div>
@@ -633,7 +633,7 @@ export function CsvImportModal({
           )}
 
           {error && (
-            <div className="mt-3 text-[12.5px]" style={{ color: "var(--danger)" }}>
+            <div className="mt-3 text-[12px]" style={{ color: "var(--danger)" }}>
               {error}
             </div>
           )}
@@ -644,14 +644,14 @@ export function CsvImportModal({
           <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-white/[0.06] shrink-0">
             <button
               onClick={onClose}
-              className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer transition-colors"
+              className="h-9 px-4 rounded-[var(--radius-md)] text-[12px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer transition-colors"
             >
               Annuler
             </button>
             <button
               onClick={handleImport}
               disabled={importing || importedCount === 0}
-              className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] font-medium cursor-pointer transition-colors disabled:opacity-50"
+              className="h-9 px-4 rounded-[var(--radius-md)] text-[12px] font-medium cursor-pointer transition-colors disabled:opacity-50"
               style={{ background: "var(--color-accent)", color: "var(--color-accent-contrast, #1a1408)" }}
             >
               {importing

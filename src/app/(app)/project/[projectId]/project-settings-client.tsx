@@ -391,7 +391,7 @@ export function ProjectSettings({ project }: { project: ProjectData }) {
         <h2 className="text-[15px] font-medium text-text-primary mb-1">
           Sauvegarder tout le projet
         </h2>
-        <p className="text-[12.5px] text-text-tertiary leading-relaxed mb-3">
+        <p className="text-[12px] text-text-tertiary leading-relaxed mb-3">
           Une archive .zip contenant <strong>tout</strong> : l&apos;univers,
           les manuscrits, les chapitrages et les synopsis — en Markdown, prêt
           à être importé dans Notion. Gardez-en une copie chez vous : c&apos;est

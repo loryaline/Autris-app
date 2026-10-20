@@ -31,7 +31,7 @@
   --bg: #1a1d2e; --bg-2: #15172a; --bg-3: #23263d; --bg-hover: #2a2e45;
   --surface: rgba(255,255,255,0.025); --surface-2: rgba(255,255,255,0.04);
   --border: #2e3148; --border-soft: rgba(255,255,255,0.06);
-  --text: #e2d5c1; --text-2: #a89e8d; --text-3: #7a7163; --text-4: #544d44;
+  --text: #e2d5c1; --text-2: #a89e8d; --text-3: #7a7163; --text-4: #8f8374;
   --accent: #e4b48c; --accent-2: #c99879; --accent-bg: #2e2538;
   --accent-border: #7a553d; --accent-ink: #2a1a10;
   --secondary: #5DCAA5; --tertiary: #BA7517; --danger: #E05555;
@@ -52,7 +52,7 @@
   --bg: #f6efe2; --bg-2: #ede2cc; --bg-3: #fdf8ee; --bg-hover: #f1e7d2;
   --surface: rgba(122,85,61,0.04); --surface-2: rgba(122,85,61,0.07);
   --border: #d9c8a8; --border-soft: rgba(122,85,61,0.18);
-  --text: #3a2a1c; --text-2: #604734; --text-3: #7a5e44; --text-4: #8f7359;
+  --text: #3a2a1c; --text-2: #604734; --text-3: #7a5e44; --text-4: #816850;
   --accent: #b5693f; --accent-2: #8b4a26; --accent-bg: #f3e3cb;
   --accent-border: #d9b287; --accent-ink: #fdf8ee;
   --secondary: #2a8a68; --tertiary: #a16410; --danger: #b8403c;
@@ -73,7 +73,7 @@
   --bg: #0a0e1a; --bg-2: #060912; --bg-3: #111726; --bg-hover: #1a2236;
   --surface: rgba(120,180,255,0.04); --surface-2: rgba(120,180,255,0.08);
   --border: #1e2740; --border-soft: rgba(120,180,255,0.12);
-  --text: #d6e4ff; --text-2: #8aa0c6; --text-3: #5d7099; --text-4: #3a4a6e;
+  --text: #d6e4ff; --text-2: #8aa0c6; --text-3: #5d7099; --text-4: #647aad;
   --accent: #62e6ff; --accent-2: #38c5e0; --accent-bg: #0e2735;
   --accent-border: #1e5b6e; --accent-ink: #04121a;
   --secondary: #ff5e7e; --tertiary: #b78bff; --danger: #ff5e7e;
@@ -94,7 +94,7 @@
   --bg: #eef2fb; --bg-2: #e2e8f5; --bg-3: #f7f9ff; --bg-hover: #e6ecf8;
   --surface: rgba(30,60,120,0.04); --surface-2: rgba(30,60,120,0.08);
   --border: #c8d1e6; --border-soft: rgba(30,60,120,0.14);
-  --text: #0f1830; --text-2: #3e4666; --text-3: #565d7a; --text-4: #7c8398;
+  --text: #0f1830; --text-2: #3e4666; --text-3: #565d7a; --text-4: #666d82;
   --accent: #0a85a8; --accent-2: #066680; --accent-bg: #d9eef5;
   --accent-border: #84c8da; --accent-ink: #f7feff;
   --secondary: #d83a5d; --tertiary: #6638b8; --danger: #d83a5d;
@@ -1942,4 +1942,63 @@ button:active:not(:disabled),
 }
 @media (prefers-reduced-motion: reduce) {
   .rd-skel { animation: none; }
+}
+
+
+/* La teinte la plus pâle de chaque thème a été relevée au seuil AA.
+
+   Elle donnait 2,00:1 sur le thème par défaut et 2,19:1 sur le thème SF —
+   là où la norme en demande 4,5. Elle habille 332 endroits, surtout du
+   10 px : exactement la taille qui a le plus besoin de contraste. Les
+   nouvelles valeurs sont calculées, pas choisies à l'œil : luminosité
+   montée pas à pas, teinte et saturation conservées, jusqu'au premier
+   point qui passe le seuil. */
+
+
+/* Une cible atteignable au doigt.
+
+   La règle générale des 44 px ne vise que quatre classes — les
+   boutons-icônes, l'ajout dans l'arborescence, les entrées de navigation,
+   l'effacement de recherche. Tout le reste y échappait, y compris des
+   boutons de 24 px placés à quatre pixels d'un voisin. Cette classe se
+   pose au cas par cas sur ceux qui le méritent, sans gonfler leur taille
+   au bureau : la zone grandit, le dessin ne bouge pas. */
+@media (any-pointer: coarse) {
+  .rd-tap {
+    position: relative;
+  }
+  .rd-tap::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+  }
+}
+
+
+/* Le texte posé sur une couverture ne suit pas les jetons de surface.
+
+   Le titre d'un projet et ses mentions — genre, nombre de romans, « Gérer »
+   — prenaient leur couleur dans les jetons du thème, pensés pour le fond
+   sombre de l'application. Or ils se lisent par-dessus l'illustration
+   choisie par l'autrice, qui peut être claire, chargée, n'importe quoi :
+   un gris moyen y devient illisible, et le contraste dépend alors du
+   hasard de l'image.
+
+   Ici la couleur est fixe et claire, et le voile sous le texte est
+   renforcé. La lisibilité ne dépend plus de la couverture. */
+.rd-board-cover .rd-board-name {
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+.rd-board-cover .rd-board-tag {
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.rd-board-cover .rd-board-tag.accent {
+  color: #f0c89f;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }

@@ -27,6 +27,24 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.14.0] — 2026-10-20
+
+### Corrections
+
+- **Le texte le plus pâle repasse au-dessus du seuil de contraste.** Il donnait 2,00:1 sur le thème par défaut et 2,19:1 sur le thème SF, là où la norme en demande 4,5 — et il habille 332 endroits, surtout du 10 px, c'est-à-dire la taille qui en a le plus besoin. Les quatre thèmes sont relevés avec des valeurs calculées plutôt que choisies à l'œil : luminosité montée pas à pas, teinte et saturation conservées, jusqu'au premier point qui passe.
+- **« Supprimer » ne ressemble plus à « Exporter ».** Dans la barre du synopsis, les trois boutons portaient exactement les mêmes classes ; seul le survol distinguait le geste irréversible — un état qui n'existe ni au repos ni au doigt. Il prend la couleur d'alerte en permanence, un séparateur l'écarte de ses voisins, et sa zone tactile passe à 44 px sans que son dessin ne change.
+- **Les messages éphémères se font enfin entendre.** Chacun portait bien une annonce pour les lecteurs d'écran, mais il la portait **avant** d'entrer dans la page, texte déjà en place : or un lecteur d'écran annonce ce qui change dans une région déjà présente, pas une région qui arrive remplie. Ils étaient donc muets alors que le code semblait correct. C'est désormais leur conteneur, permanent, qui porte l'annonce.
+- **Le bouton « Liens manquants » du plateau retrouve son nom.** L'étiquette accessible qu'on lui passait depuis la 0.10.6 était jetée en silence : le composant ne déclarait pas ce paramètre. Comme on venait de lui retirer son texte, il n'avait plus de nom du tout.
+- **Les intitulés de colonne du chapitrage ne se coupent plus.** « ÉLÉMENTS MINEURS/AMBI… », « TEM… » : on ne pouvait pas savoir ce qu'une colonne contenait sans l'élargir, et l'infobulle n'existe pas au doigt. Ils tiennent sur deux lignes.
+- **Le texte posé sur une couverture reste lisible quelle que soit l'image.** Il prenait sa couleur dans les jetons du thème, pensés pour le fond sombre de l'application, alors qu'il se lit par-dessus une illustration choisie librement : le contraste dépendait du hasard. Couleur claire fixe, ombre portée, et voile renforcé sous le texte.
+- **Trois détails de rédaction** : « − 1 mots » accorde son pluriel, un chapitre vide se lit en zéro minute et non en une, et « sauvegardé » n'est plus affiché deux fois au même instant dans l'éditeur — la barre du bas garde sa pastille et ne reprend le mot que lorsqu'il y a quelque chose à signaler.
+
+### Changements
+
+- **L'échelle typographique perd ses demi-pixels.** Vingt-sept tailles coexistaient, dont dix séparées par des demi-pixels : un écart qu'aucun œil ne perçoit, mais qui produit du désordre sans produire de sens. 196 emplois ramenés à la valeur entière la plus proche, vingt tailles restantes, toutes en pixels entiers.
+
+---
+
 ## [0.13.3] — 2026-10-20
 
 ### Corrections

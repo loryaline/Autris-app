@@ -103,7 +103,7 @@ export function LinkTypePicker({
           {custom && (
             <button
               onClick={() => onPick(query.trim())}
-              className="w-full text-left px-3 py-1.5 text-[12.5px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
+              className="w-full text-left px-3 py-1.5 text-[12px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
               style={{ color: "var(--accent)" }}
             >
               Créer « {query.trim()} »
@@ -112,7 +112,7 @@ export function LinkTypePicker({
           {groups.map((g) => (
             <div key={g.label}>
               <div
-                className="px-3 pt-2 pb-1 text-[9.5px] uppercase"
+                className="px-3 pt-2 pb-1 text-[10px] uppercase"
                 style={{ letterSpacing: "0.13em", color: "var(--text-4)" }}
               >
                 {g.label}
@@ -122,7 +122,7 @@ export function LinkTypePicker({
                   <button
                     key={t}
                     onClick={() => onPick(t)}
-                    className="px-2 py-1 rounded-full text-[11.5px] cursor-pointer transition-colors"
+                    className="px-2 py-1 rounded-full text-[12px] cursor-pointer transition-colors"
                     style={{
                       background: "var(--bg-2)",
                       border: "1px solid var(--border-soft)",

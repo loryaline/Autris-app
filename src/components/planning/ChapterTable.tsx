@@ -1598,7 +1598,7 @@ export function ChapterTable({
                 setRowMenu(null);
                 moveRow(m.idx, -1);
               }}
-              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2 disabled:opacity-35 disabled:cursor-not-allowed"
+              className="w-full text-left px-3 py-1.5 text-[12px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2 disabled:opacity-35 disabled:cursor-not-allowed"
             >
               <span className="text-[13px] leading-none w-4 text-center">⌃</span>
               Monter ce chapitre
@@ -1610,7 +1610,7 @@ export function ChapterTable({
                 setRowMenu(null);
                 moveRow(m.idx, 1);
               }}
-              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2 disabled:opacity-35 disabled:cursor-not-allowed"
+              className="w-full text-left px-3 py-1.5 text-[12px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2 disabled:opacity-35 disabled:cursor-not-allowed"
             >
               <span className="text-[13px] leading-none w-4 text-center">⌄</span>
               Descendre ce chapitre
@@ -1622,7 +1622,7 @@ export function ChapterTable({
                 setRowMenu(null);
                 insertChapterAt(m.idx);
               }}
-              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2"
+              className="w-full text-left px-3 py-1.5 text-[12px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2"
             >
               <span className="text-[13px] leading-none w-4 text-center">↑</span>
               Insérer un chapitre au-dessus
@@ -1633,7 +1633,7 @@ export function ChapterTable({
                 setRowMenu(null);
                 insertChapterAt(m.idx + 1);
               }}
-              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2"
+              className="w-full text-left px-3 py-1.5 text-[12px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2"
             >
               <span className="text-[13px] leading-none w-4 text-center">↓</span>
               Insérer un chapitre en dessous
@@ -1648,7 +1648,7 @@ export function ChapterTable({
                   anchor: m.anchor,
                 });
               }}
-              className="w-full text-left px-3 py-1.5 text-[12.5px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2"
+              className="w-full text-left px-3 py-1.5 text-[12px] text-text-secondary hover:bg-white/[0.05] hover:text-text-primary cursor-pointer bg-transparent border-none flex items-center gap-2"
             >
               <span className="w-4 flex justify-center">
                 <span
@@ -1678,7 +1678,7 @@ export function ChapterTable({
                   handleDeleteChapter(m.chapterId);
                 }
               }}
-              className="w-full text-left px-3 py-1.5 text-[12.5px] cursor-pointer bg-transparent border-none flex items-center gap-2 hover:bg-white/[0.05]"
+              className="w-full text-left px-3 py-1.5 text-[12px] cursor-pointer bg-transparent border-none flex items-center gap-2 hover:bg-white/[0.05]"
               style={{ color: "var(--danger)" }}
             >
               <span className="text-[13px] leading-none w-4 text-center">🗑</span>
@@ -1699,14 +1699,14 @@ export function ChapterTable({
             <div className="text-[14px] font-medium text-text-primary mb-2">
               Supprimer la colonne « {confirmDeleteCol.name} » ?
             </div>
-            <div className="text-[12.5px] text-text-tertiary leading-relaxed mb-4">
+            <div className="text-[12px] text-text-tertiary leading-relaxed mb-4">
               Toutes les valeurs saisies dans cette colonne seront
               définitivement perdues.
             </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setConfirmDeleteCol(null)}
-                className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer"
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[12px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer"
               >
                 Annuler
               </button>
@@ -1716,7 +1716,7 @@ export function ChapterTable({
                   setConfirmDeleteCol(null);
                   deleteCustomColumn(c.id);
                 }}
-                className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] font-medium cursor-pointer text-white"
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[12px] font-medium cursor-pointer text-white"
                 style={{ background: "var(--danger)" }}
               >
                 Supprimer
@@ -1737,7 +1737,7 @@ export function ChapterTable({
             <div className="text-[14px] font-medium text-text-primary mb-2">
               Vider le tableau ?
             </div>
-            <div className="text-[12.5px] text-text-tertiary leading-relaxed mb-4">
+            <div className="text-[12px] text-text-tertiary leading-relaxed mb-4">
               Une version de sécurité est créée automatiquement avant (menu
               Versions) — les données du tableau seront restaurables.
             </div>
@@ -1750,7 +1750,7 @@ export function ChapterTable({
                 <div className="text-[13px] text-text-primary font-medium">
                   Vider le contenu des cases
                 </div>
-                <div className="text-[11.5px] text-text-quaternary mt-0.5">
+                <div className="text-[12px] text-text-quaternary mt-0.5">
                   Les chapitres restent (titres, statuts, texte en Rédaction) —
                   seules les cases de planification sont vidées.
                 </div>
@@ -1764,7 +1764,7 @@ export function ChapterTable({
                 <div className="text-[13px] font-medium" style={{ color: "var(--danger)" }}>
                   Supprimer tous les chapitres
                 </div>
-                <div className="text-[11.5px] text-text-quaternary mt-0.5">
+                <div className="text-[12px] text-text-quaternary mt-0.5">
                   ⚠ Supprime aussi le texte écrit dans la Rédaction — la
                   version de sécurité ne sauvegarde QUE le tableau, pas le
                   texte des chapitres. Irréversible pour le texte.
@@ -1780,7 +1780,7 @@ export function ChapterTable({
               <button
                 onClick={() => setShowClearConfirm(false)}
                 disabled={clearing}
-                className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer disabled:opacity-50"
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[12px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer disabled:opacity-50"
               >
                 {clearing ? "En cours…" : "Annuler"}
               </button>
@@ -1821,9 +1821,27 @@ export function ChapterTable({
                       isDragOver ? "bg-[var(--color-accent-bg)]" : ""
                     }`}
                   >
+                    {/* L'intitulé tient sur deux lignes plutôt que de se couper.
+
+                        Sur une colonne étroite, « ÉLÉMENTS MINEURS/AMBIANCES »
+                        devenait « ÉLÉMENTS MINEURS/AMBI… » et « TEMPO » se
+                        réduisait à « TEM… » : on ne pouvait plus savoir ce
+                        qu'une colonne contenait sans l'élargir. L'infobulle ne
+                        rattrapait rien — elle n'existe pas au doigt.
+
+                        Deux lignes suffisent à tout afficher, et l'interligne
+                        resserré empêche l'en-tête de grossir pour autant. */}
                     <div
-                      className="flex-1 px-3 py-2.5 text-[10px] font-medium text-text-quaternary uppercase select-none whitespace-nowrap overflow-hidden text-ellipsis"
-                      style={{ letterSpacing: "0.16em" }}
+                      className="flex-1 px-3 py-2.5 text-[10px] font-medium text-text-quaternary uppercase select-none"
+                      style={{
+                        letterSpacing: "0.12em",
+                        lineHeight: 1.25,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        overflowWrap: "anywhere",
+                      }}
                       title={col.label}
                     >
                       {col.label}

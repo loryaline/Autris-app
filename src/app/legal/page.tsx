@@ -36,7 +36,7 @@ export default function LegalIndex() {
               className="block p-4 rounded-[var(--radius-md)] border border-white/[0.06] bg-bg-tertiary/40 hover:bg-bg-tertiary/70 hover:border-[var(--color-accent-border)] transition-colors no-underline"
             >
               <div className="text-[15px] text-text-primary font-medium">{s.title}</div>
-              <div className="text-[12.5px] text-text-tertiary mt-1">{s.desc}</div>
+              <div className="text-[12px] text-text-tertiary mt-1">{s.desc}</div>
             </Link>
           </li>
         ))}

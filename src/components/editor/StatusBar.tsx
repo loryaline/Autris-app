@@ -32,10 +32,23 @@ export function StatusBar({
         )}
       </div>
 
-      {/* Sync status */}
-      <div className="flex items-center gap-1.5 px-2.5 ml-auto">
+      {/* L'état de l'enregistrement.
+
+          L'en-tête l'annonce déjà en toutes lettres : le répéter ici
+          revenait à dire « sauvegardé » deux fois au même instant, en haut
+          et en bas du même écran. Quand tout va bien, la pastille seule
+          suffit — c'est un signal d'ambiance, pas une nouvelle. Dès que
+          quelque chose cloche, le mot revient : une sauvegarde en cours,
+          une perte de réseau ou une erreur méritent d'être nommées. */}
+      <div
+        className="flex items-center gap-1.5 px-2.5 ml-auto"
+        title={status.label}
+        aria-label={status.label}
+      >
         <div className={`w-1.5 h-1.5 rounded-full ${status.color}`} />
-        <span className="text-text-tertiary">{status.label}</span>
+        {syncStatus !== "saved" && (
+          <span className="text-text-tertiary">{status.label}</span>
+        )}
       </div>
     </div>
   );

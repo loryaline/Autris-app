@@ -1578,7 +1578,7 @@ function FicheBody({
               ))}
             </div>
           )}
-          <div className="text-[9.5px]" style={{ color: "var(--text-4)" }}>
+          <div className="text-[10px]" style={{ color: "var(--text-4)" }}>
             Double-clic pour ouvrir la fiche
           </div>
         </div>

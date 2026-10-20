@@ -220,7 +220,7 @@ export function NoteEditor({
         </button>
 
         <span
-          className="text-[12.5px] md:text-[11px] flex-1"
+          className="text-[12px] md:text-[11px] flex-1"
           style={{ color: "var(--text-4)" }}
           aria-live="polite"
         >
@@ -236,7 +236,7 @@ export function NoteEditor({
             value={projectId ?? ""}
             onChange={(e) => assign(e.target.value)}
             aria-label="Rattacher à un projet"
-            className="h-9 md:h-8 px-2 rounded text-[13.5px] md:text-[12px] cursor-pointer max-w-[45vw]"
+            className="h-9 md:h-8 px-2 rounded text-[14px] md:text-[12px] cursor-pointer max-w-[45vw]"
             style={{
               background: "transparent",
               border: "1px solid var(--border-soft)",

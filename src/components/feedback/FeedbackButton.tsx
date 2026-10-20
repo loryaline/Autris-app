@@ -272,7 +272,7 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
                         }`}
                       >
                         <span className="text-[14px]">{t.icon}</span>
-                        <span className="text-[11.5px] font-medium">{t.label}</span>
+                        <span className="text-[12px] font-medium">{t.label}</span>
                       </button>
                     ))}
                   </div>
@@ -351,7 +351,7 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={attachments.length >= MAX_FILES}
-                    className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-sm)] border border-dashed border-white/[0.12] text-[11.5px] text-text-tertiary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-sm)] border border-dashed border-white/[0.12] text-[12px] text-text-tertiary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <span className="text-[13px] leading-none">＋</span>
                     {attachments.length === 0 ? "Joindre une image" : "Ajouter"}
@@ -373,14 +373,14 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
                     placeholder="vous@exemple.com"
                     className="w-full h-9 px-3 text-[13px] bg-bg-primary border border-white/[0.08] rounded-[var(--radius-sm)] focus:outline-none focus:border-[var(--color-accent-border)] text-text-primary placeholder:text-text-quaternary"
                   />
-                  <p className="text-[10.5px] text-text-quaternary mt-1">
+                  <p className="text-[10px] text-text-quaternary mt-1">
                     Renseignez votre email seulement si vous voulez qu&apos;on vous réponde.
                     Sinon le retour reste anonyme — votre email de compte n&apos;est pas transmis.
                   </p>
                 </div>
 
                 {/* Contexte technique */}
-                <label className="flex items-start gap-2 cursor-pointer text-[11.5px] text-text-tertiary">
+                <label className="flex items-start gap-2 cursor-pointer text-[12px] text-text-tertiary">
                   <input
                     type="checkbox"
                     checked={includeContext}
@@ -405,14 +405,14 @@ export function FeedbackButton(_props: { userEmail?: string | null } = {}) {
                   <button
                     onClick={() => setOpen(false)}
                     disabled={submitting}
-                    className="h-8 px-3 rounded-[var(--radius-sm)] text-[12.5px] text-text-tertiary hover:text-text-primary cursor-pointer disabled:opacity-50"
+                    className="h-8 px-3 rounded-[var(--radius-sm)] text-[12px] text-text-tertiary hover:text-text-primary cursor-pointer disabled:opacity-50"
                   >
                     Annuler
                   </button>
                   <button
                     onClick={handleSubmit}
                     disabled={!message.trim() || submitting}
-                    className={`h-8 px-3.5 rounded-[var(--radius-sm)] text-[12.5px] font-medium transition-colors ${
+                    className={`h-8 px-3.5 rounded-[var(--radius-sm)] text-[12px] font-medium transition-colors ${
                       message.trim() && !submitting
                         ? "bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-[#2a1a10] cursor-pointer"
                         : "bg-white/[0.05] text-text-quaternary cursor-not-allowed"

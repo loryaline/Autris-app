@@ -67,7 +67,7 @@ export function ThemePills({
   }
 
   const pillPad = compact ? "px-2 py-[1px]" : "px-2.5 py-[2px]";
-  const pillText = compact ? "text-[10.5px]" : "text-[11px]";
+  const pillText = compact ? "text-[10px]" : "text-[11px]";
 
   return (
     <div className="flex flex-wrap items-center gap-1 px-2 py-1.5 min-h-[28px]">

@@ -185,7 +185,7 @@ export function WbEntryPanel({
       </button>
       <div className="flex items-center gap-2">
         {editing && savedAt && (
-          <span className="text-[9.5px] text-text-quaternary font-serif italic">
+          <span className="text-[10px] text-text-quaternary font-serif italic">
             enregistré · {formatRelativeDate(savedAt)}
           </span>
         )}
@@ -201,7 +201,7 @@ export function WbEntryPanel({
           <button
             onClick={() => setEditing(true)}
             title="Modifier cette fiche sans quitter la vue"
-            className="text-[11.5px] font-medium rounded px-2 py-1 cursor-pointer transition-colors"
+            className="text-[12px] font-medium rounded px-2 py-1 cursor-pointer transition-colors"
             style={{
               color: "var(--accent)",
               background: "var(--accent-bg)",
@@ -283,7 +283,7 @@ export function WbEntryPanel({
         {/* Titre façon éditorial : eyebrow + titre + sous-titre italique */}
         <div>
           <div
-            className="text-[9.5px] font-medium text-text-quaternary uppercase flex items-center gap-1.5"
+            className="text-[10px] font-medium text-text-quaternary uppercase flex items-center gap-1.5"
             style={{ letterSpacing: "0.18em" }}
           >
             <span>{sub?.icon ?? cat?.icon}</span>
@@ -297,7 +297,7 @@ export function WbEntryPanel({
             )}
           </h3>
           {entry.subtitle?.trim() && (
-            <p className="mt-1 text-[11.5px] text-text-tertiary font-serif italic leading-snug">
+            <p className="mt-1 text-[12px] text-text-tertiary font-serif italic leading-snug">
               {entry.subtitle}
             </p>
           )}
@@ -322,7 +322,7 @@ export function WbEntryPanel({
               readOnly
             />
           ) : (
-            <p className="text-[11.5px] text-text-quaternary font-serif italic">
+            <p className="text-[12px] text-text-quaternary font-serif italic">
               Aucun détail renseigné pour cette fiche.
             </p>
           )
@@ -337,7 +337,7 @@ export function WbEntryPanel({
             >
               Notes personnelles
             </div>
-            <p className="text-[11.5px] leading-relaxed text-text-secondary whitespace-pre-wrap font-serif italic">
+            <p className="text-[12px] leading-relaxed text-text-secondary whitespace-pre-wrap font-serif italic">
               {notesText}
             </p>
           </div>
@@ -426,7 +426,7 @@ export function WbEntryPanel({
           }}
           placeholder="Synopsis court, en une ou deux phrases…"
           rows={3}
-          className="w-full text-[11.5px] leading-relaxed px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-secondary placeholder:text-text-quaternary transition-colors"
+          className="w-full text-[12px] leading-relaxed px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-secondary placeholder:text-text-quaternary transition-colors"
         />
       </div>
 
@@ -457,7 +457,7 @@ export function WbEntryPanel({
           }}
           placeholder="Pense-bête, pistes, remarques d'auteur…"
           rows={3}
-          className="w-full text-[11.5px] leading-relaxed px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-secondary placeholder:text-text-quaternary italic transition-colors"
+          className="w-full text-[12px] leading-relaxed px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-secondary placeholder:text-text-quaternary italic transition-colors"
         />
       </div>
 
@@ -474,7 +474,7 @@ export function WbEntryPanel({
                 <button
                   key={s.key}
                   onClick={() => scheduleSave({ status: s.key })}
-                  className="text-[10.5px] px-2 py-0.5 rounded-full cursor-pointer transition-colors"
+                  className="text-[10px] px-2 py-0.5 rounded-full cursor-pointer transition-colors"
                   style={{
                     background: active ? "var(--accent-bg)" : "transparent",
                     border: `1px solid ${active ? "var(--accent-border)" : "var(--border-soft)"}`,
