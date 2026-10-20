@@ -267,7 +267,7 @@ function FocusedCell({
       ref={containerRef}
       onBlur={handleBlur}
       // h-full pour que le wrapper de l'éditeur couvre toute la cellule
-      className={`h-full cell-focused ${className ?? ""}`}
+      className={`h-full ${className ?? ""}`}
     >
       <EditorContent
         editor={editor}

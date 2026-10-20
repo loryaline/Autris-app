@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.13.3] — 2026-10-20
+
+### Corrections
+
+- **La zone de saisie d'une case ne porte plus aucun décor.** Il restait un fond légèrement plus clair, dernier vestige des trois habillages qui se sont succédé là — un contour, un fond, un anneau de focus — tous ajoutés au cadre que la case dessine déjà. Le cadre de la case suffit, et le curseur dit où l'on tape.
+
+---
+
 ## [0.13.2] — 2026-10-20
 
 ### Corrections
