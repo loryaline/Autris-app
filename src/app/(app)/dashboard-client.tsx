@@ -264,7 +264,7 @@ export function DashboardClient({
                   style={
                     project.cover_image_url
                       ? {
-                          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.8) 100%), url(${project.cover_image_url})`,
+                          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.88) 100%), url(${project.cover_image_url})`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                         }
@@ -473,7 +473,7 @@ export function DashboardClient({
                         border: "none",
                         cursor: "pointer",
                         color: "var(--text-4)",
-                        fontSize: 10.5,
+                        fontSize: 10,
                         padding: "4px 8px",
                         textAlign: "left",
                       }}

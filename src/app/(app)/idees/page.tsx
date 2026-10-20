@@ -40,7 +40,7 @@ export default async function IdeasPage() {
         >
           Idées
         </h1>
-        <p className="text-[13.5px]" style={{ color: "var(--text-3)" }}>
+        <p className="text-[14px]" style={{ color: "var(--text-3)" }}>
           La boîte à idées n&apos;est pas encore installée. Exécutez la
           migration <code>migration-ideas.sql</code> dans le SQL Editor de
           Supabase, puis rechargez cette page.

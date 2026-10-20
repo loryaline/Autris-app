@@ -139,12 +139,23 @@ function ExpandOption({
 function ToolButton({
   onClick,
   title,
+  ariaLabel,
   children,
   active = false,
   disabled = false,
 }: {
   onClick: () => void;
   title: string;
+  /**
+   * Nom accessible, quand le bouton n'a pas de texte visible.
+   *
+   * Ce paramètre n'existait pas : l'étiquette passée au bouton « Tracer
+   * les liens manquants » était donc silencieusement jetée. Comme on
+   * venait de lui retirer son libellé pour gagner de la place, il ne
+   * restait plus rien — ni nom lu, ni texte affiché. Une infobulle ne
+   * remplace pas un nom : elle n'existe pas au doigt.
+   */
+  ariaLabel?: string;
   children: React.ReactNode;
   active?: boolean;
   disabled?: boolean;
@@ -153,6 +164,7 @@ function ToolButton({
     <button
       onClick={onClick}
       title={title}
+      aria-label={ariaLabel}
       disabled={disabled}
       className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] text-[12px] cursor-pointer transition-colors disabled:opacity-50"
       style={{
@@ -194,13 +206,13 @@ function AddItem({
       </span>
       <span className="min-w-0">
         <span
-          className="block text-[12.5px] leading-tight"
+          className="block text-[12px] leading-tight"
           style={{ color: "var(--text-1)" }}
         >
           {label}
         </span>
         <span
-          className="block text-[10.5px] leading-tight mt-0.5"
+          className="block text-[10px] leading-tight mt-0.5"
           style={{ color: "var(--text-4)" }}
         >
           {hint}
@@ -1033,7 +1045,7 @@ export function WbBoard({
                           setShowBoardMenu(false);
                           if (!current) board.openBoard(b);
                         }}
-                        className="flex-1 min-w-0 text-left px-2 py-1.5 rounded text-[12.5px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05] flex items-center gap-1.5"
+                        className="flex-1 min-w-0 text-left px-2 py-1.5 rounded text-[12px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05] flex items-center gap-1.5"
                         style={{ color: current ? "var(--accent)" : "var(--text-2)" }}
                       >
                         <span className="text-[11px]">{b.is_main ? "🗺️" : "▫"}</span>
@@ -1079,7 +1091,7 @@ export function WbBoard({
                     setShowBoardMenu(false);
                     setCreatingBoard("");
                   }}
-                  className="w-full text-left px-3.5 py-1.5 text-[12.5px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
+                  className="w-full text-left px-3.5 py-1.5 text-[12px] cursor-pointer bg-transparent border-none hover:bg-white/[0.05]"
                   style={{ color: "var(--accent)" }}
                 >
                   + Nouveau plateau
@@ -1285,7 +1297,7 @@ export function WbBoard({
         <ToolButton
           onClick={revealExisting}
           title="Tracer les relations entre les fiches déjà posées, sans rien ajouter au plateau"
-          aria-label="Tracer les liens manquants"
+          ariaLabel="Tracer les liens manquants"
         >
           <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
             <circle cx="3.5" cy="3.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
@@ -1413,7 +1425,7 @@ export function WbBoard({
                 <button
                   onClick={() => setEditingNodeId(selectedNode.id)}
                   title="Modifier le contenu"
-                  className="inline-flex items-center gap-1.5 h-7 px-2 rounded text-[11.5px] cursor-pointer transition-colors bg-transparent border-none hover:bg-white/[0.05]"
+                  className="inline-flex items-center gap-1.5 h-7 px-2 rounded text-[12px] cursor-pointer transition-colors bg-transparent border-none hover:bg-white/[0.05]"
                   style={{ color: "var(--accent)" }}
                 >
                   <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -1439,7 +1451,7 @@ export function WbBoard({
                 <button
                   onClick={() => setShowExpandMenu((v) => !v)}
                   title="Déplier les fiches liées d'après les relations déjà écrites"
-                  className="inline-flex items-center gap-1.5 h-7 px-2 rounded text-[11.5px] cursor-pointer transition-colors bg-transparent border-none hover:bg-white/[0.05]"
+                  className="inline-flex items-center gap-1.5 h-7 px-2 rounded text-[12px] cursor-pointer transition-colors bg-transparent border-none hover:bg-white/[0.05]"
                   style={{ color: "var(--accent)" }}
                 >
                   <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -1860,7 +1872,7 @@ export function WbBoard({
                   )}
                   <button
                     onClick={() => setEditingNodeId(null)}
-                    className="ml-auto h-8 px-3 rounded text-[12.5px] cursor-pointer border-none"
+                    className="ml-auto h-8 px-3 rounded text-[12px] cursor-pointer border-none"
                     style={
                       isTexte
                         ? { background: "var(--accent)", color: "#1a1410" }
@@ -1952,7 +1964,7 @@ export function WbBoard({
             )}
 
             <p
-              className="px-3.5 pt-2 pb-1 text-[10.5px] leading-snug"
+              className="px-3.5 pt-2 pb-1 text-[10px] leading-snug"
               style={{ color: "var(--text-4)" }}
             >
               Seules les fiches absentes du plateau sont posées. Rien n&apos;est
@@ -2019,7 +2031,7 @@ export function WbBoard({
                   setCreatingBoard(null);
                   setRenamingBoard(null);
                 }}
-                className="h-8 px-3 rounded text-[12.5px] cursor-pointer"
+                className="h-8 px-3 rounded text-[12px] cursor-pointer"
                 style={{
                   background: "transparent",
                   border: "1px solid var(--border-soft)",
@@ -2039,7 +2051,7 @@ export function WbBoard({
                     setCreatingBoard(null);
                   }
                 }}
-                className="h-8 px-3 rounded text-[12.5px] cursor-pointer border-none font-medium"
+                className="h-8 px-3 rounded text-[12px] cursor-pointer border-none font-medium"
                 style={{ background: "var(--accent)", color: "#1a1410" }}
               >
                 {renamingBoard ? "Renommer" : "Créer"}
@@ -2100,7 +2112,7 @@ export function WbBoard({
                   board.setEdgeLabel(renamingEdge.edge.id, renamingEdge.value.trim());
                   setRenamingEdge(null);
                 }}
-                className="h-8 px-3 rounded text-[12.5px] cursor-pointer border-none font-medium"
+                className="h-8 px-3 rounded text-[12px] cursor-pointer border-none font-medium"
                 style={{ background: "var(--accent)", color: "#1a1410" }}
               >
                 Terminé
@@ -2187,7 +2199,7 @@ export function WbBoard({
                   });
                   setRenamingCadre(null);
                 }}
-                className="ml-auto h-8 px-3 rounded text-[12.5px] cursor-pointer border-none font-medium"
+                className="ml-auto h-8 px-3 rounded text-[12px] cursor-pointer border-none font-medium"
                 style={{ background: "var(--accent)", color: "#1a1410" }}
               >
                 Terminé

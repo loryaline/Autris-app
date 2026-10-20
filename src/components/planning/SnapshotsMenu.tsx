@@ -323,7 +323,7 @@ export function SnapshotsMenu({
       <button
         onClick={() => setOpen((o) => !o)}
         title="Versions du tableau : sauvegarder, consulter, restaurer"
-        className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12.5px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
+        className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.08] text-[12px] text-text-secondary hover:text-text-primary hover:border-white/[0.15] cursor-pointer transition-colors"
       >
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
           <circle cx="7" cy="7" r="5.2" stroke="currentColor" strokeWidth="1.2" />
@@ -348,7 +348,7 @@ export function SnapshotsMenu({
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSave()}
                   placeholder="Nom (facultatif)…"
-                  className="flex-1 h-8 px-2.5 rounded bg-bg-primary border border-white/[0.10] text-[12.5px] text-text-primary placeholder:text-text-quaternary"
+                  className="flex-1 h-8 px-2.5 rounded bg-bg-primary border border-white/[0.10] text-[12px] text-text-primary placeholder:text-text-quaternary"
                 />
                 <button
                   onClick={handleSave}
@@ -377,7 +377,7 @@ export function SnapshotsMenu({
                   >
                     <div className="flex items-center gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="text-[12.5px] text-text-primary truncate" title={s.name}>
+                        <div className="text-[12px] text-text-primary truncate" title={s.name}>
                           {s.auto && (
                             <span className="text-[10px] text-text-quaternary mr-1.5 uppercase">auto</span>
                           )}
@@ -423,7 +423,7 @@ export function SnapshotsMenu({
             </div>
 
             {error && (
-              <div className="px-3.5 py-2.5 text-[11.5px] border-t border-white/[0.06]" style={{ color: "var(--danger)" }}>
+              <div className="px-3.5 py-2.5 text-[12px] border-t border-white/[0.06]" style={{ color: "var(--danger)" }}>
                 {error}
               </div>
             )}
@@ -439,7 +439,7 @@ export function SnapshotsMenu({
             <div className="text-[14px] font-medium text-text-primary mb-2">
               Restaurer « {confirmRestore.name} » ?
             </div>
-            <div className="text-[12.5px] text-text-tertiary leading-relaxed mb-4">
+            <div className="text-[12px] text-text-tertiary leading-relaxed mb-4">
               Le tableau reprendra l&apos;état de cette version. Une sauvegarde
               automatique de l&apos;état actuel sera créée juste avant — tu ne
               perds rien. Les chapitres créés depuis cette version ne sont pas
@@ -448,7 +448,7 @@ export function SnapshotsMenu({
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setConfirmRestore(null)}
-                className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer"
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[12px] text-text-secondary bg-bg-primary border border-white/[0.08] hover:border-white/[0.15] cursor-pointer"
               >
                 Annuler
               </button>
@@ -458,7 +458,7 @@ export function SnapshotsMenu({
                   setConfirmRestore(null);
                   handleRestore(s);
                 }}
-                className="h-9 px-4 rounded-[var(--radius-md)] text-[12.5px] font-medium cursor-pointer"
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[12px] font-medium cursor-pointer"
                 style={{ background: "var(--color-accent)", color: "var(--color-accent-contrast, #1a1408)" }}
               >
                 Restaurer
@@ -476,7 +476,7 @@ export function SnapshotsMenu({
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06] shrink-0">
               <div>
                 <div className="text-[14px] font-medium text-text-primary">{viewing.name}</div>
-                <div className="text-[11.5px] text-text-tertiary mt-0.5">Lecture seule</div>
+                <div className="text-[12px] text-text-tertiary mt-0.5">Lecture seule</div>
               </div>
               <button onClick={() => setViewing(null)} className="rd-icon-btn" title="Fermer" aria-label="Fermer">
                 ×
@@ -514,7 +514,7 @@ function SnapshotPreview({ data }: { data: SnapshotData }) {
   ];
 
   return (
-    <table className="w-full text-[11.5px] border-collapse">
+    <table className="w-full text-[12px] border-collapse">
       <thead>
         <tr className="bg-bg-tertiary">
           {defaultCols.map((c) => (

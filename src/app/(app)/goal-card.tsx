@@ -123,7 +123,7 @@ export function GoalCard(props: GoalCardProps) {
           <div className="rd-goal-month">
             {activeNovelTitle ? <em>{activeNovelTitle}</em> : "Aucun roman actif"}
           </div>
-          <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>
             Objectif quotidien · {dailyGoal.toLocaleString("fr-FR")} mots
           </div>
         </div>

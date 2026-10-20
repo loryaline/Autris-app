@@ -8,7 +8,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
         <Link href="/" className="text-[15px] no-underline" style={{ fontFamily: "var(--font-serif)" }}>
           <span className="italic text-[var(--color-accent)]">Autris</span>
         </Link>
-        <div className="ml-auto flex items-center gap-5 text-[12.5px]">
+        <div className="ml-auto flex items-center gap-5 text-[12px]">
           <LegalNavLink href="/legal/mentions" label="Mentions légales" />
           <LegalNavLink href="/legal/cgu" label="CGU" />
           <LegalNavLink href="/legal/confidentialite" label="Confidentialité" />

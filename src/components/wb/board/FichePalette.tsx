@@ -146,7 +146,7 @@ export function FichePalette({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Rechercher une fiche…"
-          className="h-8 px-2.5 rounded text-[12.5px] w-full"
+          className="h-8 px-2.5 rounded text-[12px] w-full"
           style={{
             background: "var(--bg)",
             border: "1px solid var(--border-soft)",
@@ -156,7 +156,7 @@ export function FichePalette({
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="h-7 px-1.5 rounded text-[11.5px] w-full cursor-pointer"
+          className="h-7 px-1.5 rounded text-[12px] w-full cursor-pointer"
           style={{
             background: "var(--bg)",
             border: "1px solid var(--border-soft)",
@@ -173,7 +173,7 @@ export function FichePalette({
       </div>
 
       <div
-        className="px-3 pb-1.5 text-[10.5px] shrink-0"
+        className="px-3 pb-1.5 text-[10px] shrink-0"
         style={{ color: "var(--text-4)" }}
       >
         Cliquez pour ouvrir · glissez sur le plateau pour poser
@@ -269,7 +269,7 @@ export function FichePalette({
                         </div>
                         <div className="min-w-0 flex-1">
                           <div
-                            className="text-[12.5px] truncate"
+                            className="text-[12px] truncate"
                             style={{ color: "var(--text-1)" }}
                           >
                             {e.title}

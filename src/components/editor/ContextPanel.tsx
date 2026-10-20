@@ -184,8 +184,11 @@ export function ContextPanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const supabaseRef = useRef(createClient());
 
-  const readingTime = Math.max(1, Math.round(wordCount / 250));
-  const speakingTime = Math.max(1, Math.round(wordCount / 150));
+  /* Un chapitre vide se lit en zéro minute, pas en une. Le plancher à 1
+     servait à ne pas afficher « 0 min » sur un texte court ; il affichait
+     surtout « 1 min » sur une page blanche. */
+  const readingTime = wordCount === 0 ? 0 : Math.max(1, Math.round(wordCount / 250));
+  const speakingTime = wordCount === 0 ? 0 : Math.max(1, Math.round(wordCount / 150));
 
   // Fetch scenes + synopsis when Scenes tab opens (also Info, pour thème + nœud narratif)
   useEffect(() => {
@@ -579,7 +582,7 @@ export function ContextPanel({
           <button
             key={t.key}
             onClick={() => setOwnTab(t.key)}
-            className={`relative pb-2.5 text-[12.5px] cursor-pointer bg-transparent border-none transition-colors ${
+            className={`relative pb-2.5 text-[12px] cursor-pointer bg-transparent border-none transition-colors ${
               activeTab === t.key
                 ? "text-[var(--color-accent)] font-medium"
                 : "text-text-tertiary hover:text-text-secondary"
@@ -624,7 +627,7 @@ export function ContextPanel({
               </InfoRow>
               <InfoRow label="Nœud narratif">
                 {knotText ? (
-                  <span className="text-[12.5px] text-text-primary">{knotText}</span>
+                  <span className="text-[12px] text-text-primary">{knotText}</span>
                 ) : (
                   <span className="text-[12px] italic text-text-quaternary">—</span>
                 )}
@@ -713,7 +716,7 @@ export function ContextPanel({
                 </div>
 
                 {scenes.length === 0 ? (
-                  <div className="text-[11.5px] italic text-text-quaternary/80 py-3 px-3 rounded-[var(--radius-md)] border border-dashed border-white/[0.05] text-center">
+                  <div className="text-[12px] italic text-text-quaternary/80 py-3 px-3 rounded-[var(--radius-md)] border border-dashed border-white/[0.05] text-center">
                     Aucune scène. Cliquez sur <span className="not-italic text-text-tertiary">+ Scène</span> pour en créer.
                   </div>
                 ) : (
@@ -798,7 +801,7 @@ export function ContextPanel({
                                   setEditingId(scene.id);
                                   setEditValue(scene.title);
                                 }}
-                                className="flex-1 min-w-0 text-[12.5px] text-text-primary break-words"
+                                className="flex-1 min-w-0 text-[12px] text-text-primary break-words"
                                 title="Double-clic pour renommer"
                               >
                                 {scene.title}
@@ -816,7 +819,7 @@ export function ContextPanel({
                               }}
                             >
                               <span className="w-1.5 h-1.5 rounded-full" style={{ background: badge.dot }} />
-                              <span className="text-[10.5px] font-medium">{badge.label}</span>
+                              <span className="text-[10px] font-medium">{badge.label}</span>
                             </button>
                             {/* Delete */}
                             <button
@@ -929,14 +932,14 @@ export function ContextPanel({
                         <section className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-2">
                             <span
-                              className="text-[9.5px] font-medium uppercase text-text-quaternary"
+                              className="text-[10px] font-medium uppercase text-text-quaternary"
                               style={{ letterSpacing: "0.18em" }}
                             >
                               Version courante
                             </span>
                             <button
                               onClick={triggerManualSnapshot}
-                              className="ml-auto text-[10.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors inline-flex items-center gap-1"
+                              className="ml-auto text-[10px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer transition-colors inline-flex items-center gap-1"
                               title="Créer un instantané nommé"
                             >
                               <span className="text-[12px] leading-none">+</span>
@@ -958,7 +961,7 @@ export function ContextPanel({
                               >
                                 v.&nbsp;{versionLabel}
                               </span>
-                              <span className="text-[10.5px] text-text-tertiary">
+                              <span className="text-[10px] text-text-tertiary">
                                 — courante
                               </span>
                               <span className="ml-auto text-[10px] text-text-tertiary tabular-nums">
@@ -1005,7 +1008,7 @@ export function ContextPanel({
                                     color: "#7ed8b7",
                                   }}
                                 >
-                                  + {delta.toLocaleString("fr-FR")} mots
+                                  + {delta.toLocaleString("fr-FR")} mot{delta > 1 ? "s" : ""}
                                 </span>
                               )}
                               {delta !== null && delta < 0 && (
@@ -1037,7 +1040,7 @@ export function ContextPanel({
                     {versions.length > 1 && (
                       <section className="flex flex-col gap-1.5">
                         <span
-                          className="text-[9.5px] font-medium uppercase text-text-quaternary"
+                          className="text-[10px] font-medium uppercase text-text-quaternary"
                           style={{ letterSpacing: "0.18em" }}
                         >
                           Historique
@@ -1082,7 +1085,7 @@ export function ContextPanel({
                                     {/* Ligne 1 : v.N + date */}
                                     <div className="flex items-baseline gap-1.5 mb-0.5">
                                       <span
-                                        className={`text-[11.5px] ${
+                                        className={`text-[12px] ${
                                           isLabelOnly ? "text-text-tertiary" : "text-text-primary"
                                         }`}
                                         style={{ fontFamily: "var(--font-serif)" }}
@@ -1115,11 +1118,11 @@ export function ContextPanel({
                                         className="w-full text-[11px] bg-bg-primary border border-[var(--color-accent)]/40 rounded px-1 py-0.5 text-text-primary outline-none mb-1"
                                       />
                                     ) : description ? (
-                                      <div className="text-[10.5px] italic text-text-secondary leading-snug mb-1">
+                                      <div className="text-[10px] italic text-text-secondary leading-snug mb-1">
                                         {description}
                                       </div>
                                     ) : isLabelOnly ? (
-                                      <div className="text-[10.5px] italic text-text-quaternary/80 leading-snug mb-1">
+                                      <div className="text-[10px] italic text-text-quaternary/80 leading-snug mb-1">
                                         {v.label}
                                       </div>
                                     ) : null}
@@ -1133,7 +1136,7 @@ export function ContextPanel({
                                             color: "#7ed8b7",
                                           }}
                                         >
-                                          + {delta.toLocaleString("fr-FR")} mots
+                                          + {delta.toLocaleString("fr-FR")} mot{delta > 1 ? "s" : ""}
                                         </span>
                                       )}
                                       {delta !== null && delta < 0 && (
@@ -1144,7 +1147,7 @@ export function ContextPanel({
                                             color: "#e89494",
                                           }}
                                         >
-                                          − {Math.abs(delta).toLocaleString("fr-FR")} mots
+                                          − {Math.abs(delta).toLocaleString("fr-FR")} mot{Math.abs(delta) > 1 ? "s" : ""}
                                         </span>
                                       )}
                                       {isInitial && (
@@ -1155,7 +1158,7 @@ export function ContextPanel({
                                             color: "#7ed8b7",
                                           }}
                                         >
-                                          + {v.word_count.toLocaleString("fr-FR")} mots · initial
+                                          + {v.word_count.toLocaleString("fr-FR")} mot{v.word_count > 1 ? "s" : ""} · initial
                                         </span>
                                       )}
                                       {v.label && description && (
@@ -1277,7 +1280,7 @@ function FieldBlock({
   return (
     <div className={`px-3 ${pad} border-b border-white/[0.04] last:border-b-0`}>
       <div
-        className="text-[9.5px] font-medium text-text-quaternary uppercase mb-1"
+        className="text-[10px] font-medium text-text-quaternary uppercase mb-1"
         style={{ letterSpacing: "0.18em" }}
       >
         {label}
@@ -1290,7 +1293,7 @@ function FieldBlock({
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-2 bg-bg-tertiary/40 border-b border-white/[0.04] last:border-b-0">
-      <span className="text-[11.5px] text-text-tertiary">{label}</span>
+      <span className="text-[12px] text-text-tertiary">{label}</span>
       <div className="flex items-center min-w-0">{children}</div>
     </div>
   );
@@ -1300,7 +1303,7 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
   return (
     <div className="p-3 rounded-[var(--radius-md)] border border-white/[0.06] bg-bg-tertiary/40">
       <div
-        className="text-[9.5px] font-medium text-text-quaternary uppercase mb-1.5"
+        className="text-[10px] font-medium text-text-quaternary uppercase mb-1.5"
         style={{ letterSpacing: "0.18em" }}
       >
         {label}
@@ -1308,7 +1311,7 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
       <div className="font-serif text-[22px] leading-none text-text-primary tabular-nums">
         {value}
       </div>
-      {hint && <div className="mt-1.5 text-[10.5px] text-text-quaternary">{hint}</div>}
+      {hint && <div className="mt-1.5 text-[10px] text-text-quaternary">{hint}</div>}
     </div>
   );
 }
@@ -1437,7 +1440,7 @@ function WorldTabBody({
                     return Array.from(groups.entries()).map(([group, cats]) => (
                       <div key={group} className="py-1">
                         <div
-                          className="px-3 pb-1 text-[9.5px] font-medium uppercase text-text-quaternary"
+                          className="px-3 pb-1 text-[10px] font-medium uppercase text-text-quaternary"
                           style={{ letterSpacing: "0.18em" }}
                         >
                           {group}
@@ -1823,7 +1826,7 @@ function PickerOverlay({
                         {hasTitle ? e.title : "Sans titre"}
                       </div>
                       {e.subtitle && (
-                        <div className="text-[10.5px] text-text-tertiary truncate">{e.subtitle}</div>
+                        <div className="text-[10px] text-text-tertiary truncate">{e.subtitle}</div>
                       )}
                     </div>
                   </button>

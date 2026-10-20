@@ -125,7 +125,7 @@ export function MilestoneAlerts({ items }: { items: MilestoneAlertItem[] }) {
             <div className="text-[12px] text-text-primary font-medium">
               {titleText}
             </div>
-            <div className="text-[10.5px] text-text-tertiary">
+            <div className="text-[10px] text-text-tertiary">
               {summaryParts.join(" · ")}
             </div>
           </div>
@@ -147,11 +147,11 @@ export function MilestoneAlerts({ items }: { items: MilestoneAlertItem[] }) {
                   >
                     {icon}
                   </span>
-                  <span className="text-[11.5px] text-text-primary truncate">
+                  <span className="text-[12px] text-text-primary truncate">
                     {m.title || <span className="italic text-text-quaternary">Sans titre</span>}
                   </span>
                   {m.novelTitle && (
-                    <span className="text-[10.5px] text-text-quaternary truncate font-serif italic">
+                    <span className="text-[10px] text-text-quaternary truncate font-serif italic">
                       · {m.novelTitle}
                     </span>
                   )}
@@ -201,7 +201,7 @@ export function MilestoneAlerts({ items }: { items: MilestoneAlertItem[] }) {
               );
             })}
             {items.length > 6 && (
-              <li className="px-1.5 text-[10.5px] text-text-tertiary italic">
+              <li className="px-1.5 text-[10px] text-text-tertiary italic">
                 + {items.length - 6} autre{items.length - 6 > 1 ? "s" : ""}…
               </li>
             )}

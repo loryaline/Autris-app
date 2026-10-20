@@ -277,7 +277,7 @@ export function PlanningSubSidebar({
             <select
               value={newType}
               onChange={(e) => setNewType(e.target.value as MilestoneType)}
-              className="w-full px-1.5 py-1 text-[11.5px] bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-sm)] cursor-pointer text-text-secondary"
+              className="w-full px-1.5 py-1 text-[12px] bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-sm)] cursor-pointer text-text-secondary"
             >
               {TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -289,12 +289,12 @@ export function PlanningSubSidebar({
               type="date"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
-              className="w-full px-1.5 py-1 text-[11.5px] bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-sm)] text-text-secondary"
+              className="w-full px-1.5 py-1 text-[12px] bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-sm)] text-text-secondary"
             />
             <button
               onClick={addMilestone}
               disabled={!newTitle.trim()}
-              className="text-[11.5px] px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="text-[12px] px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               style={{
                 background: "var(--color-accent)",
                 color: "#1a1410",
@@ -327,7 +327,7 @@ export function PlanningSubSidebar({
                   <select
                     value={editType}
                     onChange={(e) => setEditType(e.target.value as MilestoneType)}
-                    className="w-full px-1.5 py-1 text-[11.5px] bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-sm)] cursor-pointer text-text-secondary"
+                    className="w-full px-1.5 py-1 text-[12px] bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-sm)] cursor-pointer text-text-secondary"
                   >
                     {TYPES.map((t) => (
                       <option key={t.value} value={t.value}>
@@ -339,12 +339,12 @@ export function PlanningSubSidebar({
                     type="date"
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
-                    className="w-full px-1.5 py-1 text-[11.5px] bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-sm)] text-text-secondary"
+                    className="w-full px-1.5 py-1 text-[12px] bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-sm)] text-text-secondary"
                   />
                   <div className="flex gap-1.5">
                     <button
                       onClick={() => saveEdit(m.id)}
-                      className="flex-1 text-[11.5px] px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
+                      className="flex-1 text-[12px] px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
                       style={{
                         background: "var(--color-accent)",
                         color: "#1a1410",
@@ -354,7 +354,7 @@ export function PlanningSubSidebar({
                     </button>
                     <button
                       onClick={() => deleteMilestone(m.id)}
-                      className="text-[11.5px] px-2 py-1.5 bg-red-500/10 text-red-400 rounded-[var(--radius-sm)] cursor-pointer hover:bg-red-500/20"
+                      className="text-[12px] px-2 py-1.5 bg-red-500/10 text-red-400 rounded-[var(--radius-sm)] cursor-pointer hover:bg-red-500/20"
                       title="Supprimer" aria-label="Supprimer"
                     >
                       🗑
@@ -370,7 +370,7 @@ export function PlanningSubSidebar({
                 >
                   {m.target_date && (
                     <div
-                      className="text-[9.5px] font-medium text-text-quaternary uppercase mb-0.5"
+                      className="text-[10px] font-medium text-text-quaternary uppercase mb-0.5"
                       style={{ letterSpacing: "0.16em" }}
                     >
                       {fmtDate(m.target_date)}
@@ -408,7 +408,7 @@ export function PlanningSubSidebar({
                     <button
                       type="button"
                       onClick={() => startEdit(m)}
-                      className={`flex-1 min-w-0 text-left text-[12.5px] truncate cursor-pointer ${
+                      className={`flex-1 min-w-0 text-left text-[12px] truncate cursor-pointer ${
                         m.status === "done"
                           ? "text-text-tertiary line-through"
                           : "text-text-primary"

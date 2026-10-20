@@ -125,7 +125,7 @@ function ChapterRow({
           ref={buttonRef}
           onClick={onSelect}
           onDoubleClick={() => { setEditing(true); setEditValue(chapter.title); }}
-          className={`relative flex items-center gap-2 w-full text-left pl-3 pr-2 py-[7px] text-[12.5px] rounded-[var(--radius-md)] cursor-grab transition-colors outline-none ${
+          className={`relative flex items-center gap-2 w-full text-left pl-3 pr-2 py-[7px] text-[12px] rounded-[var(--radius-md)] cursor-grab transition-colors outline-none ${
             isActive
               ? "bg-white/[0.035] text-text-primary font-medium"
               : "text-text-secondary hover:text-text-primary hover:bg-white/[0.02]"

@@ -160,7 +160,7 @@ export function WbMainImage({
                 </>
               )}
             </div>
-            <div className="text-[9.5px] text-text-quaternary uppercase" style={{ letterSpacing: "0.18em" }}>
+            <div className="text-[10px] text-text-quaternary uppercase" style={{ letterSpacing: "0.18em" }}>
               PNG · JPG · WEBP · 10 Mo max
             </div>
           </button>

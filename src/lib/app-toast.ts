@@ -23,6 +23,18 @@ function stack(): HTMLElement {
   if (el) return el;
   el = document.createElement("div");
   el.id = STACK_ID;
+  /* La pile est elle-même la région vivante, et elle vit en permanence.
+
+     Chaque message portait son propre aria-live — mais il le portait
+     avant d'entrer dans la page, texte déjà en place. Or un lecteur
+     d'écran n'annonce pas une région vivante qui arrive toute remplie :
+     il annonce ce qui CHANGE dans une région déjà présente. Les messages
+     étaient donc muets, alors que tout semblait correct dans le code.
+
+     En déclarant la pile une fois pour toutes, chaque message qu'on y
+     dépose devient une mutation — et se fait entendre. */
+  el.setAttribute("role", "status");
+  el.setAttribute("aria-live", "polite");
   el.style.cssText = [
     "position:fixed",
     "z-index:9997",

@@ -231,7 +231,7 @@ function SceneRow({
               setEditing(false);
             }
           }}
-          className="flex-1 px-1.5 py-0.5 text-[12.5px] border border-[var(--color-accent-border)] rounded bg-bg-primary text-text-primary outline-none"
+          className="flex-1 px-1.5 py-0.5 text-[12px] border border-[var(--color-accent-border)] rounded bg-bg-primary text-text-primary outline-none"
         />
       ) : (
         <span
@@ -239,7 +239,7 @@ function SceneRow({
             setEditing(true);
             setEditValue(scene.title);
           }}
-          className="flex-1 text-[12.5px] text-text-secondary cursor-text truncate"
+          className="flex-1 text-[12px] text-text-secondary cursor-text truncate"
           title="Double-cliquer pour renommer"
         >
           {scene.title}
@@ -297,7 +297,7 @@ function ChapterCardHeader({
           </>
         )}
       </div>
-      <div className="text-[11.5px] text-text-tertiary shrink-0 inline-flex items-center gap-1.5">
+      <div className="text-[12px] text-text-tertiary shrink-0 inline-flex items-center gap-1.5">
         <span>
           {scenesCount} scène{scenesCount > 1 ? "s" : ""}
         </span>
@@ -538,7 +538,7 @@ export function OutlineView({
                 <div className="mt-3 text-center">
                   <button
                     onClick={() => addScene(chapter.id)}
-                    className="text-[11.5px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer font-serif italic transition-colors"
+                    className="text-[12px] text-text-tertiary hover:text-[var(--color-accent)] cursor-pointer font-serif italic transition-colors"
                   >
                     + Ajouter une scène
                   </button>

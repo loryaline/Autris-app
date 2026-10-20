@@ -205,7 +205,7 @@ export function IdeasClient({
 
       {visible.length === 0 ? (
         <div className="py-16 text-center">
-          <p className="text-[15px] md:text-[13.5px] m-0" style={{ color: "var(--text-4)" }}>
+          <p className="text-[15px] md:text-[14px] m-0" style={{ color: "var(--text-4)" }}>
             {showArchived
               ? "Rien de rangé pour l'instant."
               : query || projectFilter
@@ -254,7 +254,7 @@ export function IdeasClient({
                   className="flex-1 min-w-0 py-4 md:py-3 no-underline block"
                 >
                   <span
-                    className="text-[16.5px] md:text-[14px] leading-[1.45] block"
+                    className="text-[16px] md:text-[14px] leading-[1.45] block"
                     style={{
                       color: "var(--text-1)",
                       display: "-webkit-box",
@@ -266,7 +266,7 @@ export function IdeasClient({
                     {idea.body || "Note vide"}
                   </span>
                   <span
-                    className="flex items-center gap-1.5 mt-1.5 text-[12.5px] md:text-[11px]"
+                    className="flex items-center gap-1.5 mt-1.5 text-[12px] md:text-[11px]"
                     style={{ color: "var(--text-4)" }}
                   >
                     <span>{frenchDate(idea.created_at)}</span>

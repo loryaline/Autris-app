@@ -279,16 +279,33 @@ export function SynopsisView({
           >
             Dupliquer
           </button>
+          {/* Le geste irréversible, et seulement lui.
+
+              Les trois boutons de cette barre portaient exactement les
+              mêmes classes : même gris, même corps, quatre pixels d'écart.
+              « Supprimer » ne se distinguait qu'au SURVOL — un état qui
+              n'existe pas au repos, et pas du tout au doigt. Viser
+              « Dupliquer » et toucher « Supprimer » n'était pas de la
+              maladresse : une cible de 24 px à 4 px de sa voisine donne
+              ce résultat-là.
+
+              Trois changements, chacun pour une raison : la couleur
+              d'alerte au repos, pour qu'il ne ressemble plus à ses
+              voisins ; un écart devant lui, pour qu'on ne l'atteigne pas
+              par glissement ; une hauteur de 44 px sur écran tactile,
+              parce que la règle générale ne couvre pas ce bouton. */}
+          <span className="w-px h-4 ml-2 mr-1 bg-white/[0.10]" aria-hidden="true" />
           <button
             onClick={deleteActive}
             disabled={list.length <= 1}
             title="Supprimer ce synopsis"
-            className="h-6 px-2 rounded-[var(--radius-sm)] text-[11px] text-text-tertiary hover:text-[var(--color-danger,#e0556b)] hover:bg-white/[0.04] cursor-pointer transition-colors disabled:opacity-40"
+            className="rd-tap h-6 px-2 rounded-[var(--radius-sm)] text-[11px] hover:bg-[var(--color-danger,#e0556b)]/10 cursor-pointer transition-colors disabled:opacity-40"
+            style={{ color: "var(--color-danger, #e0556b)" }}
           >
             Supprimer
           </button>
           <span
-            className="text-[10.5px] px-1.5"
+            className="text-[10px] px-1.5"
             style={{ color: status === "saving" ? "var(--accent)" : "var(--text-4)" }}
           >
             {status === "saving" ? "Sauvegarde…" : "Sauvegardé"}

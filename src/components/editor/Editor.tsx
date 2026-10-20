@@ -607,14 +607,14 @@ export function NovelEditor({
               chapitre qui dit où l'on écrit. */}
           {!isPhone && (
             <>
-              <Link href="/" className={`text-[15px] md:text-[12.5px] no-underline shrink-0 ${canNavigateHome ? "text-text-tertiary hover:text-[var(--color-accent)]" : "text-text-quaternary pointer-events-none"}`}>
+              <Link href="/" className={`text-[15px] md:text-[12px] no-underline shrink-0 ${canNavigateHome ? "text-text-tertiary hover:text-[var(--color-accent)]" : "text-text-quaternary pointer-events-none"}`}>
                 {projectTitle}
               </Link>
               <span className="mx-1 text-text-quaternary/60 text-[13px] md:text-[11px] shrink-0">/</span>
             </>
           )}
           <span
-            className={`text-[15px] md:text-[12.5px] text-text-tertiary ${isPhone ? "truncate min-w-0 max-w-[30%]" : "shrink-0"}`}
+            className={`text-[15px] md:text-[12px] text-text-tertiary ${isPhone ? "truncate min-w-0 max-w-[30%]" : "shrink-0"}`}
             title={isPhone ? novelTitle : undefined}
           >
             {novelTitle}
@@ -622,7 +622,7 @@ export function NovelEditor({
           {activeChapter && (
             <>
               <span className="mx-1 text-text-quaternary/60 text-[13px] md:text-[11px] shrink-0">/</span>
-              <span className="text-[15px] md:text-[12.5px] text-text-primary font-medium truncate min-w-0">
+              <span className="text-[15px] md:text-[12px] text-text-primary font-medium truncate min-w-0">
                 {activeChapter.title}
               </span>
               <button
@@ -776,7 +776,7 @@ export function NovelEditor({
 
       {/* Conseil contextuel — persona « Explorateur » uniquement */}
       {!focusMode && showTips && (
-        <div className="shrink-0 px-4 py-1.5 bg-bg-primary border-b border-white/[0.04] text-[11.5px] text-text-quaternary italic">
+        <div className="shrink-0 px-4 py-1.5 bg-bg-primary border-b border-white/[0.04] text-[12px] text-text-quaternary italic">
           Astuce : la barre d&apos;outils flotte — glissez-la où vous voulez, ou ancrez-la sur un bord.
         </div>
       )}

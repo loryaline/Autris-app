@@ -147,7 +147,7 @@ export function WbCustomBlocks({
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="w-full py-2.5 border border-dashed border-white/[0.10] rounded-[var(--radius-md)] text-[12.5px] text-text-tertiary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors"
+            className="w-full py-2.5 border border-dashed border-white/[0.10] rounded-[var(--radius-md)] text-[12px] text-text-tertiary hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] cursor-pointer transition-colors"
           >
             + Ajouter un bloc personnalisé
           </button>
@@ -164,8 +164,8 @@ export function WbCustomBlocks({
                   className="flex flex-col items-start gap-1 p-2.5 rounded-[var(--radius-sm)] border border-white/[0.08] bg-bg-primary hover:bg-bg-hover hover:border-[var(--color-accent-border)] cursor-pointer transition-colors text-left"
                 >
                   <span className="text-[16px] text-[var(--color-accent)] leading-none">{t.icon}</span>
-                  <span className="text-[12.5px] text-text-primary font-medium">{t.label}</span>
-                  <span className="text-[10.5px] text-text-tertiary leading-tight">{t.desc}</span>
+                  <span className="text-[12px] text-text-primary font-medium">{t.label}</span>
+                  <span className="text-[10px] text-text-tertiary leading-tight">{t.desc}</span>
                 </button>
               ))}
             </div>
@@ -350,7 +350,7 @@ function TextBlockBody({
             value={block.values[i] ?? ""}
             onChange={(e) => setValue(i, e.target.value)}
             rows={2}
-            className="w-full text-[12.5px] leading-relaxed px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-md)] resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary transition-colors"
+            className="w-full text-[12px] leading-relaxed px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-[var(--radius-md)] resize-none focus:outline-none focus:border-[var(--color-accent-border)] focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary transition-colors"
           />
         </div>
       ))}
@@ -430,7 +430,7 @@ function TableBlockBody({
   return (
     <div>
       <div className="overflow-x-auto rounded-[var(--radius-md)] border border-white/[0.06]">
-        <table className="w-full text-[12.5px] border-collapse">
+        <table className="w-full text-[12px] border-collapse">
           <thead>
             <tr className="bg-white/[0.03]">
               {block.columns.map((c, ci) => (
@@ -468,7 +468,7 @@ function TableBlockBody({
                     <input
                       value={row[ci] ?? ""}
                       onChange={(e) => setCell(ri, ci, e.target.value)}
-                      className="w-full text-[12.5px] px-2.5 py-1.5 bg-transparent border-0 focus:outline-none focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary"
+                      className="w-full text-[12px] px-2.5 py-1.5 bg-transparent border-0 focus:outline-none focus:bg-white/[0.03] text-text-primary placeholder:text-text-quaternary"
                     />
                   </td>
                 ))}
@@ -532,7 +532,7 @@ function ReadOnlyBlock({ block }: { block: CustomBlock }) {
                 >
                   {label}
                 </div>
-                <p className="text-[12.5px] leading-relaxed text-text-secondary whitespace-pre-wrap">
+                <p className="text-[12px] leading-relaxed text-text-secondary whitespace-pre-wrap">
                   {v}
                 </p>
               </div>
@@ -552,7 +552,7 @@ function ReadOnlyBlock({ block }: { block: CustomBlock }) {
         if (nonEmpty.length === 0) return null;
         return (
           <div className="overflow-x-auto rounded-[var(--radius-md)] border border-white/[0.06]">
-            <table className="w-full text-[12.5px] border-collapse">
+            <table className="w-full text-[12px] border-collapse">
               <thead>
                 <tr className="bg-white/[0.03]">
                   {block.columns.map((c, ci) => (

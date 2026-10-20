@@ -161,7 +161,7 @@ export function WbEntryDetail({
 
             {mode === "edit" && (
               <span
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10.5px] font-medium uppercase"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10px] font-medium uppercase"
                 style={{
                   letterSpacing: "0.16em",
                   background: "var(--color-accent-bg)",
@@ -229,7 +229,7 @@ export function WbEntryDetail({
                 <select
                   value={local.status}
                   onChange={(e) => scheduleSave({ ...local, status: e.target.value as WbStatus })}
-                  className="h-8 pl-5 pr-6 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.06] text-[11.5px] text-text-secondary cursor-pointer appearance-none hover:border-white/[0.1]"
+                  className="h-8 pl-5 pr-6 rounded-[var(--radius-md)] bg-bg-secondary border border-white/[0.06] text-[12px] text-text-secondary cursor-pointer appearance-none hover:border-white/[0.1]"
                   style={{
                     backgroundImage:
                       "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23737687' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E\")",
@@ -254,7 +254,7 @@ export function WbEntryDetail({
                 />
               </div>
             ) : (
-              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-bg-secondary border border-white/[0.06] text-[11.5px] text-text-secondary">
+              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-bg-secondary border border-white/[0.06] text-[12px] text-text-secondary">
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
                     local.status === "valide"
@@ -420,7 +420,7 @@ export function WbEntryDetail({
                         onClick={() =>
                           scheduleSave({ ...local, subcategory: s.key })
                         }
-                        className="h-7 inline-flex items-center gap-1.5 px-3 rounded-full text-[11.5px] cursor-pointer transition-colors border"
+                        className="h-7 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] cursor-pointer transition-colors border"
                         style={{
                           background: active ? tone.bg : "rgba(255,255,255,0.02)",
                           borderColor: active ? tone.border : "rgba(255,255,255,0.05)",
@@ -446,7 +446,7 @@ export function WbEntryDetail({
                   Catégorie
                 </div>
                 <span
-                  className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11.5px] border"
+                  className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[12px] border"
                   style={{
                     background: toneFor(local.category).bg,
                     borderColor: toneFor(local.category).border,
@@ -793,7 +793,7 @@ function ViewBody({
                   {local.description}
                 </p>
               ) : (
-                <p className="text-[12.5px] text-text-quaternary italic font-serif">
+                <p className="text-[12px] text-text-quaternary italic font-serif">
                   Aucune description.
                 </p>
               )}
@@ -978,7 +978,7 @@ function ViewBody({
                           {otherCat?.icon ?? "✦"}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[12.5px] text-text-primary truncate">
+                          <div className="text-[12px] text-text-primary truncate">
                             {other.title || "Sans titre"}
                           </div>
                           {other.subtitle && (
@@ -988,7 +988,7 @@ function ViewBody({
                           )}
                         </div>
                         <span
-                          className="text-[9.5px] font-medium uppercase text-text-quaternary flex-shrink-0"
+                          className="text-[10px] font-medium uppercase text-text-quaternary flex-shrink-0"
                           style={{ letterSpacing: "0.16em" }}
                         >
                           {link.link_type}
@@ -1065,7 +1065,7 @@ function SecretsBubbles({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-[11.5px] text-text-quaternary italic font-serif leading-snug">
+      <p className="text-[12px] text-text-quaternary italic font-serif leading-snug">
         Ton personnage a peut-être encore des secrets. Note ici ce qu'il hésite à t'avouer
         — trois voix, trois non-dits.
       </p>
@@ -1104,7 +1104,7 @@ function SecretsBubbles({
         })}
       </ul>
       {filledCount === 0 && (
-        <p className="text-[10.5px] text-text-quaternary/80 italic">
+        <p className="text-[10px] text-text-quaternary/80 italic">
           Astuce : ces trois bulles sont un rappel que ton personnage te cache peut-être
           encore quelque chose.
         </p>
@@ -1143,7 +1143,7 @@ function Card({
             {icon}
           </span>
         )}
-        <h3 className="text-[13.5px] text-text-primary font-medium">{title}</h3>
+        <h3 className="text-[14px] text-text-primary font-medium">{title}</h3>
         {titleAccent && (
           <span className="text-[11px] text-text-quaternary ml-auto font-serif italic">
             {titleAccent}

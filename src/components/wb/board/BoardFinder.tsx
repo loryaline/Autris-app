@@ -177,7 +177,7 @@ export function BoardFinder({
           >
             {hits.length === 0 ? (
               <div
-                className="px-3 py-2 text-[11.5px]"
+                className="px-3 py-2 text-[12px]"
                 style={{ color: "var(--text-4)" }}
               >
                 Rien de ce nom sur ce plateau.
@@ -252,7 +252,7 @@ export function BoardFinder({
           </div>
           {presentCategories.length === 0 ? (
             <div
-              className="px-3 pb-1 text-[11.5px]"
+              className="px-3 pb-1 text-[12px]"
               style={{ color: "var(--text-4)" }}
             >
               Aucune fiche posée : rien à filtrer pour l&apos;instant.
@@ -321,7 +321,7 @@ export function BoardFinder({
             <button
               onClick={() => onFilterChange(EMPTY_FILTER)}
               disabled={!active}
-              className="text-[11.5px] cursor-pointer bg-transparent border-none p-0 disabled:opacity-40 disabled:cursor-default"
+              className="text-[12px] cursor-pointer bg-transparent border-none p-0 disabled:opacity-40 disabled:cursor-default"
               style={{ color: "var(--text-3)" }}
             >
               Tout réafficher

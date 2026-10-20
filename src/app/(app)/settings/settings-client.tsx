@@ -182,7 +182,7 @@ export function SettingsClient({
 
       {/* Liens légaux */}
       <Section title="Informations légales">
-        <div className="flex items-center gap-3 text-[12.5px]">
+        <div className="flex items-center gap-3 text-[12px]">
           <a href="/legal/mentions" target="_blank" className="text-text-secondary hover:text-[var(--color-accent)] underline underline-offset-2">
             Mentions légales
           </a>
