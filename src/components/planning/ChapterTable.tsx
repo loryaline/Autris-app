@@ -2054,8 +2054,9 @@ export function ChapterTable({
                           <div
                             className="absolute inset-0 pointer-events-none z-10"
                             style={{
-                              background:
-                                "color-mix(in srgb, var(--color-accent) 10%, transparent)",
+                              background: isAnchor
+                                ? undefined
+                                : "color-mix(in srgb, var(--color-accent) 10%, transparent)",
                               borderTop: edges.top
                                 ? "2px solid var(--color-accent)"
                                 : undefined,
@@ -2068,9 +2069,20 @@ export function ChapterTable({
                               borderRight: edges.right
                                 ? "2px solid var(--color-accent)"
                                 : undefined,
-                              boxShadow: isAnchor
-                                ? "inset 0 0 0 2px var(--color-accent)"
-                                : undefined,
+                              /* Pas d'anneau supplémentaire sur la case
+                                 d'ancrage. Il s'ajoutait au trait du
+                                 périmètre, à deux pixels de lui : sur une
+                                 case seule, deux cadres concentriques pour
+                                 la même case ; sur une sélection de
+                                 plusieurs lignes, un cadre autour de
+                                 l'ensemble PLUS un cadre autour de la
+                                 première — ce qui se lit comme deux boîtes
+                                 empilées.
+
+                                 L'ancrage se signale autrement, et sans
+                                 rien ajouter : c'est la seule case de la
+                                 sélection qui ne reçoit pas le voile
+                                 d'accent. Comme dans un tableur. */
                             }}
                           />
                         )}
