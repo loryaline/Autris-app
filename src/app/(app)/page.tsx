@@ -31,6 +31,19 @@ export default async function DashboardPage() {
     d.setDate(d.getDate() + MILESTONE_SOON_DAYS);
     return d.toISOString().slice(0, 10);
   })();
+  /* Jusqu'où remonter dans les jalons en retard.
+
+     La requête n'avait pas de borne basse : elle rapportait TOUS les
+     jalons non terminés dont la date est passée, sans limite d'ancienneté.
+     Sur une planification nourrie — plusieurs centaines d'éléments — cela
+     ramenait un historique entier à chaque ouverture de l'accueil, pour
+     n'en afficher que les premiers. Et un jalon oublié depuis deux ans
+     n'est plus une alerte : c'est de l'archéologie. */
+  const retardMaxIso = (() => {
+    const d = new Date(nowForQuery);
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  })();
   const weekStartIso = (() => {
     const d = new Date(nowForQuery);
     const offset = (d.getDay() + 6) % 7; // lundi = 0
@@ -52,11 +65,19 @@ export default async function DashboardPage() {
   // On a aussi resserré les SELECT (plus de novels(*) ni chapters(...)),
   // et on fetch séparément le dernier chapitre modifié au lieu de tirer
   // tous les chapitres de tous les romans.
+  /* Les trois fenêtres d'activité tiennent dans une seule requête.
+
+     Le mois civil, la semaine en cours et les sept derniers jours
+     glissants se recouvrent presque entièrement — on demandait pourtant
+     trois fois la même table, pour des plages qui se chevauchent. Une
+     requête sur la plage la plus large les couvre toutes ; les trois
+     découpages se font ensuite en mémoire, sans réseau. */
+  const activiteDebutIso = [monthStartIso, weekStartIso, rolling7StartIso].sort()[0];
+  const activiteFinIso = [monthEndIso, todayIso].sort().slice(-1)[0];
+
   const [
     projectsRes,
     activityRes,
-    weekActivityRes,
-    rolling7Res,
     lastWbRes,
     milestoneRes,
     alertMilestoneRes,
@@ -87,20 +108,8 @@ export default async function DashboardPage() {
       .from("daily_activity")
       .select("date, words_written, wb_activity, wb_count, plan_activity, plan_count")
       .eq("user_id", user.id)
-      .gte("date", monthStartIso)
-      .lte("date", monthEndIso),
-    supabase
-      .from("daily_activity")
-      .select("date, words_written")
-      .eq("user_id", user.id)
-      .gte("date", weekStartIso)
-      .lte("date", todayForWeekIso),
-    supabase
-      .from("daily_activity")
-      .select("words_written")
-      .eq("user_id", user.id)
-      .gte("date", rolling7StartIso)
-      .lte("date", todayIso),
+      .gte("date", activiteDebutIso)
+      .lte("date", activiteFinIso),
     supabase
       .from("daily_activity")
       .select("date")
@@ -122,6 +131,7 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .not("target_date", "is", null)
       .neq("status", "done")
+      .gte("target_date", retardMaxIso)
       .lte("target_date", soonIso)
       .order("target_date", { ascending: true }),
     supabase
@@ -151,8 +161,18 @@ export default async function DashboardPage() {
   );
 
   const projects = projectsRes.data;
-  const activityRows = activityRes.data;
-  const weekActivityRows = weekActivityRes.data;
+  /* Les trois fenêtres, découpées dans le même jeu de lignes. */
+  const activiteToutes = activityRes.data ?? [];
+  const dansPlage = (d: string, debut: string, fin: string) => d >= debut && d <= fin;
+  const activityRows = activiteToutes.filter((r) =>
+    dansPlage(r.date, monthStartIso, monthEndIso),
+  );
+  const weekActivityRows = activiteToutes.filter((r) =>
+    dansPlage(r.date, weekStartIso, todayForWeekIso),
+  );
+  const rolling7Rows = activiteToutes.filter((r) =>
+    dansPlage(r.date, rolling7StartIso, todayIso),
+  );
   const lastWbRow = lastWbRes.data;
   const milestoneRows = milestoneRes.data;
   const alertMilestoneRows = alertMilestoneRes.data;
@@ -165,7 +185,7 @@ export default async function DashboardPage() {
       ?.reduce((s, n) => s + n.current_words, 0) ?? 0), 0) ?? 0;
 
   // Mots de la semaine
-  const weekWordsTotal = (weekActivityRows ?? []).reduce(
+  const weekWordsTotal = weekActivityRows.reduce(
     (s, r) => s + Math.max(0, r.words_written ?? 0),
     0,
   );
@@ -230,7 +250,7 @@ export default async function DashboardPage() {
     wb_activity: boolean;
     plan_activity: boolean;
   }>();
-  for (const r of activityRows ?? []) {
+  for (const r of activityRows) {
     activityByDate.set(r.date, {
       words_written: r.words_written ?? 0,
       wb_count: r.wb_count ?? 0,
@@ -336,7 +356,7 @@ export default async function DashboardPage() {
      mots écrits sur l'objectif total — et le rythme sur les sept derniers
      jours glissants, une fenêtre qui avance avec le temps et qu'aucune date
      passée ne leste. Arrêter une semaine se voit, et se rattrape. */
-  const rolling7Words = (rolling7Res.data ?? []).reduce(
+  const rolling7Words = rolling7Rows.reduce(
     (sum, r) => sum + Math.max(0, r.words_written ?? 0),
     0,
   );
