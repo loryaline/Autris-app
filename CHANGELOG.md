@@ -27,6 +27,17 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.15.0] — 2026-10-20
+
+### Changements
+
+- **L'accueil interroge la base huit fois au lieu de dix, et ne balaie plus d'historique.** Trois des requêtes lisaient la même table d'activité sur des plages qui se recouvrent presque entièrement — le mois civil, la semaine en cours, les sept derniers jours glissants. Une seule requête couvre désormais la plage la plus large, et les trois découpages se font en mémoire.
+- **Les jalons en retard s'arrêtent à trente jours.** La requête n'avait aucune borne basse : elle rapportait tous les jalons non terminés dont la date est passée, sans limite d'ancienneté, pour n'en afficher que les premiers. Sur une planification de plusieurs centaines d'éléments, c'était un historique entier ramené à chaque ouverture. Et un jalon oublié depuis deux ans n'est plus une alerte.
+
+  Ce second point change ce qui s'affiche, pas seulement ce qui se charge : un retard de plus d'un mois ne remonte plus en alerte. La fenêtre se règle d'une ligne si elle est trop courte.
+
+---
+
 ## [0.14.1] — 2026-10-20
 
 ### Corrections
