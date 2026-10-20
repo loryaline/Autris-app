@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.13.1] — 2026-10-20
+
+### Corrections
+
+- **Le second cadre du chapitrage disparaît pour de bon.** La 0.11.3 avait retiré le mauvais : celui qui restait venait de la case d'ancrage, qui recevait un anneau intérieur de 2 px **en plus** du trait de son périmètre, à deux pixels de lui. Sur une case seule, deux cadres concentriques pour désigner la même case ; sur une sélection de plusieurs lignes, un cadre autour de l'ensemble plus un cadre autour de la première — ce qui se lit comme deux boîtes empilées. L'ancrage se signale maintenant sans rien ajouter : c'est la seule case de la sélection qui ne reçoit pas le voile d'accent, comme dans un tableur.
+
+---
+
 ## [0.13.0] — 2026-10-16
 
 ### Changements
