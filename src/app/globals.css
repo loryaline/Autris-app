@@ -318,17 +318,12 @@ body {
 .rich-cell-display p {
   margin: 0;
 }
-/* La case en cours d'édition.
+/* La zone de texte d'une case en édition ne porte AUCUN décor.
 
-   Il y avait deux cadres pour une seule case : celui que la case dessine
-   elle-même, et celui-ci, posé autour de la zone de texte. Deux traits
-   d'accent emboîtés à quelques pixels l'un de l'autre, pour désigner le
-   même endroit. On garde le cadre de la case — il épouse ses bords — et
-   le texte n'en porte plus. Reste un fond à peine plus clair, qui suffit
-   à dire que la saisie est ouverte. */
-.cell-focused {
-  background: rgba(255, 255, 255, 0.02);
-}
+   Elle en a porté trois tour à tour — un contour, un fond, un anneau de
+   focus — qui s'ajoutaient au cadre que la case dessine déjà. Trois
+   façons de désigner le même endroit. Le cadre de la case suffit, et le
+   curseur dit où l'on tape. */
 
 .tiptap p {
   margin-bottom: 0.75em;
