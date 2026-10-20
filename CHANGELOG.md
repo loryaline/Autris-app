@@ -27,6 +27,14 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.14.1] — 2026-10-20
+
+### Corrections
+
+- **L'écran des idées a enfin une mise en page de bureau.** Il n'en avait qu'une, celle du téléphone : une colonne de 720 px et un bouton flottant collé au coin bas-droit de la fenêtre — pas de la liste. Sur un grand écran il se retrouvait à sept cents pixels des idées auxquelles il se rapporte, et réservait sous lui la hauteur d'une barre de navigation qui n'existe pas là. « Nouvelle idée » rejoint le titre au bureau ; le bouton flottant reste sur téléphone, où il est à sa place, sous le pouce.
+
+---
+
 ## [0.14.0] — 2026-10-20
 
 ### Corrections
