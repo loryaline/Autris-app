@@ -126,6 +126,25 @@ export function IdeasClient({
             />
           </svg>
         </button>
+        {/* Au bureau, écrire une idée se fait depuis l'en-tête.
+
+            Cet écran n'avait qu'une mise en page, celle du téléphone : une
+            colonne de 720 px et un bouton flottant collé au coin bas-droit
+            de la FENÊTRE — pas de la liste. Sur un grand écran il se
+            retrouvait à sept cents pixels des idées auxquelles il se
+            rapporte, et réservait sous lui la hauteur d'une barre de
+            navigation qui n'existe pas là. Le bouton flottant reste sur
+            téléphone, où il est à sa place, sous le pouce. */}
+        <Link
+          href="/idees/nouvelle"
+          className="hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--radius-md)] text-[13px] font-medium no-underline transition-colors"
+          style={{ background: "var(--accent)", color: "#1a1410" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+            <path d="M11 4v14M4 11h14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          </svg>
+          Nouvelle idée
+        </Link>
       </div>
 
       {/* Le va-et-vient « à trier / rangées » n'est pas un filtre, c'est
@@ -302,7 +321,7 @@ export function IdeasClient({
         href="/idees/nouvelle"
         title="Écrire une idée"
         aria-label="Écrire une idée"
-        className="fixed right-4 z-40 flex items-center justify-center rounded-full no-underline shadow-lg"
+        className="md:hidden fixed right-4 z-40 flex items-center justify-center rounded-full no-underline shadow-lg"
         style={{
           bottom: "calc(84px + env(safe-area-inset-bottom, 0px))",
           width: 60,
