@@ -27,6 +27,18 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.13.2] — 2026-10-20
+
+### Corrections
+
+- **Le second cadre venait d'ailleurs : l'anneau de focus.** La règle d'accessibilité qui souligne l'élément actif au clavier s'appliquait aussi aux zones de saisie — les navigateurs l'accordent même au clic, puisqu'on va y taper. Dans une case du chapitrage, elle encadrait la **zone de texte**, haute comme son contenu et aux coins arrondis, pendant que la sélection encadrait la **case entière**, haute comme la ligne : deux boîtes de tailles différentes, l'une sous l'autre. L'écart ne se voit que sur une ligne haute, quand une colonne voisine est longue — ce qui explique qu'il ait survécu à deux corrections.
+
+  Les surfaces d'écriture n'ont plus cet anneau : le curseur dit déjà où l'on tape, et la case porte son propre cadre. Les boutons et les liens le gardent.
+
+- **L'anneau de focus n'impose plus ses coins arrondis** à ce qu'il entoure : il épouse la forme de l'élément.
+
+---
+
 ## [0.13.1] — 2026-10-20
 
 ### Corrections
