@@ -37,31 +37,44 @@ export default async function WorldBuildingPage({
     );
   }
 
-  const { data: entries } = await supabase
-    .from("wb_entries")
-    .select("*")
-    .eq("project_id", projectId)
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
+  /* Les trois dernières lectures partaient l'une après l'autre.
 
-  // Liste des romans (livres) du projet — utilisée pour attribuer une fiche à un livre.
-  const { data: novels } = await supabase
-    .from("novels")
-    .select("id, title")
-    .eq("project_id", projectId)
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: true });
+     Les fiches, puis les romans, puis les liens : trois allers-retours
+     jusqu'à la base, chacun attendant la fin du précédent, alors que les
+     deux premiers n'avaient besoin que de l'identifiant du projet — connu
+     depuis l'adresse. Quant aux liens, ils réclamaient la liste des
+     fiches ; mais un lien part d'une fiche, et une fiche connaît son
+     projet : on les demande donc par le projet, en joignant la table des
+     fiches. Les trois partent ensemble.
 
-  // Charge tous les liens dont les deux extrémités appartiennent à ce projet
-  const entryIds = (entries ?? []).map((e) => e.id);
-  let links: unknown[] = [];
-  if (entryIds.length > 0) {
-    const { data: linkRows } = await supabase
-      .from("wb_links")
+     C'est le trajet qui coûte, pas la requête : trois vagues successives
+     coûtaient trois fois ce qu'une seule coûte. */
+  const [entriesRes, novelsRes, linksRes] = await Promise.all([
+    supabase
+      .from("wb_entries")
       .select("*")
-      .in("from_entry_id", entryIds);
-    links = linkRows ?? [];
-  }
+      .eq("project_id", projectId)
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
+    // Les romans du projet — pour rattacher une fiche à un livre.
+    supabase
+      .from("novels")
+      .select("id, title")
+      .eq("project_id", projectId)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("wb_links")
+      .select("*, wb_entries!from_entry_id!inner(project_id)")
+      .eq("wb_entries.project_id", projectId),
+  ]);
+
+  const entries = entriesRes.data;
+  const novels = novelsRes.data;
+  /* La jointure ne servait qu'à filtrer : on retire la colonne ajoutée. */
+  const links = (linksRes.data ?? []).map(
+    ({ wb_entries: _ignore, ...reste }) => reste,
+  );
 
   return (
     <WbClient

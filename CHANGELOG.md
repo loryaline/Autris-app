@@ -27,6 +27,18 @@ versionné selon [SemVer](https://semver.org/lang/fr/).
 
 ---
 
+## [0.15.1] — 2026-10-21
+
+### Changements
+
+- **La planification et le plateau d'univers ne font plus attendre plusieurs fois.** Ces deux pages procédaient par vagues successives : la planification lançait sept requêtes, attendait, puis en lançait deux autres qui réclamaient les identifiants obtenus à la première ; le plateau en enchaînait quatre, chacune après la fin de la précédente. Or c'est le **trajet** jusqu'à la base qui coûte, pas la requête : quatre vagues coûtaient quatre fois ce qu'une seule coûte.
+
+  Ces retardataires n'avaient en réalité pas besoin d'attendre. Les valeurs de cellules et les scènes se rattachent à un chapitre, et un chapitre connaît son roman ; un lien part d'une fiche, et une fiche connaît son projet. On les demande donc par le roman ou par le projet, en joignant la table intermédiaire. La planification passe de deux vagues à une, le plateau de quatre à une.
+
+- **L'éditeur garde ses deux vagues**, et c'est délibéré : ses fiches d'univers dépendent du projet du roman, qu'il faut d'abord résoudre. Le détour par une double jointure serait fragile pour un gain nul sur la page déjà la plus rapide.
+
+---
+
 ## [0.15.0] — 2026-10-20
 
 ### Changements
