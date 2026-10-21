@@ -26,10 +26,30 @@ export default async function PlanningPage({
   const user = await utilisateurConnecte(supabase);
   if (!user) redirect("/login");
 
-  // Phase 1 : tout ce qui ne dépend pas de chapters/customColumns en parallèle.
-  // Avant : 6 awaits séquentiels, ~600 ms-1.5 s sur Supabase. Maintenant
-  // 2 phases parallèles → ~250-500 ms.
-  const [novelRes, chaptersRes, customColumnsRes, milestonesRes, beatsRes, profileRes, synopsesRes] = await Promise.all([
+  /* Tout en une seule vague.
+
+     La page procédait en deux temps : sept requêtes en parallèle, puis
+     une attente, puis deux autres qui réclamaient les identifiants des
+     colonnes et des chapitres obtenus à la première. Elle payait donc
+     DEUX fois le trajet jusqu'à la base, l'un après l'autre — et c'est
+     ce trajet, pas le nombre de requêtes, qui coûte le plus cher.
+
+     Ces deux retardataires n'avaient en réalité pas besoin d'attendre.
+     Les valeurs de cellules comme les scènes se rattachent à un chapitre,
+     et un chapitre connaît son roman : on peut donc les demander par le
+     roman directement, en joignant la table des chapitres. Les neuf
+     requêtes partent désormais ensemble. */
+  const [
+    novelRes,
+    chaptersRes,
+    customColumnsRes,
+    milestonesRes,
+    beatsRes,
+    profileRes,
+    synopsesRes,
+    cellValuesRes,
+    scenesRes,
+  ] = await Promise.all([
     supabase
       .from("novels")
       .select("id, title, project_id, narrative_template, column_order, column_colors, column_widths, projects(title)")
@@ -71,6 +91,18 @@ export default async function PlanningPage({
       .from("synopses")
       .select("id, title, content, position")
       .eq("novel_id", novelId)
+      .eq("user_id", user.id)
+      .order("position", { ascending: true }),
+    // Rattachées au roman par la table des chapitres, donc indépendantes.
+    supabase
+      .from("planning_cell_values")
+      .select("id, column_id, chapter_id, value, color, chapters!inner(novel_id)")
+      .eq("chapters.novel_id", novelId)
+      .eq("user_id", user.id),
+    supabase
+      .from("scenes")
+      .select("id, chapter_id, title, position, status, chapters!inner(novel_id)")
+      .eq("chapters.novel_id", novelId)
       .eq("user_id", user.id)
       .order("position", { ascending: true }),
   ]);
@@ -129,30 +161,13 @@ export default async function PlanningPage({
     }
   }
 
-  // Phase 2 : cellValues + scenes (dépendent des IDs de phase 1)
-  const columnIds = (customColumns ?? []).map((c) => c.id);
-  const chapterIds = (chapters ?? []).map((c) => c.id);
+  /* La jointure ne sert qu'à filtrer : on retire la colonne qu'elle
+     ajoute avant de passer les lignes à l'interface. */
+  const sansJointure = <T extends Record<string, unknown>>(lignes: T[] | null) =>
+    (lignes ?? []).map(({ chapters: _ignore, ...reste }) => reste);
 
-  const [cellValuesRes, scenesRes] = await Promise.all([
-    columnIds.length > 0
-      ? supabase
-          .from("planning_cell_values")
-          .select("*")
-          .in("column_id", columnIds)
-          .eq("user_id", user.id)
-      : Promise.resolve({ data: [] }),
-    chapterIds.length > 0
-      ? supabase
-          .from("scenes")
-          .select("id, chapter_id, title, position, status")
-          .in("chapter_id", chapterIds)
-          .eq("user_id", user.id)
-          .order("position", { ascending: true })
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const cellValues = cellValuesRes.data;
-  const scenes = scenesRes.data;
+  const cellValues = sansJointure(cellValuesRes.data);
+  const scenes = sansJointure(scenesRes.data);
 
   const projectTitle = (novel as unknown as { projects: { title: string } }).projects?.title ?? "";
   const columnOrder = (novel as unknown as { column_order: string[] | null }).column_order;
